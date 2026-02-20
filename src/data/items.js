@@ -103,8 +103,106 @@ const STYLES = [
   { fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 15px currentColor, 0 0 30px currentColor' },
 ];
 
+// 300 extremely rare aura names (rarities 100M → 100B)
+const AURA_TEXTS = [
+  'Aura of the First Dawn', 'Aura of Eternal Twilight', 'Aura of the Void Heart', 'Aura of Cosmic Weave',
+  'Aura of the Forgotten God', 'Aura of Infinite Echo', 'Aura of the World Seed', 'Aura of Unbroken Oath',
+  'Aura of the Last Star', 'Aura of Primordial Flame', 'Aura of the Silent Watcher', 'Aura of Shattered Time',
+  'Aura of the Dreaming Dead', 'Aura of Celestial Blood', 'Aura of the Nameless One', 'Aura of Endless Winter',
+  'Aura of the Iron Covenant', 'Aura of Phantom Crown', 'Aura of the Lost Empire', 'Aura of Unspoken Truth',
+  'Aura of the Seventh Seal', 'Aura of Obsidian Tears', 'Aura of the Hollow Throne', 'Aura of Whispered Curses',
+  'Aura of the Undying Ember', 'Aura of Starlight Ashes', 'Aura of the Broken Chain', 'Aura of Midnight Sun',
+  'Aura of the Fallen Seraph', 'Aura of Crimson Oath', 'Aura of the Unwritten Law', 'Aura of Ghostly Dominion',
+  'Aura of the Final Breath', 'Aura of Silver Silence', 'Aura of the Drowned Kingdom', 'Aura of Burning Ice',
+  'Aura of the Blind Oracle', 'Aura of Golden Ruin', 'Aura of the Unchosen Path', 'Aura of Shadowed Mercy',
+  'Aura of the Ninth Hell', 'Aura of Pale Dominion', 'Aura of the Sleeping Titan', 'Aura of Fractured Soul',
+  'Aura of the Last Prayer', 'Aura of Emerald Decay', 'Aura of the Unbound Will', 'Aura of Crystalline Sorrow',
+  'Aura of the Hollow Victory', 'Aura of Violet Storm', 'Aura of the Eternal Return', 'Aura of Rust and Bone',
+  'Aura of the Shattered Mirror', 'Aura of Amber Stasis', 'Aura of the Unseen Hand', 'Aura of Bleeding Sky',
+  'Aura of the Dying Light', 'Aura of Jade Oblivion', 'Aura of the Unspoken Name', 'Aura of Frozen Fire',
+  'Aura of the First and Last', 'Aura of Pearl and Ash', 'Aura of the Unwritten End', 'Aura of Hollow Glory',
+  'Aura of the Zero Hour', 'Aura of Ivory Despair', 'Aura of the Unbroken Storm', 'Aura of Silent Thunder',
+  'Aura of the Forgotten Tongue', 'Aura of Sapphire Ruin', 'Aura of the Unchained Fate', 'Aura of Dust and Glory',
+  'Aura of the Empty Throne', 'Aura of Ruby Vengeance', 'Aura of the Unseen Crown', 'Aura of Twilight Reign',
+  'Aura of the Last Witness', 'Aura of Onyx Mercy', 'Aura of the Unspoken Bond', 'Aura of Eternal Frost',
+  'Aura of the Dormant God', 'Aura of Topaz Judgment', 'Aura of the Unwritten Word', 'Aura of Crimson Dawn',
+  'Aura of the Final Silence', 'Aura of Opal Madness', 'Aura of the Unbound Chain', 'Aura of Ghost Flame',
+  'Aura of the Lost Horizon', 'Aura of Amethyst Sorrow', 'Aura of the Unchosen One', 'Aura of Silver Ruin',
+  'Aura of the Broken Oath', 'Aura of Diamond Dust', 'Aura of the Unseen Gate', 'Aura of Blood Moon',
+  'Aura of the Sleeping Dragon', 'Aura of Jade Storm', 'Aura of the Unspoken Vow', 'Aura of Iron and Silk',
+  'Aura of the Last Guardian', 'Aura of Emerald Fire', 'Aura of the Unwritten Tale', 'Aura of Hollow Echo',
+  'Aura of the Forgotten Crown', 'Aura of Pearl Dominion', 'Aura of the Unbound Oath', 'Aura of Ash and Gold',
+  'Aura of the Hollow King', 'Aura of Sapphire Tears', 'Aura of the Unseen Blade', 'Aura of Midnight Bloom',
+  'Aura of the Dying Empire', 'Aura of Ruby Silence', 'Aura of the Unchained Soul', 'Aura of Frost and Flame',
+  'Aura of the Seventh Heaven', 'Aura of Onyx Storm', 'Aura of the Unspoken Truth', 'Aura of Starlight Fall',
+  'Aura of the Blind King', 'Aura of Topaz Ruin', 'Aura of the Unwritten Law', 'Aura of Phantom and Bone',
+  'Aura of the Last Breath', 'Aura of Opal Dominion', 'Aura of the Unbound Will', 'Aura of Crimson Tide',
+  'Aura of the Empty Crown', 'Aura of Amethyst Flame', 'Aura of the Unseen Hand', 'Aura of Silver and Shadow',
+  'Aura of the Shattered Oath', 'Aura of Diamond Storm', 'Aura of the Unchosen Path', 'Aura of Eternal Dusk',
+  'Aura of the Dormant Storm', 'Aura of Jade Dominion', 'Aura of the Unspoken Name', 'Aura of Iron Dawn',
+  'Aura of the Lost Covenant', 'Aura of Emerald Ruin', 'Aura of the Unwritten End', 'Aura of Ghost and Ash',
+  'Aura of the Final Dawn', 'Aura of Pearl Storm', 'Aura of the Unbound Chain', 'Aura of Violet Ruin',
+  'Aura of the Hollow Seraph', 'Aura of Sapphire Dominion', 'Aura of the Unseen Crown', 'Aura of Burning Dusk',
+  'Aura of the Dying Star', 'Aura of Ruby Flame', 'Aura of the Unchained Fate', 'Aura of Crystal and Blood',
+  'Aura of the Ninth Gate', 'Aura of Onyx Dominion', 'Aura of the Unspoken Bond', 'Aura of Frozen Dawn',
+  'Aura of the Sleeping Empire', 'Aura of Topaz Storm', 'Aura of the Unwritten Word', 'Aura of Pale Fire',
+  'Aura of the Forgotten Oath', 'Aura of Opal Ruin', 'Aura of the Unbound Oath', 'Aura of Amber and Iron',
+  'Aura of the Last Covenant', 'Aura of Amethyst Dominion', 'Aura of the Unseen Gate', 'Aura of Twilight Flame',
+  'Aura of the Broken Crown', 'Aura of Diamond Dominion', 'Aura of the Unchosen One', 'Aura of Shadow and Gold',
+  'Aura of the Empty Throne', 'Aura of Jade Flame', 'Aura of the Unspoken Vow', 'Aura of Crimson Storm',
+  'Aura of the Shattered Empire', 'Aura of Emerald Dominion', 'Aura of the Unwritten Tale', 'Aura of Bone and Silk',
+  'Aura of the Dormant Crown', 'Aura of Pearl Flame', 'Aura of the Unbound Will', 'Aura of Sapphire Ruin',
+  'Aura of the Lost Throne', 'Aura of Ruby Dominion', 'Aura of the Unseen Blade', 'Aura of Midnight and Ash',
+  'Aura of the Final Throne', 'Aura of Onyx Flame', 'Aura of the Unspoken Truth', 'Aura of Eternal Storm',
+  'Aura of the Blind Seraph', 'Aura of Topaz Dominion', 'Aura of the Unwritten Law', 'Aura of Ghost Flame',
+  'Aura of the Dying Covenant', 'Aura of Opal Flame', 'Aura of the Unchained Soul', 'Aura of Violet Dominion',
+  'Aura of the Hollow Dawn', 'Aura of Amethyst Ruin', 'Aura of the Unseen Hand', 'Aura of Silver Storm',
+  'Aura of the Seventh Throne', 'Aura of Diamond Flame', 'Aura of the Unchosen Path', 'Aura of Iron and Pearl',
+  'Aura of the Forgotten Throne', 'Aura of Jade Ruin', 'Aura of the Unspoken Name', 'Aura of Crimson Dominion',
+  'Aura of the Last Throne', 'Aura of Emerald Flame', 'Aura of the Unbound Oath', 'Aura of Starlight Ruin',
+  'Aura of the Empty Covenant', 'Aura of Pearl Ruin', 'Aura of the Unwritten End', 'Aura of Onyx and Gold',
+  'Aura of the Shattered Throne', 'Aura of Sapphire Flame', 'Aura of the Unseen Crown', 'Aura of Frost Dominion',
+  'Aura of the Sleeping Throne', 'Aura of Ruby Ruin', 'Aura of the Unspoken Bond', 'Aura of Burning Dominion',
+  'Aura of the Dormant Covenant', 'Aura of Onyx Ruin', 'Aura of the Unbound Chain', 'Aura of Jade Dominion',
+  'Aura of the Lost Dawn', 'Aura of Topaz Flame', 'Aura of the Unwritten Word', 'Aura of Phantom Dominion',
+  'Aura of the Final Covenant', 'Aura of Opal Dominion', 'Aura of the Unchained Fate', 'Aura of Amethyst Storm',
+  'Aura of the Hollow Covenant', 'Aura of Diamond Ruin', 'Aura of the Unseen Gate', 'Aura of Eternal Dominion',
+  'Aura of the Dying Throne', 'Aura of Jade Flame', 'Aura of the Unspoken Vow', 'Aura of Ivory Dominion',
+  'Aura of the Ninth Throne', 'Aura of Emerald Ruin', 'Aura of the Unchosen One', 'Aura of Crimson Flame',
+  'Aura of the Blind Throne', 'Aura of Pearl Flame', 'Aura of the Unwritten Law', 'Aura of Sapphire Storm',
+  'Aura of the Forgotten Covenant', 'Aura of Ruby Flame', 'Aura of the Unbound Will', 'Aura of Midnight Dominion',
+  'Aura of the Broken Covenant', 'Aura of Onyx Storm', 'Aura of the Unseen Blade', 'Aura of Twilight Dominion',
+  'Aura of the Last Dawn', 'Aura of Topaz Ruin', 'Aura of the Unspoken Truth', 'Aura of Silver Flame',
+  'Aura of the Empty Dawn', 'Aura of Opal Storm', 'Aura of the Unwritten Tale', 'Aura of Amber Dominion',
+  'Aura of the Shattered Covenant', 'Aura of Amethyst Flame', 'Aura of the Unchained Soul', 'Aura of Pale Dominion',
+  'Aura of the Dormant Dawn', 'Aura of Diamond Storm', 'Aura of the Unseen Hand', 'Aura of Ghost Dominion',
+  'Aura of the Lost Covenant', 'Aura of Jade Storm', 'Aura of the Unspoken Name', 'Aura of Iron Dominion',
+  'Aura of the Final Dawn', 'Aura of Emerald Storm', 'Aura of the Unbound Oath', 'Aura of Violet Flame',
+  'Aura of the Hollow Throne', 'Aura of Pearl Storm', 'Aura of the Unwritten End', 'Aura of Crystal Dominion',
+  'Aura of the Dying Dawn', 'Aura of Sapphire Ruin', 'Aura of the Unchosen Path', 'Aura of Bone Dominion',
+  'Aura of the Seventh Covenant', 'Aura of Ruby Storm', 'Aura of the Unseen Crown', 'Aura of Ash Dominion',
+  'Aura of the Forgotten Dawn', 'Aura of Onyx Flame', 'Aura of the Unspoken Bond', 'Aura of Gold Dominion',
+  'Aura of the Last Covenant', 'Aura of Topaz Dominion', 'Aura of the Unwritten Word', 'Aura of Blood Dominion',
+  'Aura of the Empty Throne', 'Aura of Opal Ruin', 'Aura of the Unbound Chain', 'Aura of Shadow Dominion',
+  'Aura of the Shattered Dawn', 'Aura of Amethyst Ruin', 'Aura of the Unseen Gate', 'Aura of Flame Dominion',
+  'Aura of the Sleeping Covenant', 'Aura of Diamond Flame', 'Aura of the Unspoken Truth', 'Aura of Storm Dominion',
+  'Aura of the Dormant Throne', 'Aura of Jade Ruin', 'Aura of the Unwritten Law', 'Aura of Void Dominion',
+  'Aura of the Lost Throne', 'Aura of Emerald Flame', 'Aura of the Unchained Fate', 'Aura of Cosmic Dominion',
+  'Aura of the Final Throne', 'Aura of Pearl Ruin', 'Aura of the Unseen Blade', 'Aura of Primordial Dominion',
+  'Aura of the Hollow Dawn', 'Aura of Sapphire Storm', 'Aura of the Unchosen One', 'Aura of Infinite Dominion',
+  'Aura of the Dying Covenant', 'Aura of Ruby Ruin', 'Aura of the Unspoken Vow', 'Aura of Absolute Dominion',
+  'Aura of the Ninth Covenant', 'Aura of Onyx Dominion', 'Aura of the Unbound Will', 'Aura of Transcendent Aura',
+  'Aura of the Blind Covenant', 'Aura of Topaz Ruin', 'Aura of the Unwritten End', 'Aura of Divine Aura',
+  'Aura of the Forgotten Throne', 'Aura of Opal Flame', 'Aura of the Unseen Hand', 'Aura of Mythic Aura',
+  'Aura of the Broken Dawn', 'Aura of Amethyst Dominion', 'Aura of the Unspoken Name', 'Aura of Legendary Aura',
+  'Aura of the Last Throne', 'Aura of Diamond Ruin', 'Aura of the Unbound Oath', 'Aura of Omega Aura',
+  'Aura of the Empty Covenant', 'Aura of Jade Flame', 'Aura of the Unwritten Tale', 'Aura of Alpha Aura',
+  'Aura of the Shattered Throne', 'Aura of Emerald Ruin', 'Aura of the Unchained Soul', 'Aura of Zero Aura',
+  'Aura of the Dormant Dawn', 'Aura of Pearl Storm', 'Aura of the Unseen Crown', 'Aura of Infinity Aura',
+];
+
 // Rarity: denominator from 2 (1/2) to 10^10 (1/10 billion). Log-spaced over 500 items.
-function buildItems() {
+function buildBaseItems() {
   const items = [];
   const n = 500;
   const logLow = Math.log10(2);
@@ -127,6 +225,40 @@ function buildItems() {
       weight: 1 / rarity,
     });
   }
+  return items;
+}
+
+// 300 extremely rare auras: rarities from 100M (1e8) to 100B (1e11), log-spaced
+function buildAuraItems(startId) {
+  const items = [];
+  const n = 300;
+  const logLow = Math.log10(100e6);   // 100 million
+  const logHigh = Math.log10(100e9);  // 100 billion
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const logR = logLow + t * (logHigh - logLow);
+    const rarity = Math.round(Math.pow(10, logR));
+    const text = AURA_TEXTS[i % AURA_TEXTS.length];
+    const font = FONTS[i % FONTS.length];
+    const color = COLORS[i % COLORS.length];
+    const style = STYLES[i % STYLES.length];
+    items.push({
+      id: startId + i,
+      text,
+      font,
+      color,
+      ...style,
+      rarity,
+      weight: 1 / rarity,
+    });
+  }
+  return items;
+}
+
+function buildItems() {
+  const base = buildBaseItems();
+  const auras = buildAuraItems(base.length);
+  const items = [...base, ...auras];
   const totalWeight = items.reduce((s, x) => s + x.weight, 0);
   items.forEach((x) => {
     x.probability = x.weight / totalWeight;

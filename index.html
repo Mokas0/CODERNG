@@ -26,8 +26,18 @@
           <button type="button" id="roll-btn" class="roll-btn">Roll</button>
         </div>
         <section class="history">
-          <h2>Past rolls — salvage for coins</h2>
-          <ul id="history-list" class="history-list"></ul>
+          <div class="tabs">
+            <button type="button" class="tab-btn active" data-tab="past" aria-selected="true">Past rolls</button>
+            <button type="button" class="tab-btn" data-tab="locked" aria-selected="false">Locked storage</button>
+          </div>
+          <div id="tab-past" class="tab-panel" role="tabpanel">
+            <p class="tab-desc">Salvage for coins or lock to move to storage.</p>
+            <ul id="history-list" class="history-list"></ul>
+          </div>
+          <div id="tab-locked" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
+            <p class="tab-desc">Locked auras are safe here. No salvage. Unlock to send back to Past rolls.</p>
+            <ul id="locked-list" class="history-list history-list--storage"></ul>
+          </div>
         </section>
       </main>
     </div>

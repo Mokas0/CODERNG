@@ -160,6 +160,71 @@ body {
   color: var(--dim);
 }
 
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.tab-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+  border-color: var(--dim);
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  background: rgba(201, 162, 39, 0.12);
+  border-color: var(--accent);
+}
+
+.tab-panel {
+  display: block;
+}
+
+.tab-panel.hidden {
+  display: none;
+}
+
+.tab-desc {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--dim);
+}
+
+.history-list--storage .history-item {
+  border-color: var(--accent);
+  background: rgba(201, 162, 39, 0.06);
+}
+
+.unlock-btn {
+  flex-shrink: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.unlock-btn:hover {
+  filter: brightness(1.1);
+}
+
 .history-list {
   list-style: none;
   margin: 0;
@@ -178,6 +243,23 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.9rem;
+}
+
+.lock-btn {
+  flex-shrink: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.lock-btn:hover {
+  background: rgba(201, 162, 39, 0.15);
 }
 
 .history-text {
@@ -209,4 +291,10 @@ body {
 
 .salvage-btn:hover {
   filter: brightness(1.15);
+}
+
+.salvage-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
 }
