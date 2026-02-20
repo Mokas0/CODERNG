@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RNG Roller — Roll the 500</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel&family=Comfortaa&family=Cormorant+Garamond:ital,wght@0,400;1,700&family=Creepster&family=DM+Serif+Display&family=Fredoka:wght@400;600&family=Great+Vibes&family=Inter:wght@400;700;900&family=JetBrains+Mono&family=Lobster&family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poiret+One&family=Press+Start+2P&family=Quicksand:wght@400;700&family=Raleway:wght@400;700;900&family=Righteous&family=Rubik:wght@400;700;900&family=Space+Mono&family=Syne:wght@400;800&family=Unbounded:wght@400;700&display=swap" rel="stylesheet" />
+    </head>
+  <body>
+    <div id="app">
+      <header class="header">
+        <h1>RNG Roller</h1>
+        <div class="meta">
+          <span class="coins-wrap">🪙 <span id="coins">0</span> coins</span>
+          <span class="luck-wrap">Luck: <span id="luck-value">1× (normal)</span></span>
+          <button type="button" id="luck-btn" class="luck-btn">Boost luck (50 coins)</button>
+        </div>
+      </header>
+      <main class="main">
+        <div class="result-wrap">
+          <p id="result-label" class="rarity-label">—</p>
+          <p id="result" class="result-text">Roll to start</p>
+          <button type="button" id="roll-btn" class="roll-btn">Roll</button>
+        </div>
+        <section class="history">
+          <h2>Past rolls — salvage for coins</h2>
+          <ul id="history-list" class="history-list"></ul>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
