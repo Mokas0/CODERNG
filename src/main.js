@@ -724,21 +724,47 @@ async function casinoResolveItemflip(id) {
   renderCasino();
 }
 
+function renderAuraPreview(aura) {
+  if (!aura || aura.text == null) return '<span class="casino-aura-preview casino-aura-preview--unknown">?</span>';
+  const font = (aura.font || '').replace(/'/g, "\\'");
+  const style = `font-family:'${font}',sans-serif;color:${aura.color || '#fff'};font-weight:${aura.fontWeight || '400'};font-style:${aura.fontStyle || 'normal'};text-shadow:${aura.textShadow || 'none'}`;
+  const title = `${String(aura.text).replace(/"/g, '&quot;')} (${formatRarity(aura.rarity)})`;
+  return `<span class="casino-aura-preview" style="${style}" title="${title}">${escapeHtml(aura.text)}</span> <span class="casino-aura-rarity">${formatRarity(aura.rarity)}</span>`;
+}
+
 async function loadCasinoItemflipList() {
   const list = document.getElementById('casino-itemflip-list');
   if (!list || !supabase) return;
   const { data: openList } = await supabase.from('itemflip_challenges').select('id, creator_username, creator_aura_id, status, acceptor_username, acceptor_aura_id').in('status', ['open', 'matched']).order('created_at', { ascending: false }).limit(30);
-  const myAuras = casinoAuraVault.map((a) => a.id);
+  const auraIds = new Set();
+  (openList || []).forEach((c) => {
+    if (c.creator_aura_id) auraIds.add(c.creator_aura_id);
+    if (c.acceptor_aura_id) auraIds.add(c.acceptor_aura_id);
+  });
+  const auraMap = {};
+  if (auraIds.size > 0) {
+    const { data: auras } = await supabase.from('casino_aura_inventory').select('id, item_json').in('id', [...auraIds]);
+    (auras || []).forEach((r) => {
+      let json = r.item_json;
+      if (typeof json === 'string') { try { json = JSON.parse(json); } catch { json = {}; } }
+      auraMap[r.id] = json || {};
+    });
+  }
   const rows = (openList || []).map((c) => {
     const creatorMe = c.creator_username === getCasinoUsername();
+    const creatorAura = auraMap[c.creator_aura_id];
+    const acceptorAura = auraMap[c.acceptor_aura_id];
     if (c.status === 'open' && !creatorMe) {
       const options = casinoAuraVault.map((a) => `<option value="${a.id}">${escapeHtml(a.text)} (${formatRarity(a.rarity)})</option>`).join('');
-      return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(c.creator_username)} — 1 aura</span><select class="casino-select casino-select--inline" data-challenge-id="${c.id}">${options ? `<option value="">Your aura</option>${options}` : '<option value="">No auras</option>'}</select><button type="button" class="hub-btn casino-itemflip-accept-btn" data-challenge-id="${c.id}">Accept</button></div>`;
+      const opponentAuraHtml = creatorAura ? `${escapeHtml(c.creator_username)} stakes ${renderAuraPreview(creatorAura)}` : `${escapeHtml(c.creator_username)} — 1 aura`;
+      return `<div class="casino-row"><span class="casino-row-desc">${opponentAuraHtml}</span><select class="casino-select casino-select--inline" data-challenge-id="${c.id}">${options ? `<option value="">Your aura</option>${options}` : '<option value="">No auras</option>'}</select><button type="button" class="hub-btn casino-itemflip-accept-btn" data-challenge-id="${c.id}">Accept</button></div>`;
     }
     if (c.status === 'matched') {
       const me = getCasinoUsername();
       const canResolve = me && (c.creator_username === me || c.acceptor_username === me);
-      return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(c.creator_username)} vs ${escapeHtml(c.acceptor_username || '?')}</span>${canResolve ? `<button type="button" class="hub-btn casino-itemflip-resolve-btn" data-id="${c.id}">Resolve</button>` : '<span class="casino-wait">Waiting</span>'}</div>`;
+      const creatorPart = creatorAura ? `${escapeHtml(c.creator_username)} ${renderAuraPreview(creatorAura)}` : escapeHtml(c.creator_username);
+      const acceptorPart = acceptorAura ? `${escapeHtml(c.acceptor_username || '?')} ${renderAuraPreview(acceptorAura)}` : (c.acceptor_username || '?');
+      return `<div class="casino-row casino-row--itemflip"><span class="casino-row-desc">${creatorPart} <span class="casino-vs">vs</span> ${acceptorPart}</span>${canResolve ? `<button type="button" class="hub-btn casino-itemflip-resolve-btn" data-id="${c.id}">Resolve</button>` : '<span class="casino-wait">Waiting</span>'}</div>`;
     }
     return '';
   }).filter(Boolean);
