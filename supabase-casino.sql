@@ -47,6 +47,18 @@ alter table public.casino_aura_inventory enable row level security;
 alter table public.coinflip_challenges enable row level security;
 alter table public.itemflip_challenges enable row level security;
 
+drop policy if exists "Allow read casino_wallets" on public.casino_wallets;
+drop policy if exists "Allow read casino_aura_inventory" on public.casino_aura_inventory;
+drop policy if exists "Allow insert casino_aura_inventory" on public.casino_aura_inventory;
+drop policy if exists "Allow update casino_aura_inventory" on public.casino_aura_inventory;
+drop policy if exists "Allow delete casino_aura_inventory" on public.casino_aura_inventory;
+drop policy if exists "Allow read coinflip_challenges" on public.coinflip_challenges;
+drop policy if exists "Allow insert coinflip_challenges" on public.coinflip_challenges;
+drop policy if exists "Allow update coinflip_challenges" on public.coinflip_challenges;
+drop policy if exists "Allow read itemflip_challenges" on public.itemflip_challenges;
+drop policy if exists "Allow insert itemflip_challenges" on public.itemflip_challenges;
+drop policy if exists "Allow update itemflip_challenges" on public.itemflip_challenges;
+
 create policy "Allow read casino_wallets" on public.casino_wallets for select using (true);
 create policy "Allow read casino_aura_inventory" on public.casino_aura_inventory for select using (true);
 create policy "Allow insert casino_aura_inventory" on public.casino_aura_inventory for insert with check (true);
@@ -264,6 +276,7 @@ as $$
 declare
   v_json jsonb;
   v_in_use boolean;
+  v_deleted int;
 begin
   if p_username is null or p_username = '' or p_aura_id is null then
     return query select false, null::jsonb, 'Invalid input'::text;
@@ -286,6 +299,11 @@ begin
     return;
   end if;
   delete from casino_aura_inventory where id = p_aura_id and username = p_username;
+  get diagnostics v_deleted = row_count;
+  if v_deleted <> 1 then
+    return query select false, null::jsonb, 'Withdraw failed'::text;
+    return;
+  end if;
   return query select true, v_json, ''::text;
 end;
 $$;

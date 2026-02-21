@@ -360,23 +360,42 @@ body {
   color: var(--text-muted);
 }
 
-.shop-buy-btn {
+.shop-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.shop-buy-btn,
+.shop-buy-max-btn {
   padding: 0.4rem 0.75rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--bg);
-  background: var(--accent);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: filter 0.2s;
 }
 
-.shop-buy-btn:hover:not(:disabled) {
+.shop-buy-btn {
+  color: var(--bg);
+  background: var(--accent);
+}
+
+.shop-buy-btn:hover:not(:disabled),
+.shop-buy-max-btn:hover:not(:disabled) {
   filter: brightness(1.1);
 }
 
-.shop-buy-btn:disabled {
+.shop-buy-max-btn {
+  color: var(--text);
+  background: var(--border);
+}
+
+.shop-buy-btn:disabled,
+.shop-buy-max-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

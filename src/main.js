@@ -220,6 +220,23 @@ function buyPotion(potionId, fromBenny = false) {
   if (fromBenny) renderBennyShop();
 }
 
+function buyPotionMax(potionId, fromBenny = false) {
+  const pool = fromBenny
+    ? POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) }))
+    : getCurrentShopOffers();
+  const potion = pool.find((p) => p.id === potionId);
+  if (!potion || potion.cost < 1) return;
+  const coins = getCoins();
+  const count = Math.floor(coins / potion.cost);
+  if (count < 1) return;
+  setCoins(coins - potion.cost * count);
+  setLuckMultiplier(getLuckMultiplier() + potion.luckBonus * count);
+  renderCoins();
+  renderLuck();
+  renderShop();
+  if (fromBenny) renderBennyShop();
+}
+
 function renderShop() {
   const list = document.getElementById('shop-list');
   if (!list) return;
@@ -228,20 +245,32 @@ function renderShop() {
   const offers = getCurrentShopOffers();
   const coins = getCoins();
   list.innerHTML = offers.map(
-    (p) =>
-      `<div class="shop-item">
+    (p) => {
+      const canBuy = coins >= p.cost;
+      const maxCount = Math.floor(coins / p.cost);
+      const canBuyMax = maxCount >= 1;
+      return `<div class="shop-item">
         <span class="shop-item-emoji">${p.emoji}</span>
         <div class="shop-item-info">
           <span class="shop-item-name">${p.name}</span>
           <span class="shop-item-effect">+${p.luckBonus}× luck for next roll</span>
         </div>
-        <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="false" ${coins < p.cost ? 'disabled' : ''}>
-          ${p.cost} coins
-        </button>
-      </div>`
+        <div class="shop-item-actions">
+          <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="false" ${!canBuy ? 'disabled' : ''}>
+            ${p.cost} coins
+          </button>
+          <button type="button" class="shop-buy-max-btn" data-potion="${p.id}" data-benny="false" ${!canBuyMax ? 'disabled' : ''} title="${canBuyMax ? `Buy ${maxCount}` : ''}">
+            Buy max${canBuyMax ? ` (${maxCount})` : ''}
+          </button>
+        </div>
+      </div>`;
+    }
   ).join('');
   list.querySelectorAll('.shop-buy-btn').forEach((btn) => {
     btn.addEventListener('click', () => buyPotion(btn.dataset.potion, false));
+  });
+  list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
+    btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, false));
   });
 }
 
@@ -301,20 +330,32 @@ function renderBennyShop() {
   const coins = getCoins();
   const bennyPrices = POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) }));
   list.innerHTML = bennyPrices.map(
-    (p) =>
-      `<div class="shop-item">
+    (p) => {
+      const canBuy = coins >= p.cost;
+      const maxCount = Math.floor(coins / p.cost);
+      const canBuyMax = maxCount >= 1;
+      return `<div class="shop-item">
         <span class="shop-item-emoji">${p.emoji}</span>
         <div class="shop-item-info">
           <span class="shop-item-name">${p.name}</span>
           <span class="shop-item-effect">+${p.luckBonus}× luck (Benny's price)</span>
         </div>
-        <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="true" ${coins < p.cost ? 'disabled' : ''}>
-          ${p.cost} coins
-        </button>
-      </div>`
+        <div class="shop-item-actions">
+          <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="true" ${!canBuy ? 'disabled' : ''}>
+            ${p.cost} coins
+          </button>
+          <button type="button" class="shop-buy-max-btn" data-potion="${p.id}" data-benny="true" ${!canBuyMax ? 'disabled' : ''} title="${canBuyMax ? `Buy ${maxCount}` : ''}">
+            Buy max${canBuyMax ? ` (${maxCount})` : ''}
+          </button>
+        </div>
+      </div>`;
+    }
   ).join('');
   list.querySelectorAll('.shop-buy-btn').forEach((btn) => {
     btn.addEventListener('click', () => buyPotion(btn.dataset.potion, true));
+  });
+  list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
+    btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, true));
   });
 }
 
@@ -607,15 +648,32 @@ async function casinoDepositAura(lockedIndex) {
 
 async function casinoWithdrawAura(auraId) {
   const username = getCasinoUsername();
-  if (!username || !supabase) return;
-  const { data, error } = await supabase.rpc('casino_withdraw_aura', { p_username: username, p_aura_id: auraId });
-  const result = Array.isArray(data) ? data[0] : data;
+  const id = typeof auraId === 'number' && Number.isInteger(auraId) ? auraId : parseInt(auraId, 10);
+  if (!username || !supabase || !Number.isInteger(id) || id < 1) {
+    showCasinoMessage('casino-itemflip-msg', 'Invalid aura.', true);
+    return;
+  }
+  const { data, error } = await supabase.rpc('casino_withdraw_aura', { p_username: username, p_aura_id: id });
+  const result = Array.isArray(data) && data.length > 0 ? data[0] : data;
   if (error || !result?.success) {
     showCasinoMessage('casino-itemflip-msg', result?.message || error?.message || 'Withdraw failed', true);
     return;
   }
+  let item = result.item_json;
+  if (item == null) {
+    showCasinoMessage('casino-itemflip-msg', 'Withdraw failed: no data returned.', true);
+    return;
+  }
+  if (typeof item === 'string') {
+    try {
+      item = JSON.parse(item);
+    } catch {
+      showCasinoMessage('casino-itemflip-msg', 'Withdraw failed: invalid data.', true);
+      return;
+    }
+  }
   const locked = getLockedStorage();
-  locked.push(result.item_json);
+  locked.push({ text: item.text, font: item.font, color: item.color, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textShadow: item.textShadow, rarity: item.rarity });
   setLockedStorage(locked);
   await loadCasinoAuraVault();
   renderLockedStorage();
@@ -726,7 +784,11 @@ function renderCasino() {
         html += locked.map((h, i) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${(h.font || '').replace(/'/g, "\\'")}';color:${h.color || '#fff'}">${escapeHtml(h.text)}</span><span class="history-rarity">${formatRarity(h.rarity)}</span><button type="button" class="hub-btn casino-deposit-aura-btn" data-locked-index="${i}">Deposit</button></div>`).join('');
       } else html += '<p class="casino-empty">No locked auras. Lock items from Past rolls first.</p>';
       vaultEl.innerHTML = html;
-      vaultEl.querySelectorAll('.casino-withdraw-aura-btn').forEach((btn) => btn.addEventListener('click', () => casinoWithdrawAura(Number(btn.dataset.auraId))));
+      vaultEl.querySelectorAll('.casino-withdraw-aura-btn').forEach((btn) => {
+        const rawId = btn.dataset.auraId;
+        const id = rawId !== undefined && rawId !== '' ? parseInt(rawId, 10) : NaN;
+        btn.addEventListener('click', () => casinoWithdrawAura(id));
+      });
       vaultEl.querySelectorAll('.casino-deposit-aura-btn').forEach((btn) => btn.addEventListener('click', () => casinoDepositAura(Number(btn.dataset.lockedIndex))));
     }
     const auraSelect = document.getElementById('casino-itemflip-aura');
