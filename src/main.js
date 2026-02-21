@@ -136,6 +136,9 @@ const POTIONS = [
   { id: 'potion4', name: 'Supreme Luck Elixir', cost: 300, luckBonus: 1.5, emoji: '✨' },
   { id: 'potion5', name: 'Mythic Fortune Brew', cost: 700, luckBonus: 2, emoji: '🌟' },
 ];
+// Very rare spawn in rotating shop only (not in Benny's list)
+const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: '3000× Luck Elixir', cost: 5000, luckBonus: 2999, emoji: '👑' };
+const LEGENDARY_POTION_SPAWN_CHANCE = 0.008;
 
 // ——— Rotating shop (resets every 5 min) ———
 function getShopRotationEnd() {
@@ -177,11 +180,17 @@ function getCurrentShopOffers() {
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
   const count = 3 + Math.floor(seededRandom(seed + 99) * 2);
-  return indices.slice(0, count).map((i) => {
+  const offers = indices.slice(0, count).map((i) => {
     const p = POTIONS[i];
     const discount = 0.85 + seededRandom(seed + i * 7) * 0.15;
     return { ...p, cost: Math.max(1, Math.floor(p.cost * discount)) };
   });
+  // Very rare chance to add the 3000× luck potion this rotation (seeded so same for whole rotation)
+  if (seededRandom(seed + 1337) < LEGENDARY_POTION_SPAWN_CHANCE) {
+    const discount = 0.9 + seededRandom(seed + 1338) * 0.1;
+    offers.push({ ...LEGENDARY_LUCK_POTION, cost: Math.max(1, Math.floor(LEGENDARY_LUCK_POTION.cost * discount)) });
+  }
+  return offers;
 }
 
 function updateShopCountdown() {
@@ -431,6 +440,304 @@ async function postHubTrade() {
   loadHubTrades();
 }
 
+// ——— Casino (coinflip for coins, itemflip for auras) ———
+let casinoCoinBalance = 0;
+let casinoAuraVault = [];
+
+function getCasinoUsername() {
+  return getHubUsername();
+}
+function setCasinoUsername(name) {
+  setHubUsername(name);
+}
+
+async function casinoFetchBalance() {
+  const username = getCasinoUsername();
+  if (!username || !supabase) return 0;
+  const { data } = await supabase.from('casino_wallets').select('coins_balance').eq('username', username).single();
+  casinoCoinBalance = data?.coins_balance ?? 0;
+  return casinoCoinBalance;
+}
+
+async function casinoDepositCoins() {
+  const username = getCasinoUsername();
+  const input = document.getElementById('casino-deposit-amount');
+  const amount = Math.floor(Number(input?.value || 0));
+  if (!username || !supabase || amount <= 0) return;
+  const localCoins = getCoins();
+  if (localCoins < amount) {
+    showCasinoMessage('casino-coinflip-msg', 'Not enough coins in game.', true);
+    return;
+  }
+  const { data, error } = await supabase.rpc('casino_deposit_coins', { p_username: username, p_amount: amount });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-coinflip-msg', result?.message || error?.message || 'Deposit failed', true);
+    return;
+  }
+  setCoins(localCoins - amount);
+  casinoCoinBalance = result.new_balance ?? casinoCoinBalance;
+  if (input) input.value = '';
+  renderCoins();
+  renderCasino();
+}
+
+async function casinoWithdrawCoins() {
+  const username = getCasinoUsername();
+  const input = document.getElementById('casino-deposit-amount');
+  const amount = Math.floor(Number(input?.value || 0));
+  if (!username || !supabase || amount <= 0) return;
+  const { data, error } = await supabase.rpc('casino_withdraw_coins', { p_username: username, p_amount: amount });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-coinflip-msg', result?.message || error?.message || 'Withdraw failed', true);
+    return;
+  }
+  setCoins(getCoins() + amount);
+  casinoCoinBalance = result.new_balance ?? 0;
+  if (input) input.value = '';
+  renderCoins();
+  renderCasino();
+}
+
+function showCasinoMessage(id, text, isError = false) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = text || '';
+    el.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+  }
+}
+
+async function casinoCreateCoinflip() {
+  const username = getCasinoUsername();
+  const amountEl = document.getElementById('casino-coinflip-amount');
+  const sideEl = document.getElementById('casino-coinflip-side');
+  const amount = Math.floor(Number(amountEl?.value || 0));
+  const side = (sideEl?.value || 'heads').toLowerCase();
+  if (!username || !supabase || amount <= 0) {
+    showCasinoMessage('casino-coinflip-msg', 'Set name and amount.', true);
+    return;
+  }
+  if (casinoCoinBalance < amount) {
+    showCasinoMessage('casino-coinflip-msg', 'Not enough coins in casino balance. Deposit first.', true);
+    return;
+  }
+  const { data, error } = await supabase.rpc('casino_create_coinflip', { p_username: username, p_side: side, p_amount: amount });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-coinflip-msg', result?.message || error?.message || 'Create failed', true);
+    return;
+  }
+  showCasinoMessage('casino-coinflip-msg', `Challenge #${result.challenge_id} created. Waiting for opponent.`);
+  if (amountEl) amountEl.value = '';
+  renderCasino();
+}
+
+async function casinoAcceptCoinflip(id) {
+  const username = getCasinoUsername();
+  if (!username || !supabase) return;
+  const { data, error } = await supabase.rpc('casino_accept_coinflip', { p_challenge_id: id, p_username: username });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-coinflip-msg', result?.message || error?.message || 'Accept failed', true);
+    return;
+  }
+  showCasinoMessage('casino-coinflip-msg', 'Challenge accepted. Either player can resolve.');
+  renderCasino();
+}
+
+async function casinoResolveCoinflip(id) {
+  if (!supabase) return;
+  const { data, error } = await supabase.rpc('casino_resolve_coinflip', { p_challenge_id: id });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-coinflip-msg', result?.message || error?.message || 'Resolve failed', true);
+    return;
+  }
+  showCasinoMessage('casino-coinflip-msg', `Result: ${result.result_side}. Winner: ${result.winner_username}`);
+  renderCasino();
+}
+
+async function loadCasinoCoinflipList() {
+  const list = document.getElementById('casino-coinflip-list');
+  if (!list || !supabase) return;
+  const { data: openList } = await supabase.from('coinflip_challenges').select('id, creator_username, creator_side, amount, status, acceptor_username, result').in('status', ['open', 'matched']).order('created_at', { ascending: false }).limit(30);
+  const rows = (openList || []).map((c) => {
+    if (c.status === 'open') {
+      const canAfford = casinoCoinBalance >= c.amount;
+      return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(c.creator_username)} — ${c.amount} coins on ${c.creator_side}</span><button type="button" class="hub-btn casino-accept-btn" data-id="${c.id}" data-amount="${c.amount}" ${!canAfford ? 'disabled title="Not enough casino balance"' : ''}>Accept (stake ${c.amount})</button></div>`;
+    }
+    const me = getCasinoUsername();
+    const canResolve = me && (c.creator_username === me || c.acceptor_username === me);
+    return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(c.creator_username)} vs ${escapeHtml(c.acceptor_username || '?')} — ${c.amount} coins</span>${canResolve ? `<button type="button" class="hub-btn casino-resolve-btn" data-id="${c.id}">Resolve</button>` : '<span class="casino-wait">Waiting for resolve</span>'}</div>`;
+  });
+  list.innerHTML = rows.length ? rows.join('') : '<p class="casino-empty">No open coinflip challenges.</p>';
+  list.querySelectorAll('.casino-accept-btn').forEach((btn) => btn.addEventListener('click', () => casinoAcceptCoinflip(Number(btn.dataset.id))));
+  list.querySelectorAll('.casino-resolve-btn').forEach((btn) => btn.addEventListener('click', () => casinoResolveCoinflip(Number(btn.dataset.id))));
+}
+
+async function loadCasinoAuraVault() {
+  const username = getCasinoUsername();
+  if (!username || !supabase) {
+    casinoAuraVault = [];
+    return;
+  }
+  const { data } = await supabase.from('casino_aura_inventory').select('id, item_json').eq('username', username).order('id', { ascending: false });
+  casinoAuraVault = (data || []).map((r) => ({ id: r.id, ...r.item_json }));
+}
+
+async function casinoDepositAura(lockedIndex) {
+  const username = getCasinoUsername();
+  const locked = getLockedStorage();
+  if (lockedIndex < 0 || lockedIndex >= locked.length || !username || !supabase) return;
+  const item = locked[lockedIndex];
+  const itemJson = { text: item.text, font: item.font, color: item.color, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textShadow: item.textShadow, rarity: item.rarity };
+  const { data, error } = await supabase.rpc('casino_deposit_aura', { p_username: username, p_item_json: itemJson });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-itemflip-msg', result?.message || error?.message || 'Deposit failed', true);
+    return;
+  }
+  locked.splice(lockedIndex, 1);
+  setLockedStorage(locked);
+  renderLockedStorage();
+  await loadCasinoAuraVault();
+  renderCasino();
+}
+
+async function casinoWithdrawAura(auraId) {
+  const username = getCasinoUsername();
+  if (!username || !supabase) return;
+  const { data, error } = await supabase.rpc('casino_withdraw_aura', { p_username: username, p_aura_id: auraId });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-itemflip-msg', result?.message || error?.message || 'Withdraw failed', true);
+    return;
+  }
+  const locked = getLockedStorage();
+  locked.push(result.item_json);
+  setLockedStorage(locked);
+  await loadCasinoAuraVault();
+  renderLockedStorage();
+  renderCasino();
+}
+
+async function casinoCreateItemflip() {
+  const username = getCasinoUsername();
+  const select = document.getElementById('casino-itemflip-aura');
+  const auraId = select?.value ? Number(select.value) : 0;
+  if (!username || !supabase || !auraId) {
+    showCasinoMessage('casino-itemflip-msg', 'Select an aura from vault.', true);
+    return;
+  }
+  const { data, error } = await supabase.rpc('casino_create_itemflip', { p_username: username, p_aura_id: auraId });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-itemflip-msg', result?.message || error?.message || 'Create failed', true);
+    return;
+  }
+  showCasinoMessage('casino-itemflip-msg', `Itemflip #${result.challenge_id} created.`);
+  if (select) select.value = '';
+  renderCasino();
+}
+
+async function casinoAcceptItemflip(challengeId, auraId) {
+  const username = getCasinoUsername();
+  if (!username || !supabase) return;
+  const { data, error } = await supabase.rpc('casino_accept_itemflip', { p_challenge_id: challengeId, p_username: username, p_aura_id: auraId });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-itemflip-msg', result?.message || error?.message || 'Accept failed', true);
+    return;
+  }
+  showCasinoMessage('casino-itemflip-msg', 'Accepted. Either player can resolve.');
+  renderCasino();
+}
+
+async function casinoResolveItemflip(id) {
+  if (!supabase) return;
+  const { data, error } = await supabase.rpc('casino_resolve_itemflip', { p_challenge_id: id });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showCasinoMessage('casino-itemflip-msg', result?.message || error?.message || 'Resolve failed', true);
+    return;
+  }
+  showCasinoMessage('casino-itemflip-msg', `Winner: ${result.result_winner}`);
+  renderCasino();
+}
+
+async function loadCasinoItemflipList() {
+  const list = document.getElementById('casino-itemflip-list');
+  if (!list || !supabase) return;
+  const { data: openList } = await supabase.from('itemflip_challenges').select('id, creator_username, creator_aura_id, status, acceptor_username, acceptor_aura_id').in('status', ['open', 'matched']).order('created_at', { ascending: false }).limit(30);
+  const myAuras = casinoAuraVault.map((a) => a.id);
+  const rows = (openList || []).map((c) => {
+    const creatorMe = c.creator_username === getCasinoUsername();
+    if (c.status === 'open' && !creatorMe) {
+      const options = casinoAuraVault.map((a) => `<option value="${a.id}">${escapeHtml(a.text)} (${formatRarity(a.rarity)})</option>`).join('');
+      return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(c.creator_username)} — 1 aura</span><select class="casino-select casino-select--inline" data-challenge-id="${c.id}">${options ? `<option value="">Your aura</option>${options}` : '<option value="">No auras</option>'}</select><button type="button" class="hub-btn casino-itemflip-accept-btn" data-challenge-id="${c.id}">Accept</button></div>`;
+    }
+    if (c.status === 'matched') {
+      const me = getCasinoUsername();
+      const canResolve = me && (c.creator_username === me || c.acceptor_username === me);
+      return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(c.creator_username)} vs ${escapeHtml(c.acceptor_username || '?')}</span>${canResolve ? `<button type="button" class="hub-btn casino-itemflip-resolve-btn" data-id="${c.id}">Resolve</button>` : '<span class="casino-wait">Waiting</span>'}</div>`;
+    }
+    return '';
+  }).filter(Boolean);
+  list.innerHTML = rows.length ? rows.join('') : '<p class="casino-empty">No open itemflip challenges.</p>';
+  list.querySelectorAll('.casino-itemflip-accept-btn').forEach((btn) => {
+    const cid = Number(btn.dataset.challengeId);
+    const row = btn.closest('.casino-row');
+    const sel = row?.querySelector('.casino-select');
+    btn.addEventListener('click', () => { const aid = sel?.value ? Number(sel.value) : 0; if (aid) casinoAcceptItemflip(cid, aid); });
+  });
+  list.querySelectorAll('.casino-itemflip-resolve-btn').forEach((btn) => btn.addEventListener('click', () => casinoResolveItemflip(Number(btn.dataset.id))));
+}
+
+function renderCasino() {
+  const status = document.getElementById('casino-status');
+  const usernameInput = document.getElementById('casino-username');
+  if (usernameInput) usernameInput.value = getCasinoUsername();
+  if (status) status.textContent = isHubAvailable() ? 'Use the same display name as Hub. Deposit coins or auras to play.' : 'Casino is offline. Configure Supabase to play.';
+  const coinsEl = document.getElementById('casino-coins');
+  if (coinsEl) coinsEl.textContent = casinoCoinBalance.toLocaleString();
+  if (!supabase) return;
+  (async () => {
+    await casinoFetchBalance();
+    if (coinsEl) coinsEl.textContent = casinoCoinBalance.toLocaleString();
+    const amountInput = document.getElementById('casino-coinflip-amount');
+    const createBtn = document.getElementById('casino-coinflip-create');
+    if (createBtn && amountInput) {
+      const amount = Math.floor(Number(amountInput.value || 0));
+      createBtn.disabled = !getCasinoUsername() || amount <= 0 || casinoCoinBalance < amount;
+      createBtn.title = amount > 0 && casinoCoinBalance < amount ? 'Deposit more coins to create' : '';
+    }
+    await loadCasinoAuraVault();
+    await loadCasinoCoinflipList();
+    const vaultEl = document.getElementById('casino-aura-vault');
+    if (vaultEl) {
+      const locked = getLockedStorage();
+      let html = '<p class="casino-vault-label">In vault (for itemflip):</p>';
+      if (casinoAuraVault.length) {
+        html += casinoAuraVault.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color};font-weight:${a.fontWeight || '400'};font-style:${a.fontStyle || 'normal'};text-shadow:${a.textShadow || 'none'}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><button type="button" class="hub-btn casino-withdraw-aura-btn" data-aura-id="${a.id}">Withdraw</button></div>`).join('');
+      } else html += '<p class="casino-empty">No auras in vault. Deposit from Locked tab.</p>';
+      html += '<p class="casino-vault-label">Deposit from Locked (below):</p>';
+      if (locked.length) {
+        html += locked.map((h, i) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${(h.font || '').replace(/'/g, "\\'")}';color:${h.color || '#fff'}">${escapeHtml(h.text)}</span><span class="history-rarity">${formatRarity(h.rarity)}</span><button type="button" class="hub-btn casino-deposit-aura-btn" data-locked-index="${i}">Deposit</button></div>`).join('');
+      } else html += '<p class="casino-empty">No locked auras. Lock items from Past rolls first.</p>';
+      vaultEl.innerHTML = html;
+      vaultEl.querySelectorAll('.casino-withdraw-aura-btn').forEach((btn) => btn.addEventListener('click', () => casinoWithdrawAura(Number(btn.dataset.auraId))));
+      vaultEl.querySelectorAll('.casino-deposit-aura-btn').forEach((btn) => btn.addEventListener('click', () => casinoDepositAura(Number(btn.dataset.lockedIndex))));
+    }
+    const auraSelect = document.getElementById('casino-itemflip-aura');
+    if (auraSelect) {
+      const opts = casinoAuraVault.map((a) => `<option value="${a.id}">${escapeHtml(a.text)} (${formatRarity(a.rarity)})</option>`).join('');
+      auraSelect.innerHTML = opts ? `<option value="">Select aura</option>${opts}` : '<option value="">No auras in vault</option>';
+    }
+    await loadCasinoItemflipList();
+  })();
+}
+
 function escapeHtml(s) {
   const div = document.createElement('div');
   div.textContent = s;
@@ -556,7 +863,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'memory', 'hub'].forEach((id) => {
+  ['past', 'locked', 'shop', 'memory', 'hub', 'casino'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -566,6 +873,7 @@ function switchTab(tabName) {
   if (tabName === 'shop') renderShop();
   if (tabName === 'memory') renderMemoryMatch();
   if (tabName === 'hub') renderHub();
+  if (tabName === 'casino') renderCasino();
 }
 
 function roll() {
@@ -692,6 +1000,21 @@ function init() {
   document.getElementById('hub-chat-send')?.addEventListener('click', sendHubMessage);
   document.getElementById('hub-chat-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendHubMessage(); });
   document.getElementById('hub-trade-post')?.addEventListener('click', postHubTrade);
+
+  const casinoUsernameInput = document.getElementById('casino-username');
+  if (casinoUsernameInput) casinoUsernameInput.addEventListener('input', () => setCasinoUsername(casinoUsernameInput.value));
+  document.getElementById('casino-deposit-btn')?.addEventListener('click', casinoDepositCoins);
+  document.getElementById('casino-withdraw-btn')?.addEventListener('click', casinoWithdrawCoins);
+  document.getElementById('casino-coinflip-create')?.addEventListener('click', casinoCreateCoinflip);
+  document.getElementById('casino-coinflip-amount')?.addEventListener('input', () => {
+    const amountInput = document.getElementById('casino-coinflip-amount');
+    const createBtn = document.getElementById('casino-coinflip-create');
+    if (createBtn && amountInput) {
+      const amount = Math.floor(Number(amountInput.value || 0));
+      createBtn.disabled = !getCasinoUsername() || amount <= 0 || casinoCoinBalance < amount;
+    }
+  });
+  document.getElementById('casino-itemflip-create')?.addEventListener('click', casinoCreateItemflip);
 
   advanceShopRotationIfNeeded();
   renderCoins();

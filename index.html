@@ -32,6 +32,7 @@
             <button type="button" class="tab-btn" data-tab="shop" aria-selected="false">Shop</button>
             <button type="button" class="tab-btn" data-tab="memory" aria-selected="false">Memory match</button>
             <button type="button" class="tab-btn" data-tab="hub" aria-selected="false">Hub</button>
+            <button type="button" class="tab-btn" data-tab="casino" aria-selected="false">Casino</button>
           </div>
           <div id="tab-past" class="tab-panel" role="tabpanel">
             <p class="tab-desc">Salvage for coins or lock to move to storage.</p>
@@ -76,6 +77,54 @@
                   <input type="text" id="hub-trade-want" class="hub-input" placeholder="Wanting..." maxlength="200" />
                   <button type="button" id="hub-trade-post" class="hub-btn">Post trade</button>
                 </div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-casino" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
+            <p class="tab-desc">Coinflip for coins, itemflip for auras. Set a display name (same as Hub) and deposit to play.</p>
+            <div class="casino-setup">
+              <label for="casino-username">Display name</label>
+              <input type="text" id="casino-username" class="hub-input" placeholder="Your name" maxlength="24" />
+              <p id="casino-status" class="hub-status"></p>
+            </div>
+            <div class="casino-balance">
+              <span>Casino balance: <strong id="casino-coins">0</strong> coins</span>
+              <div class="casino-balance-actions">
+                <input type="number" id="casino-deposit-amount" class="casino-amount-input" placeholder="Amount" min="1" />
+                <button type="button" id="casino-deposit-btn" class="hub-btn">Deposit</button>
+                <button type="button" id="casino-withdraw-btn" class="hub-btn hub-btn--secondary">Withdraw</button>
+              </div>
+            </div>
+            <div class="casino-sections">
+              <div class="casino-section">
+                <h3 class="hub-heading">Coinflip (coins)</h3>
+                <div class="casino-create-row">
+                  <input type="number" id="casino-coinflip-amount" class="casino-amount-input" placeholder="Amount" min="1" />
+                  <select id="casino-coinflip-side" class="casino-select">
+                    <option value="heads">Heads</option>
+                    <option value="tails">Tails</option>
+                  </select>
+                  <button type="button" id="casino-coinflip-create" class="hub-btn">Create challenge</button>
+                </div>
+                <p id="casino-coinflip-msg" class="casino-msg"></p>
+                <div id="casino-coinflip-list" class="casino-list"></div>
+              </div>
+              <div class="casino-section">
+                <h3 class="hub-heading">Aura vault</h3>
+                <p class="tab-desc">Deposit auras from Locked storage to use in itemflip.</p>
+                <div id="casino-aura-vault" class="casino-aura-vault"></div>
+              </div>
+              <div class="casino-section">
+                <h3 class="hub-heading">Itemflip (auras)</h3>
+                <p class="tab-desc">Stake an aura from your vault. Winner takes both.</p>
+                <div id="casino-itemflip-list" class="casino-list"></div>
+                <div class="casino-create-row">
+                  <select id="casino-itemflip-aura" class="casino-select casino-select--wide">
+                    <option value="">Select aura from vault</option>
+                  </select>
+                  <button type="button" id="casino-itemflip-create" class="hub-btn">Create challenge</button>
+                </div>
+                <p id="casino-itemflip-msg" class="casino-msg"></p>
               </div>
             </div>
           </div>

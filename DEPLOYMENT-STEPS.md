@@ -29,6 +29,7 @@ Do these in order. Check off each step before moving on.
 7. Click the green **Run** button (or press Ctrl+Enter).
 8. At the bottom you should see: **Success. No rows returned.**  
    - If you see an error, copy it and fix the SQL or ask for help.
+9. **Casino (optional):** Open **`supabase-casino.sql`**, copy all, new query, paste, Run. Then in **Database → Replication**, add **coinflip_challenges** and **itemflip_challenges** to the realtime publication.
 
 ---
 
