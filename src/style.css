@@ -9,24 +9,33 @@
   --surface: #16161d;
   --border: #2a2a35;
   --text: #e8e6e3;
-  --dim: #888;
+  --text-muted: #a1a1aa;
+  --dim: #71717a;
   --accent: #c9a227;
   --accent-glow: rgba(201, 162, 39, 0.4);
   --roll: #4ade80;
   --roll-hover: #22c55e;
   --salvage: #f59e0b;
   --danger: #ef4444;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --line-tight: 1.35;
+  --line-normal: 1.5;
+  --line-relaxed: 1.6;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: 'Inter', system-ui, sans-serif;
-  background: var(--bg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: var(--line-normal);
   color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(201, 162, 39, 0.12), transparent),
-    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(74, 222, 128, 0.06), transparent);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(201, 162, 39, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(74, 222, 128, 0.04), transparent);
 }
 
 #app {
@@ -49,11 +58,11 @@ body {
 
 .header h1 {
   margin: 0;
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--accent);
-  text-shadow: 0 0 20px var(--accent-glow);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: var(--line-tight);
+  color: var(--text);
 }
 
 .meta {
@@ -64,13 +73,14 @@ body {
 }
 
 .coins-wrap {
-  font-weight: 700;
-  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
 }
 
 .luck-wrap {
-  color: var(--dim);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
 }
 
 #luck-value {
@@ -116,32 +126,33 @@ body {
 
 .rarity-label {
   margin: 0 0 0.5rem;
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--dim);
 }
 
 .result-text {
   margin: 0 0 1.5rem;
-  font-size: clamp(2rem, 8vw, 4rem);
-  line-height: 1.2;
+  font-size: clamp(1.75rem, 6vw, 3rem);
+  line-height: var(--line-tight);
   min-height: 1.2em;
+  font-weight: 600;
   transition: font-family 0.2s, color 0.2s;
 }
 
 .roll-btn {
-  padding: 0.9rem 2.5rem;
-  font-size: 1.1rem;
-  font-weight: 700;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
   color: var(--bg);
   background: var(--roll);
   border: none;
   border-radius: 10px;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
-  box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.25);
 }
 
 .roll-btn:hover {
@@ -167,10 +178,10 @@ body {
 }
 
 .tab-btn {
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--dim);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -198,9 +209,10 @@ body {
 }
 
 .tab-desc {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
-  color: var(--dim);
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: var(--line-normal);
+  color: var(--text-muted);
 }
 
 .history-list--storage .history-item {
@@ -238,11 +250,12 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.625rem 0.875rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.9375rem;
+  line-height: var(--line-normal);
 }
 
 .lock-btn {
@@ -272,9 +285,17 @@ body {
 }
 
 .history-rarity {
-  color: var(--dim);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
   white-space: nowrap;
+}
+
+.history-item--empty {
+  justify-content: center;
+}
+.history-item--empty .history-text {
+  font-style: italic;
+  color: var(--text-muted);
 }
 
 .salvage-btn {
@@ -297,4 +318,348 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
   filter: none;
+}
+
+/* Shop */
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.shop-item-emoji {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.shop-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.shop-item-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
+}
+
+.shop-item-effect {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.shop-buy-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.shop-buy-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.shop-buy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.shop-countdown {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* Benny popup (no warning — player must notice and click) */
+.benny-popup-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 999;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(201, 162, 39, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.benny-popup-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(201, 162, 39, 0.6);
+}
+
+.benny-popup-btn.hidden {
+  display: none;
+}
+
+.benny-panel .shop-list {
+  margin-bottom: 1rem;
+}
+
+.benny-panel .admin-btn {
+  width: 100%;
+}
+
+/* Memory match */
+.memory-status {
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  max-width: 280px;
+}
+
+.memory-card {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  color: var(--dim);
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.memory-card:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.memory-card.flipped {
+  border-color: var(--accent);
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--text);
+  cursor: default;
+}
+
+.memory-card:disabled {
+  cursor: default;
+}
+
+.memory-new-btn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--roll);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.memory-new-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* Hub (chat + trading) */
+.hub-setup {
+  margin-bottom: 1rem;
+}
+.hub-setup label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.hub-input {
+  width: 100%;
+  max-width: 240px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+.hub-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.hub-status {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  line-height: var(--line-normal);
+  color: var(--text-muted);
+}
+.hub-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.hub-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+}
+.hub-heading {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.hub-chat-list, .hub-trades-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  line-height: var(--line-normal);
+}
+.hub-msg, .hub-trade {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.hub-msg-user, .hub-trade-user {
+  color: var(--text);
+  font-weight: 600;
+}
+.hub-chat-form, .hub-trade-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.hub-chat-form .hub-input, .hub-trade-form .hub-input {
+  flex: 1;
+  min-width: 120px;
+  max-width: none;
+}
+.hub-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.hub-btn:hover {
+  filter: brightness(1.1);
+}
+.hub-error {
+  color: var(--danger);
+  font-size: 0.8125rem;
+  line-height: var(--line-normal);
+}
+
+/* Admin panel */
+.admin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.admin-overlay.hidden {
+  display: none;
+}
+
+.admin-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-width: 260px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.admin-title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.admin-desc {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.admin-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.admin-message {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  min-height: 1.2em;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.admin-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.admin-btn:hover {
+  filter: brightness(1.1);
+}
+
+.admin-btn--secondary {
+  background: var(--border);
+  color: var(--text);
 }

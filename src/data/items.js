@@ -201,6 +201,16 @@ const AURA_TEXTS = [
   'Aura of the Dormant Dawn', 'Aura of Pearl Storm', 'Aura of the Unseen Crown', 'Aura of Infinity Aura',
 ];
 
+// 30 ultra-rare auras beyond 100B → 999B, 1–3 words
+const ULTRA_AURA_TEXTS = [
+  'Void King', 'Eternal Star', 'God Shard', 'Last Breath', 'True Myth',
+  'Omega Pulse', 'Infinite Crown', 'Primordial One', 'Cosmic End', 'Divine Spark',
+  'First Light', 'Final Dawn', 'Zero Hour', 'Alpha Wave', 'Sacred Flame',
+  'Cursed Bloom', 'Phantom Heart', 'Shadow God', 'Blood Moon', 'Crystal Soul',
+  'Lost Heaven', 'Dead Star', 'Living Void', 'Silent God', 'Broken Infinity',
+  'Eternal Night', 'Last Divine', 'One Truth', 'World Seed', 'Reality Tear',
+];
+
 // Rarity: denominator from 2 (1/2) to 10^10 (1/10 billion). Log-spaced over 500 items.
 function buildBaseItems() {
   const items = [];
@@ -255,10 +265,38 @@ function buildAuraItems(startId) {
   return items;
 }
 
+// 30 auras beyond 100B: rarities from 100B to 999B, log-spaced
+function buildUltraAuraItems(startId) {
+  const items = [];
+  const n = 30;
+  const logLow = Math.log10(100e9);   // 100 billion
+  const logHigh = Math.log10(999e9);  // 999 billion
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const logR = logLow + t * (logHigh - logLow);
+    const rarity = Math.round(Math.pow(10, logR));
+    const text = ULTRA_AURA_TEXTS[i % ULTRA_AURA_TEXTS.length];
+    const font = FONTS[i % FONTS.length];
+    const color = COLORS[i % COLORS.length];
+    const style = STYLES[i % STYLES.length];
+    items.push({
+      id: startId + i,
+      text,
+      font,
+      color,
+      ...style,
+      rarity,
+      weight: 1 / rarity,
+    });
+  }
+  return items;
+}
+
 function buildItems() {
   const base = buildBaseItems();
   const auras = buildAuraItems(base.length);
-  const items = [...base, ...auras];
+  const ultraAuras = buildUltraAuraItems(base.length + auras.length);
+  const items = [...base, ...auras, ...ultraAuras];
   const totalWeight = items.reduce((s, x) => s + x.weight, 0);
   items.forEach((x) => {
     x.probability = x.weight / totalWeight;
