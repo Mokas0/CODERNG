@@ -1334,7 +1334,7 @@ function buyLuck() {
   renderLuck();
 }
 
-const ADMIN_CODE = 'banana';
+const ADMIN_CODE = import.meta.env.VITE_ADMIN_CODE || '';
 const ADMIN_COINS = 1_000_000;
 
 function openAdminPanel() {
