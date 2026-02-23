@@ -430,14 +430,39 @@ function renderMemoryMatch() {
 
 // ——— Hub (global chat + trading) ———
 const HUB_USERNAME_KEY = 'rng_hub_username';
+const HUB_USERNAME_SET_AT_KEY = 'rng_hub_username_set_at';
+const USERNAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
 let hubChatSubscription = null;
 let hubTradesSubscription = null;
 
 function getHubUsername() {
   return (localStorage.getItem(HUB_USERNAME_KEY) || '').trim().slice(0, 24);
 }
+function getUsernameSetAt() {
+  return parseInt(localStorage.getItem(HUB_USERNAME_SET_AT_KEY) || '0', 10);
+}
+function getUsernameCooldownMs() {
+  const setAt = getUsernameSetAt();
+  if (!setAt) return 0;
+  return Math.max(0, setAt + USERNAME_COOLDOWN_MS - Date.now());
+}
+function formatCooldown(ms) {
+  if (ms <= 0) return '';
+  const d = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
 function setHubUsername(name) {
-  localStorage.setItem(HUB_USERNAME_KEY, (name || '').trim().slice(0, 24));
+  const trimmed = (name || '').trim().slice(0, 24);
+  const current = getHubUsername();
+  if (trimmed === current) return; // no actual change
+  const cooldown = getUsernameCooldownMs();
+  if (cooldown > 0) return; // blocked — caller should check and show message
+  localStorage.setItem(HUB_USERNAME_KEY, trimmed);
+  if (trimmed) localStorage.setItem(HUB_USERNAME_SET_AT_KEY, String(Date.now()));
 }
 
 async function loadHubMessages() {
@@ -1422,13 +1447,58 @@ function init() {
   });
 
   const hubUsernameInput = document.getElementById('hub-username');
-  if (hubUsernameInput) hubUsernameInput.addEventListener('input', () => setHubUsername(hubUsernameInput.value));
+  if (hubUsernameInput) {
+    const hubUsernameCooldownMsg = document.getElementById('hub-username-cooldown');
+    const updateHubCooldownUI = () => {
+      const ms = getUsernameCooldownMs();
+      if (ms > 0) {
+        hubUsernameInput.disabled = true;
+        hubUsernameInput.title = `Username locked for ${formatCooldown(ms)}`;
+        if (hubUsernameCooldownMsg) hubUsernameCooldownMsg.textContent = `Username locked — can change again in ${formatCooldown(ms)}`;
+      } else {
+        hubUsernameInput.disabled = false;
+        hubUsernameInput.title = '';
+        if (hubUsernameCooldownMsg) hubUsernameCooldownMsg.textContent = '';
+      }
+    };
+    updateHubCooldownUI();
+    setInterval(updateHubCooldownUI, 60000);
+    hubUsernameInput.addEventListener('change', () => {
+      const before = getHubUsername();
+      setHubUsername(hubUsernameInput.value);
+      const after = getHubUsername();
+      if (after !== before) updateHubCooldownUI();
+      else hubUsernameInput.value = before; // revert if blocked
+    });
+  }
   document.getElementById('hub-chat-send')?.addEventListener('click', sendHubMessage);
   document.getElementById('hub-chat-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendHubMessage(); });
   document.getElementById('hub-trade-post')?.addEventListener('click', postHubTrade);
 
   const casinoUsernameInput = document.getElementById('casino-username');
-  if (casinoUsernameInput) casinoUsernameInput.addEventListener('input', () => setCasinoUsername(casinoUsernameInput.value));
+  if (casinoUsernameInput) {
+    const casinoUsernameCooldownMsg = document.getElementById('casino-username-cooldown');
+    const updateCasinoCooldownUI = () => {
+      const ms = getUsernameCooldownMs();
+      if (ms > 0) {
+        casinoUsernameInput.disabled = true;
+        casinoUsernameInput.title = `Username locked for ${formatCooldown(ms)}`;
+        if (casinoUsernameCooldownMsg) casinoUsernameCooldownMsg.textContent = `Username locked — can change again in ${formatCooldown(ms)}`;
+      } else {
+        casinoUsernameInput.disabled = false;
+        casinoUsernameInput.title = '';
+        if (casinoUsernameCooldownMsg) casinoUsernameCooldownMsg.textContent = '';
+      }
+    };
+    updateCasinoCooldownUI();
+    casinoUsernameInput.addEventListener('change', () => {
+      const before = getHubUsername();
+      setCasinoUsername(casinoUsernameInput.value);
+      const after = getHubUsername();
+      if (after !== before) updateCasinoCooldownUI();
+      else casinoUsernameInput.value = before;
+    });
+  }
   document.getElementById('casino-deposit-btn')?.addEventListener('click', casinoDepositCoins);
   document.getElementById('casino-withdraw-btn')?.addEventListener('click', casinoWithdrawCoins);
   document.getElementById('casino-coinflip-create')?.addEventListener('click', casinoCreateCoinflip);

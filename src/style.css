@@ -564,6 +564,12 @@ body {
   outline: none;
   border-color: var(--accent);
 }
+.username-cooldown-msg {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: #e07b39;
+  min-height: 1em;
+}
 .hub-status {
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
