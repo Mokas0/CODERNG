@@ -1,6 +1,6 @@
 import './style.css';
 import { ITEMS } from './data/items.js';
-import { supabase, isHubAvailable } from './supabase.js';
+import { supabase, isHubAvailable, signInWithGoogle, signOut, getUser, onAuthStateChange } from './supabase.js';
 
 const STORAGE_KEYS = {
   coins: 'rng_coins', history: 'rng_history', luck: 'rng_luck', locked: 'rng_locked', lockedStorage: 'rng_locked_storage',
@@ -10,11 +10,20 @@ const STORAGE_KEYS = {
 const SHOP_ROTATION_MS = 5 * 60 * 1000;  // 5 minutes
 const BENNY_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
 
+let currentUser = null;
+let saveTimer = null;
+function scheduleSave() {
+  if (!currentUser || !supabase) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveProgressToCloud(currentUser.id), 1500);
+}
+
 function getCoins() {
   return Number(localStorage.getItem(STORAGE_KEYS.coins) || 0);
 }
 function setCoins(n) {
   localStorage.setItem(STORAGE_KEYS.coins, String(Math.max(0, Math.floor(n))));
+  scheduleSave();
 }
 function getHistory() {
   try {
@@ -33,6 +42,7 @@ function getLuckMultiplier() {
 }
 function setLuckMultiplier(m) {
   localStorage.setItem(STORAGE_KEYS.luck, String(m));
+  scheduleSave();
 }
 
 function getLockedStorage() {
@@ -45,6 +55,7 @@ function getLockedStorage() {
 }
 function setLockedStorage(arr) {
   localStorage.setItem(STORAGE_KEYS.lockedStorage, JSON.stringify(arr));
+  scheduleSave();
 }
 
 // Migrate old lock-by-id to separate storage (one-time)
@@ -274,6 +285,91 @@ function renderShop() {
   list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
     btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, false));
   });
+}
+
+// ——— Auth & cloud progress ———
+async function saveProgressToCloud(userId) {
+  if (!supabase || !userId) return;
+  await supabase.from('user_progress').upsert({
+    user_id: userId,
+    coins: getCoins(),
+    luck_multiplier: getLuckMultiplier(),
+    locked_storage: getLockedStorage(),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' });
+}
+
+async function loadProgressFromCloud(userId) {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from('user_progress')
+    .select('coins, luck_multiplier, locked_storage')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error || !data) return;
+  // Write directly to localStorage to avoid triggering scheduleSave during load
+  if (data.coins != null) localStorage.setItem(STORAGE_KEYS.coins, String(Math.max(0, Math.floor(data.coins))));
+  if (data.luck_multiplier != null) localStorage.setItem(STORAGE_KEYS.luck, String(data.luck_multiplier));
+  if (data.locked_storage != null) localStorage.setItem(STORAGE_KEYS.lockedStorage, JSON.stringify(data.locked_storage));
+  renderCoins();
+  renderLuck();
+  renderLockedStorage();
+}
+
+function updateAuthUI(user) {
+  if (!isHubAvailable()) return;
+
+  const authControls = document.getElementById('auth-controls');
+  const authUser = document.getElementById('auth-user');
+  const authAvatar = document.getElementById('auth-avatar');
+  const authDisplayName = document.getElementById('auth-display-name');
+  const hubGate = document.getElementById('hub-auth-gate');
+  const hubContent = document.getElementById('hub-content-wrap');
+  const casinoGate = document.getElementById('casino-auth-gate');
+  const casinoContent = document.getElementById('casino-content-wrap');
+
+  if (user) {
+    authControls?.classList.add('hidden');
+    authUser?.classList.remove('hidden');
+    const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Player';
+    if (authDisplayName) authDisplayName.textContent = name;
+    if (authAvatar && user.user_metadata?.avatar_url) {
+      authAvatar.src = user.user_metadata.avatar_url;
+    }
+    if (!getHubUsername()) setHubUsername(name.slice(0, 24));
+    const hubInput = document.getElementById('hub-username');
+    const casinoInput = document.getElementById('casino-username');
+    if (hubInput && !hubInput.value) hubInput.value = getHubUsername();
+    if (casinoInput && !casinoInput.value) casinoInput.value = getHubUsername();
+    hubGate?.classList.add('hidden');
+    hubContent?.classList.remove('hidden');
+    casinoGate?.classList.add('hidden');
+    casinoContent?.classList.remove('hidden');
+  } else {
+    authControls?.classList.remove('hidden');
+    authUser?.classList.add('hidden');
+    hubGate?.classList.remove('hidden');
+    hubContent?.classList.add('hidden');
+    casinoGate?.classList.remove('hidden');
+    casinoContent?.classList.add('hidden');
+  }
+}
+
+async function initAuth() {
+  if (!isHubAvailable()) return;
+  const user = await getUser();
+  currentUser = user;
+  updateAuthUI(user);
+  if (user) loadProgressFromCloud(user.id);
+  onAuthStateChange((_event, session) => {
+    currentUser = session?.user ?? null;
+    updateAuthUI(currentUser);
+    if (currentUser) loadProgressFromCloud(currentUser.id);
+  });
+  document.getElementById('google-signin-btn')?.addEventListener('click', signInWithGoogle);
+  document.getElementById('hub-gate-signin')?.addEventListener('click', signInWithGoogle);
+  document.getElementById('casino-gate-signin')?.addEventListener('click', signInWithGoogle);
+  document.getElementById('auth-signout-btn')?.addEventListener('click', signOut);
 }
 
 // ——— Benny (appears once every 60 min at a random time; no warning) ———
@@ -1042,6 +1138,7 @@ function submitAdminCode() {
 
 function init() {
   migrateLockedToStorage();
+  initAuth();
   const rollBtn = document.getElementById('roll-btn');
   const luckBtn = document.getElementById('luck-btn');
   if (rollBtn) rollBtn.addEventListener('click', roll);

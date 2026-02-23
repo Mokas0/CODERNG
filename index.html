@@ -18,6 +18,14 @@
           <span class="luck-wrap">Luck: <span id="luck-value">1× (normal)</span></span>
           <button type="button" id="luck-btn" class="luck-btn">Boost luck (50 coins)</button>
         </div>
+        <div id="auth-controls" class="auth-controls">
+          <button type="button" id="google-signin-btn" class="google-signin-btn">Sign in with Google</button>
+        </div>
+        <div id="auth-user" class="auth-user hidden">
+          <img id="auth-avatar" class="auth-avatar" alt="" />
+          <span id="auth-display-name" class="auth-display-name"></span>
+          <button type="button" id="auth-signout-btn" class="auth-signout-btn">Sign out</button>
+        </div>
       </header>
       <main class="main">
         <div class="result-wrap">
@@ -54,77 +62,89 @@
             <button type="button" id="memory-new-btn" class="memory-new-btn">New game</button>
           </div>
           <div id="tab-hub" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
-            <p class="tab-desc">Global chat and trading. Set a display name below to join.</p>
-            <div class="hub-setup">
-              <label for="hub-username">Display name</label>
-              <input type="text" id="hub-username" class="hub-input" placeholder="Your name" maxlength="24" />
-              <p id="hub-status" class="hub-status"></p>
+            <div id="hub-auth-gate" class="tab-auth-gate hidden">
+              <p class="tab-auth-gate-msg">Sign in with Google to join global chat and trading.</p>
+              <button type="button" id="hub-gate-signin" class="google-signin-btn">Sign in with Google</button>
             </div>
-            <div class="hub-sections">
-              <div class="hub-section">
-                <h3 class="hub-heading">Chat</h3>
-                <div id="hub-chat-list" class="hub-chat-list"></div>
-                <div class="hub-chat-form">
-                  <input type="text" id="hub-chat-input" class="hub-input" placeholder="Type a message..." maxlength="500" />
-                  <button type="button" id="hub-chat-send" class="hub-btn">Send</button>
-                </div>
+            <div id="hub-content-wrap">
+              <p class="tab-desc">Global chat and trading. Set a display name below to join.</p>
+              <div class="hub-setup">
+                <label for="hub-username">Display name</label>
+                <input type="text" id="hub-username" class="hub-input" placeholder="Your name" maxlength="24" />
+                <p id="hub-status" class="hub-status"></p>
               </div>
-              <div class="hub-section">
-                <h3 class="hub-heading">Trading</h3>
-                <div id="hub-trades-list" class="hub-trades-list"></div>
-                <div class="hub-trade-form">
-                  <input type="text" id="hub-trade-offer" class="hub-input" placeholder="Offering..." maxlength="200" />
-                  <input type="text" id="hub-trade-want" class="hub-input" placeholder="Wanting..." maxlength="200" />
-                  <button type="button" id="hub-trade-post" class="hub-btn">Post trade</button>
+              <div class="hub-sections">
+                <div class="hub-section">
+                  <h3 class="hub-heading">Chat</h3>
+                  <div id="hub-chat-list" class="hub-chat-list"></div>
+                  <div class="hub-chat-form">
+                    <input type="text" id="hub-chat-input" class="hub-input" placeholder="Type a message..." maxlength="500" />
+                    <button type="button" id="hub-chat-send" class="hub-btn">Send</button>
+                  </div>
+                </div>
+                <div class="hub-section">
+                  <h3 class="hub-heading">Trading</h3>
+                  <div id="hub-trades-list" class="hub-trades-list"></div>
+                  <div class="hub-trade-form">
+                    <input type="text" id="hub-trade-offer" class="hub-input" placeholder="Offering..." maxlength="200" />
+                    <input type="text" id="hub-trade-want" class="hub-input" placeholder="Wanting..." maxlength="200" />
+                    <button type="button" id="hub-trade-post" class="hub-btn">Post trade</button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           <div id="tab-casino" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
-            <p class="tab-desc">Coinflip for coins, itemflip for auras. Set a display name (same as Hub) and deposit to play.</p>
-            <div class="casino-setup">
-              <label for="casino-username">Display name</label>
-              <input type="text" id="casino-username" class="hub-input" placeholder="Your name" maxlength="24" />
-              <p id="casino-status" class="hub-status"></p>
+            <div id="casino-auth-gate" class="tab-auth-gate hidden">
+              <p class="tab-auth-gate-msg">Sign in with Google to access the casino.</p>
+              <button type="button" id="casino-gate-signin" class="google-signin-btn">Sign in with Google</button>
             </div>
-            <div class="casino-balance">
-              <span>Casino balance: <strong id="casino-coins">0</strong> coins</span>
-              <div class="casino-balance-actions">
-                <input type="number" id="casino-deposit-amount" class="casino-amount-input" placeholder="Amount" min="1" />
-                <button type="button" id="casino-deposit-btn" class="hub-btn">Deposit</button>
-                <button type="button" id="casino-withdraw-btn" class="hub-btn hub-btn--secondary">Withdraw</button>
+            <div id="casino-content-wrap">
+              <p class="tab-desc">Coinflip for coins, itemflip for auras. Set a display name (same as Hub) and deposit to play.</p>
+              <div class="casino-setup">
+                <label for="casino-username">Display name</label>
+                <input type="text" id="casino-username" class="hub-input" placeholder="Your name" maxlength="24" />
+                <p id="casino-status" class="hub-status"></p>
               </div>
-            </div>
-            <div class="casino-sections">
-              <div class="casino-section">
-                <h3 class="hub-heading">Coinflip (coins)</h3>
-                <div class="casino-create-row">
-                  <input type="number" id="casino-coinflip-amount" class="casino-amount-input" placeholder="Amount" min="1" />
-                  <select id="casino-coinflip-side" class="casino-select">
-                    <option value="heads">Heads</option>
-                    <option value="tails">Tails</option>
-                  </select>
-                  <button type="button" id="casino-coinflip-create" class="hub-btn">Create challenge</button>
+              <div class="casino-balance">
+                <span>Casino balance: <strong id="casino-coins">0</strong> coins</span>
+                <div class="casino-balance-actions">
+                  <input type="number" id="casino-deposit-amount" class="casino-amount-input" placeholder="Amount" min="1" />
+                  <button type="button" id="casino-deposit-btn" class="hub-btn">Deposit</button>
+                  <button type="button" id="casino-withdraw-btn" class="hub-btn hub-btn--secondary">Withdraw</button>
                 </div>
-                <p id="casino-coinflip-msg" class="casino-msg"></p>
-                <div id="casino-coinflip-list" class="casino-list"></div>
               </div>
-              <div class="casino-section">
-                <h3 class="hub-heading">Aura vault</h3>
-                <p class="tab-desc">Deposit auras from Locked storage to use in itemflip.</p>
-                <div id="casino-aura-vault" class="casino-aura-vault"></div>
-              </div>
-              <div class="casino-section">
-                <h3 class="hub-heading">Itemflip (auras)</h3>
-                <p class="tab-desc">Stake an aura from your vault. Winner takes both.</p>
-                <div id="casino-itemflip-list" class="casino-list"></div>
-                <div class="casino-create-row">
-                  <select id="casino-itemflip-aura" class="casino-select casino-select--wide">
-                    <option value="">Select aura from vault</option>
-                  </select>
-                  <button type="button" id="casino-itemflip-create" class="hub-btn">Create challenge</button>
+              <div class="casino-sections">
+                <div class="casino-section">
+                  <h3 class="hub-heading">Coinflip (coins)</h3>
+                  <div class="casino-create-row">
+                    <input type="number" id="casino-coinflip-amount" class="casino-amount-input" placeholder="Amount" min="1" />
+                    <select id="casino-coinflip-side" class="casino-select">
+                      <option value="heads">Heads</option>
+                      <option value="tails">Tails</option>
+                    </select>
+                    <button type="button" id="casino-coinflip-create" class="hub-btn">Create challenge</button>
+                  </div>
+                  <p id="casino-coinflip-msg" class="casino-msg"></p>
+                  <div id="casino-coinflip-list" class="casino-list"></div>
                 </div>
-                <p id="casino-itemflip-msg" class="casino-msg"></p>
+                <div class="casino-section">
+                  <h3 class="hub-heading">Aura vault</h3>
+                  <p class="tab-desc">Deposit auras from Locked storage to use in itemflip.</p>
+                  <div id="casino-aura-vault" class="casino-aura-vault"></div>
+                </div>
+                <div class="casino-section">
+                  <h3 class="hub-heading">Itemflip (auras)</h3>
+                  <p class="tab-desc">Stake an aura from your vault. Winner takes both.</p>
+                  <div id="casino-itemflip-list" class="casino-list"></div>
+                  <div class="casino-create-row">
+                    <select id="casino-itemflip-aura" class="casino-select casino-select--wide">
+                      <option value="">Select aura from vault</option>
+                    </select>
+                    <button type="button" id="casino-itemflip-create" class="hub-btn">Create challenge</button>
+                  </div>
+                  <p id="casino-itemflip-msg" class="casino-msg"></p>
+                </div>
               </div>
             </div>
           </div>
