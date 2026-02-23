@@ -33,10 +33,10 @@ create table if not exists public.coinflip_challenges (
 create table if not exists public.itemflip_challenges (
   id bigint generated always as identity primary key,
   creator_username text not null,
-  creator_aura_id bigint not null references public.casino_aura_inventory(id) on delete restrict,
+  creator_aura_id bigint references public.casino_aura_inventory(id) on delete set null,
   status text not null default 'open' check (status in ('open', 'matched', 'settled')),
   acceptor_username text,
-  acceptor_aura_id bigint references public.casino_aura_inventory(id) on delete restrict,
+  acceptor_aura_id bigint references public.casino_aura_inventory(id) on delete set null,
   result_winner text,
   created_at timestamptz default now(),
   settled_at timestamptz

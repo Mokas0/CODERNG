@@ -254,6 +254,15 @@ begin
     return query select false, 'Aura not found in your Casino vault'::text;
     return;
   end if;
+  -- Block import if the aura is currently staked in an active itemflip challenge
+  if exists (
+    select 1 from itemflip_challenges
+    where (creator_aura_id = p_aura_id or acceptor_aura_id = p_aura_id)
+      and status in ('open', 'matched')
+  ) then
+    return query select false, 'Aura is currently staked in an active challenge. Cancel or wait for it to settle first.'::text;
+    return;
+  end if;
   delete from casino_aura_inventory where id = p_aura_id and username = v_username;
   insert into bazaar_seller_inventory (user_id, item_json) values (auth.uid(), v_json);
   return query select true, ''::text;
