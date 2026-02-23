@@ -1037,7 +1037,8 @@ async function bazaarImportAura(auraId) {
   if (!authUser || !supabase) return;
   const { data, error } = await supabase.rpc('bazaar_import_aura_from_casino', { p_aura_id: auraId });
   const result = Array.isArray(data) ? data[0] : data;
-  if (error || !result?.success) return;
+  if (error) { alert('Import failed: ' + error.message); return; }
+  if (!result?.success) { alert('Import failed: ' + (result?.message || 'Unknown error')); return; }
   await loadCasinoAuraVault();
   renderCasino();
   renderBazaar();

@@ -71,7 +71,13 @@ create table if not exists public.bazaar_seller_inventory (
 alter table public.bazaar_seller_inventory enable row level security;
 
 drop policy if exists "Bazaar inventory own" on public.bazaar_seller_inventory;
-create policy "Bazaar inventory own" on public.bazaar_seller_inventory for all using (auth.uid() = user_id);
+drop policy if exists "Bazaar inventory rpc write" on public.bazaar_seller_inventory;
+-- Users can read/delete their own rows directly
+create policy "Bazaar inventory own" on public.bazaar_seller_inventory
+  for all using (auth.uid() = user_id);
+-- Security definer RPCs insert on behalf of any user (owner = postgres bypasses uid check)
+create policy "Bazaar inventory rpc write" on public.bazaar_seller_inventory
+  for insert with check (true);
 
 -- Bazaar listings: auras for sale
 create table if not exists public.bazaar_listings (
