@@ -22,9 +22,13 @@ create table if not exists public.trades (
 alter table public.messages enable row level security;
 alter table public.trades enable row level security;
 
+drop policy if exists "Allow read messages" on public.messages;
+drop policy if exists "Allow insert messages" on public.messages;
 create policy "Allow read messages" on public.messages for select using (true);
 create policy "Allow insert messages" on public.messages for insert with check (true);
 
+drop policy if exists "Allow read trades" on public.trades;
+drop policy if exists "Allow insert trades" on public.trades;
 create policy "Allow read trades" on public.trades for select using (true);
 create policy "Allow insert trades" on public.trades for insert with check (true);
 
@@ -47,6 +51,9 @@ create table if not exists public.user_progress (
 
 alter table public.user_progress enable row level security;
 
+drop policy if exists "Users read own progress" on public.user_progress;
+drop policy if exists "Users insert own progress" on public.user_progress;
+drop policy if exists "Users update own progress" on public.user_progress;
 create policy "Users read own progress" on public.user_progress
   for select using (auth.uid() = user_id);
 
