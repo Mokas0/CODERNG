@@ -139,6 +139,8 @@ const POTIONS = [
 // Very rare spawn in rotating shop only (not in Benny's list)
 const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: '3000× Luck Elixir', cost: 5000, luckBonus: 2999, emoji: '👑' };
 const LEGENDARY_POTION_SPAWN_CHANCE = 0.008;
+// Benny-exclusive: not sold in the rotating shop
+const BENNY_ULTRALUCK_POTION = { id: 'potionBennyUltraluck', name: 'Ultraluck Potion', cost: 500000, luckBonus: 15000, emoji: '⚡' };
 
 // ——— Rotating shop (resets every 5 min) ———
 function getShopRotationEnd() {
@@ -209,7 +211,7 @@ function updateShopCountdown() {
 }
 
 function buyPotion(potionId, fromBenny = false) {
-  const pool = fromBenny ? POTIONS : getCurrentShopOffers();
+  const pool = fromBenny ? [...POTIONS, BENNY_ULTRALUCK_POTION] : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
   if (!potion || getCoins() < potion.cost) return;
   setCoins(getCoins() - potion.cost);
@@ -222,7 +224,7 @@ function buyPotion(potionId, fromBenny = false) {
 
 function buyPotionMax(potionId, fromBenny = false) {
   const pool = fromBenny
-    ? POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) }))
+    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), BENNY_ULTRALUCK_POTION]
     : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
   if (!potion || potion.cost < 1) return;
@@ -328,7 +330,10 @@ function renderBennyShop() {
   const list = document.getElementById('benny-shop-list');
   if (!list) return;
   const coins = getCoins();
-  const bennyPrices = POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) }));
+  const bennyPrices = [
+    ...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })),
+    BENNY_ULTRALUCK_POTION,
+  ];
   list.innerHTML = bennyPrices.map(
     (p) => {
       const canBuy = coins >= p.cost;
