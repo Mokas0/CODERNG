@@ -886,23 +886,38 @@ function openAuthOverlay(tab = 'signin') {
   if (!overlay) return;
   overlay.classList.remove('hidden');
   overlay.setAttribute('aria-hidden', 'false');
-  document.getElementById('auth-email')?.value = '';
-  document.getElementById('auth-password')?.value = '';
-  document.getElementById('auth-message').textContent = '';
-  document.getElementById('auth-signup-email')?.value = '';
-  document.getElementById('auth-signup-password')?.value = '';
-  document.getElementById('auth-signup-displayname')?.value = '';
-  document.getElementById('auth-signup-message').textContent = '';
+  const emailEl = document.getElementById('auth-email');
+  if (emailEl) emailEl.value = '';
+  const passwordEl = document.getElementById('auth-password');
+  if (passwordEl) passwordEl.value = '';
+  const messageEl = document.getElementById('auth-message');
+  if (messageEl) messageEl.textContent = '';
+  const signupEmailEl = document.getElementById('auth-signup-email');
+  if (signupEmailEl) signupEmailEl.value = '';
+  const signupPasswordEl = document.getElementById('auth-signup-password');
+  if (signupPasswordEl) signupPasswordEl.value = '';
+  const signupDisplayNameEl = document.getElementById('auth-signup-displayname');
+  if (signupDisplayNameEl) signupDisplayNameEl.value = '';
+  const signupMessageEl = document.getElementById('auth-signup-message');
+  if (signupMessageEl) signupMessageEl.textContent = '';
   if (tab === 'signup') {
-    document.getElementById('auth-tab-signin')?.classList.remove('active');
-    document.getElementById('auth-tab-signup')?.classList.add('active');
-    document.getElementById('auth-signin-form')?.classList.add('hidden');
-    document.getElementById('auth-signup-form')?.classList.remove('hidden');
+    const tabSignin = document.getElementById('auth-tab-signin');
+    if (tabSignin) tabSignin.classList.remove('active');
+    const tabSignup = document.getElementById('auth-tab-signup');
+    if (tabSignup) tabSignup.classList.add('active');
+    const signinForm = document.getElementById('auth-signin-form');
+    if (signinForm) signinForm.classList.add('hidden');
+    const signupForm = document.getElementById('auth-signup-form');
+    if (signupForm) signupForm.classList.remove('hidden');
   } else {
-    document.getElementById('auth-tab-signin')?.classList.add('active');
-    document.getElementById('auth-tab-signup')?.classList.remove('active');
-    document.getElementById('auth-signin-form')?.classList.remove('hidden');
-    document.getElementById('auth-signup-form')?.classList.add('hidden');
+    const tabSignin = document.getElementById('auth-tab-signin');
+    if (tabSignin) tabSignin.classList.add('active');
+    const tabSignup = document.getElementById('auth-tab-signup');
+    if (tabSignup) tabSignup.classList.remove('active');
+    const signinForm = document.getElementById('auth-signin-form');
+    if (signinForm) signinForm.classList.remove('hidden');
+    const signupForm = document.getElementById('auth-signup-form');
+    if (signupForm) signupForm.classList.add('hidden');
   }
 }
 
