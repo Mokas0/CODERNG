@@ -105,11 +105,37 @@
 
 ---
 
+## Part 4 (optional): Bazaar and Email auth
+
+The **Bazaar** lets signed-in players sell auras for coins. It requires Email auth and extra tables.
+
+1. **Enable Email auth in Supabase**
+   - In your project go to **Authentication** → **Providers**.
+   - Enable **Email** (and optionally disable “Confirm email” for quick testing).
+
+2. **Run the Bazaar schema**
+   - In **SQL Editor**, open a new query.
+   - Copy all of **`supabase-bazaar.sql`** (run this after `supabase-schema.sql` and `supabase-casino.sql`), paste, and **Run**.
+
+3. **Realtime for Bazaar**
+   - In **Database** → **Replication**, add **bazaar_listings** to the `supabase_realtime` publication so new/sold listings update live.
+
+4. **No new env vars**
+   - The same `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are used; the Bazaar and auth work with the anon key.
+
+5. **Using the Bazaar**
+   - Users **Sign up** (email, password, display name) or **Sign in** from the header.
+   - In the **Bazaar** tab they can deposit/withdraw game coins to Bazaar balance, link their Casino vault (generate code in Casino, enter in Bazaar), import auras from Casino, list auras for sale, and buy from others.
+
+---
+
 ## Quick reference
 
 | Step            | What to do |
 |-----------------|------------|
 | Supabase tables | Run `supabase-schema.sql` in Supabase SQL Editor. |
+| Casino          | Run `supabase-casino.sql`; add coinflip/itemflip tables to Realtime. |
+| Bazaar + Auth   | Enable Email in Authentication → Providers; run `supabase-bazaar.sql`; add `bazaar_listings` to Realtime. |
 | Local env       | Create `.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. |
 | Push to GitHub  | `git add .` → `git commit -m "message"` → `git push`. |
 | Deploy Netlify  | Connect GitHub repo, build command `npm run build`, publish `dist`, add the two env vars, redeploy. |

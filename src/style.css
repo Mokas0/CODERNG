@@ -72,6 +72,40 @@ body {
   gap: 0.75rem;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.auth-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.auth-user-label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+.auth-btn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.auth-btn:hover {
+  filter: brightness(1.1);
+}
+.auth-btn--secondary {
+  background: var(--border);
+  color: var(--text);
+}
+
 .coins-wrap {
   font-weight: 600;
   font-size: 0.9375rem;
@@ -844,4 +878,82 @@ body {
 .admin-btn--secondary {
   background: var(--border);
   color: var(--text);
+}
+
+.auth-panel {
+  min-width: 300px;
+  max-width: 96vw;
+}
+.auth-panel-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.auth-panel-tab {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.auth-panel-tab:hover {
+  color: var(--text);
+}
+.auth-panel-tab.active {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.auth-form label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.auth-form .admin-input {
+  margin-bottom: 0.75rem;
+}
+.auth-form .admin-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.bazaar-guest {
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.bazaar-guest p {
+  margin: 0 0 0.5rem;
+  color: var(--text-muted);
+}
+.bazaar-authed .bazaar-balance {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.bazaar-link-code-box {
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0;
+}
+.casino-link-code-display {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  line-height: var(--line-normal);
+}
+.bazaar-subheading {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.bazaar-price-input {
+  width: 70px;
 }

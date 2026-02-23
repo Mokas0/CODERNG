@@ -828,6 +828,317 @@ function renderCasino() {
       auraSelect.innerHTML = opts ? `<option value="">Select aura</option>${opts}` : '<option value="">No auras in vault</option>';
     }
     await loadCasinoItemflipList();
+    const linkCodeDisplay = document.getElementById('casino-link-code-display');
+    if (linkCodeDisplay) linkCodeDisplay.textContent = '';
+  })();
+}
+
+async function casinoGenerateLinkCode() {
+  const username = getCasinoUsername();
+  if (!username || !supabase) return;
+  const { data, error } = await supabase.rpc('generate_casino_link_code', { p_username: username });
+  const result = Array.isArray(data) && data.length > 0 ? data[0] : data;
+  const el = document.getElementById('casino-link-code-display');
+  if (!el) return;
+  if (error || !result?.code) {
+    el.textContent = 'Could not generate code.';
+    el.style.color = 'var(--danger)';
+    return;
+  }
+  const exp = result.expires_at ? new Date(result.expires_at).toLocaleTimeString() : '10 min';
+  el.textContent = `Code: ${result.code} (valid until ${exp}). Enter this in the Bazaar tab while signed in.`;
+  el.style.color = 'var(--roll)';
+}
+
+// ——— Auth (email/password for Bazaar) ———
+let authUser = null;
+let authProfile = null;
+
+function updateAuthUI() {
+  const signupBtn = document.getElementById('auth-signup-btn');
+  const signinBtn = document.getElementById('auth-signin-btn');
+  const signoutBtn = document.getElementById('auth-signout-btn');
+  const userLabel = document.getElementById('auth-user-label');
+  const guestEl = document.getElementById('bazaar-guest');
+  const authedEl = document.getElementById('bazaar-authed');
+  if (authUser) {
+    if (signupBtn) signupBtn.classList.add('hidden');
+    if (signinBtn) signinBtn.classList.add('hidden');
+    if (signoutBtn) signoutBtn.classList.remove('hidden');
+    if (userLabel) {
+      userLabel.textContent = authProfile?.display_name || authUser.email || 'Signed in';
+      userLabel.classList.remove('hidden');
+    }
+    if (guestEl) guestEl.classList.add('hidden');
+    if (authedEl) authedEl.classList.remove('hidden');
+  } else {
+    if (signupBtn) signupBtn.classList.remove('hidden');
+    if (signinBtn) signinBtn.classList.remove('hidden');
+    if (signoutBtn) signoutBtn.classList.add('hidden');
+    if (userLabel) userLabel.classList.add('hidden');
+    if (guestEl) guestEl.classList.remove('hidden');
+    if (authedEl) authedEl.classList.add('hidden');
+  }
+}
+
+function openAuthOverlay(tab = 'signin') {
+  const overlay = document.getElementById('auth-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.getElementById('auth-email')?.value = '';
+  document.getElementById('auth-password')?.value = '';
+  document.getElementById('auth-message').textContent = '';
+  document.getElementById('auth-signup-email')?.value = '';
+  document.getElementById('auth-signup-password')?.value = '';
+  document.getElementById('auth-signup-displayname')?.value = '';
+  document.getElementById('auth-signup-message').textContent = '';
+  if (tab === 'signup') {
+    document.getElementById('auth-tab-signin')?.classList.remove('active');
+    document.getElementById('auth-tab-signup')?.classList.add('active');
+    document.getElementById('auth-signin-form')?.classList.add('hidden');
+    document.getElementById('auth-signup-form')?.classList.remove('hidden');
+  } else {
+    document.getElementById('auth-tab-signin')?.classList.add('active');
+    document.getElementById('auth-tab-signup')?.classList.remove('active');
+    document.getElementById('auth-signin-form')?.classList.remove('hidden');
+    document.getElementById('auth-signup-form')?.classList.add('hidden');
+  }
+}
+
+function closeAuthOverlay() {
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+async function authSignIn() {
+  const email = document.getElementById('auth-email')?.value?.trim();
+  const password = document.getElementById('auth-password')?.value;
+  const msg = document.getElementById('auth-message');
+  if (!email || !password || !supabase) return;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    if (msg) { msg.textContent = error.message; msg.style.color = 'var(--danger)'; }
+    return;
+  }
+  if (msg) msg.textContent = '';
+  closeAuthOverlay();
+  await refreshAuthProfile();
+  updateAuthUI();
+  renderBazaar();
+}
+
+async function authSignUp() {
+  const email = document.getElementById('auth-signup-email')?.value?.trim();
+  const password = document.getElementById('auth-signup-password')?.value;
+  const displayName = document.getElementById('auth-signup-displayname')?.value?.trim()?.slice(0, 24) || '';
+  const msg = document.getElementById('auth-signup-message');
+  if (!email || !password || !supabase) return;
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    if (msg) { msg.textContent = error.message; msg.style.color = 'var(--danger)'; }
+    return;
+  }
+  if (data?.user && displayName) {
+    await supabase.from('profiles').update({ display_name: displayName }).eq('id', data.user.id);
+  }
+  if (msg) { msg.textContent = 'Check your email to confirm, or sign in.'; msg.style.color = 'var(--roll)'; }
+  setTimeout(() => { closeAuthOverlay(); refreshAuthProfile(); updateAuthUI(); renderBazaar(); }, 1500);
+}
+
+async function authSignOut() {
+  if (!supabase) return;
+  await supabase.auth.signOut();
+  authUser = null;
+  authProfile = null;
+  updateAuthUI();
+  renderBazaar();
+}
+
+async function refreshAuthProfile() {
+  if (!authUser || !supabase) return;
+  const { data } = await supabase.from('profiles').select('display_name, casino_username').eq('id', authUser.id).single();
+  authProfile = data || null;
+}
+
+// ——— Bazaar ———
+let bazaarCoinBalance = 0;
+
+async function bazaarFetchBalance() {
+  if (!authUser || !supabase) return 0;
+  const { data } = await supabase.from('bazaar_wallets').select('coins_balance').eq('user_id', authUser.id).single();
+  bazaarCoinBalance = data?.coins_balance ?? 0;
+  return bazaarCoinBalance;
+}
+
+async function bazaarDepositCoins() {
+  const amount = Math.floor(Number(document.getElementById('bazaar-deposit-amount')?.value || 0));
+  if (!authUser || !supabase || amount <= 0) return;
+  const localCoins = getCoins();
+  if (localCoins < amount) return;
+  const { data, error } = await supabase.rpc('bazaar_deposit_coins', { p_amount: amount });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) return;
+  setCoins(localCoins - amount);
+  bazaarCoinBalance = result.new_balance ?? 0;
+  document.getElementById('bazaar-deposit-amount').value = '';
+  renderCoins();
+  renderBazaar();
+}
+
+async function bazaarWithdrawCoins() {
+  const amount = Math.floor(Number(document.getElementById('bazaar-deposit-amount')?.value || 0));
+  if (!authUser || !supabase || amount <= 0) return;
+  const { data, error } = await supabase.rpc('bazaar_withdraw_coins', { p_amount: amount });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) return;
+  setCoins(getCoins() + amount);
+  bazaarCoinBalance = result.new_balance ?? 0;
+  document.getElementById('bazaar-deposit-amount').value = '';
+  renderCoins();
+  renderBazaar();
+}
+
+async function bazaarLinkCasino() {
+  const username = document.getElementById('bazaar-link-username')?.value?.trim()?.slice(0, 24) || '';
+  const code = document.getElementById('bazaar-link-code')?.value?.trim()?.slice(0, 6) || '';
+  if (!authUser || !supabase || !username || !code) return;
+  const { data, error } = await supabase.rpc('link_casino_to_account', { p_username: username, p_code: code });
+  const result = Array.isArray(data) ? data[0] : data;
+  const statusEl = document.getElementById('bazaar-link-status');
+  if (error || !result?.success) {
+    if (statusEl) { statusEl.textContent = result?.message || error?.message || 'Link failed'; statusEl.style.color = 'var(--danger)'; }
+    return;
+  }
+  if (statusEl) { statusEl.textContent = 'Vault linked.'; statusEl.style.color = 'var(--roll)'; }
+  await refreshAuthProfile();
+  renderBazaar();
+}
+
+async function bazaarImportAura(auraId) {
+  if (!authUser || !supabase) return;
+  const { data, error } = await supabase.rpc('bazaar_import_aura_from_casino', { p_aura_id: auraId });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) return;
+  await loadCasinoAuraVault();
+  renderCasino();
+  renderBazaar();
+}
+
+async function bazaarCreateListing(inventoryId, price) {
+  if (!authUser || !supabase || !inventoryId || !price || price < 1) return;
+  const { data, error } = await supabase.rpc('bazaar_create_listing', { p_inventory_id: inventoryId, p_price: price });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) return;
+  renderBazaar();
+}
+
+async function bazaarBuyListing(listingId) {
+  if (!authUser || !supabase) return;
+  const { data, error } = await supabase.rpc('bazaar_buy_listing', { p_listing_id: listingId });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) return;
+  renderBazaar();
+}
+
+async function bazaarCancelListing(listingId) {
+  if (!authUser || !supabase) return;
+  const { data, error } = await supabase.rpc('bazaar_cancel_listing', { p_listing_id: listingId });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) return;
+  renderBazaar();
+}
+
+async function bazaarWithdrawAuraToCasino(inventoryId) {
+  if (!authUser || !supabase) return;
+  const { data, error } = await supabase.rpc('bazaar_withdraw_aura_to_casino', { p_inventory_id: inventoryId });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) return;
+  await loadCasinoAuraVault();
+  renderCasino();
+  renderBazaar();
+}
+
+function renderBazaar() {
+  const guestEl = document.getElementById('bazaar-guest');
+  const authedEl = document.getElementById('bazaar-authed');
+  const coinsEl = document.getElementById('bazaar-coins');
+  if (coinsEl) coinsEl.textContent = bazaarCoinBalance.toLocaleString();
+  if (!authUser) {
+    if (guestEl) guestEl.classList.remove('hidden');
+    if (authedEl) authedEl.classList.add('hidden');
+    return;
+  }
+  if (guestEl) guestEl.classList.add('hidden');
+  if (authedEl) authedEl.classList.remove('hidden');
+  if (!supabase) return;
+  (async () => {
+    await bazaarFetchBalance();
+    if (coinsEl) coinsEl.textContent = bazaarCoinBalance.toLocaleString();
+    const linkStatus = document.getElementById('bazaar-link-status');
+    const linkForm = document.getElementById('bazaar-link-form');
+    if (authProfile?.casino_username) {
+      if (linkStatus) linkStatus.textContent = `Linked as ${escapeHtml(authProfile.casino_username)}`;
+      if (linkForm) linkForm.classList.add('hidden');
+    } else {
+      if (linkStatus) linkStatus.textContent = 'Link your Casino vault to import auras.';
+      if (linkForm) linkForm.classList.remove('hidden');
+    }
+    const { data: listings } = await supabase.from('bazaar_listings').select('id, seller_id, item_json, price').eq('status', 'listed').order('created_at', { ascending: false }).limit(50);
+    const sellerIds = [...new Set((listings || []).map((l) => l.seller_id))];
+    const sellerNames = {};
+    if (sellerIds.length) {
+      const { data: profs } = await supabase.from('profiles').select('id, display_name').in('id', sellerIds);
+      (profs || []).forEach((p) => { sellerNames[p.id] = p.display_name; });
+    }
+    const listEl = document.getElementById('bazaar-listings');
+    if (listEl) {
+      const rows = (listings || []).map((l) => {
+        const sellerName = sellerNames[l.seller_id] || '?';
+        const aura = typeof l.item_json === 'string' ? (() => { try { return JSON.parse(l.item_json); } catch { return {}; } })() : (l.item_json || {});
+        return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(sellerName)} — ${renderAuraPreview(aura)} <strong>${l.price} coins</strong></span><button type="button" class="hub-btn bazaar-buy-btn" data-id="${l.id}">Buy</button></div>`;
+      });
+      listEl.innerHTML = rows.length ? rows.join('') : '<p class="casino-empty">No listings.</p>';
+      listEl.querySelectorAll('.bazaar-buy-btn').forEach((btn) => btn.addEventListener('click', () => bazaarBuyListing(Number(btn.dataset.id))));
+    }
+    const { data: casinoVault } = authProfile?.casino_username
+      ? await supabase.from('casino_aura_inventory').select('id, item_json').eq('username', authProfile.casino_username).order('id', { ascending: false })
+      : { data: [] };
+    const vaultEl = document.getElementById('bazaar-casino-vault');
+    if (vaultEl) {
+      const vault = (casinoVault || []).map((r) => ({ id: r.id, ...(typeof r.item_json === 'string' ? (() => { try { return JSON.parse(r.item_json); } catch { return {}; } })() : r.item_json) }));
+      vaultEl.innerHTML = vault.length
+        ? vault.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><button type="button" class="hub-btn bazaar-import-btn" data-aura-id="${a.id}">Import to Bazaar</button></div>`).join('')
+        : '<p class="casino-empty">No auras in Casino vault. Link vault and deposit auras in Casino first.</p>';
+      vaultEl.querySelectorAll('.bazaar-import-btn').forEach((btn) => btn.addEventListener('click', () => bazaarImportAura(Number(btn.dataset.auraId))));
+    }
+    const { data: inv } = await supabase.from('bazaar_seller_inventory').select('id, item_json').eq('user_id', authUser.id).order('id', { ascending: false });
+    const invList = (inv || []).map((r) => ({ id: r.id, ...(typeof r.item_json === 'string' ? (() => { try { return JSON.parse(r.item_json); } catch { return {}; } })() : r.item_json) }));
+    const invEl = document.getElementById('bazaar-inventory');
+    if (invEl) {
+      invEl.innerHTML = invList.length
+        ? invList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><input type="number" class="casino-amount-input bazaar-price-input" placeholder="Price" min="1" data-id="${a.id}" /><button type="button" class="hub-btn bazaar-list-btn" data-id="${a.id}">List for sale</button><button type="button" class="hub-btn hub-btn--secondary bazaar-withdraw-aura-btn" data-id="${a.id}">To Casino</button></div>`).join('')
+        : '<p class="casino-empty">No auras in Bazaar inventory. Import from Casino vault above.</p>';
+      invEl.querySelectorAll('.bazaar-list-btn').forEach((btn) => {
+        const id = Number(btn.dataset.id);
+        const row = btn.closest('.casino-aura-row');
+        const priceInput = row?.querySelector('.bazaar-price-input');
+        btn.addEventListener('click', () => { const p = Math.floor(Number(priceInput?.value || 0)); if (p >= 1) bazaarCreateListing(id, p); });
+      });
+      invEl.querySelectorAll('.bazaar-withdraw-aura-btn').forEach((btn) => btn.addEventListener('click', () => bazaarWithdrawAuraToCasino(Number(btn.dataset.id))));
+    }
+    const { data: myListings } = await supabase.from('bazaar_listings').select('id, item_json, price').eq('seller_id', authUser.id).eq('status', 'listed').order('created_at', { ascending: false });
+    const myEl = document.getElementById('bazaar-my-listings');
+    if (myEl) {
+      const myList = (myListings || []).map((l) => ({ id: l.id, ...(typeof l.item_json === 'string' ? (() => { try { return JSON.parse(l.item_json); } catch { return {}; } })() : l.item_json), price: l.price }));
+      myEl.innerHTML = myList.length
+        ? myList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span> <strong>${a.price} coins</strong><button type="button" class="hub-btn hub-btn--secondary bazaar-cancel-btn" data-id="${a.id}">Cancel</button></div>`).join('')
+        : '<p class="casino-empty">No active listings.</p>';
+      myEl.querySelectorAll('.bazaar-cancel-btn').forEach((btn) => btn.addEventListener('click', () => bazaarCancelListing(Number(btn.dataset.id))));
+    }
   })();
 }
 
@@ -956,7 +1267,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'memory', 'hub', 'casino'].forEach((id) => {
+  ['past', 'locked', 'shop', 'memory', 'hub', 'casino', 'bazaar'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -967,6 +1278,7 @@ function switchTab(tabName) {
   if (tabName === 'memory') renderMemoryMatch();
   if (tabName === 'hub') renderHub();
   if (tabName === 'casino') renderCasino();
+  if (tabName === 'bazaar') renderBazaar();
 }
 
 function roll() {
@@ -1108,6 +1420,36 @@ function init() {
     }
   });
   document.getElementById('casino-itemflip-create')?.addEventListener('click', casinoCreateItemflip);
+
+  document.getElementById('auth-signup-btn')?.addEventListener('click', () => openAuthOverlay('signup'));
+  document.getElementById('auth-signin-btn')?.addEventListener('click', () => openAuthOverlay('signin'));
+  document.getElementById('auth-signout-btn')?.addEventListener('click', authSignOut);
+  document.getElementById('auth-tab-signin')?.addEventListener('click', () => { document.getElementById('auth-tab-signin')?.classList.add('active'); document.getElementById('auth-tab-signup')?.classList.remove('active'); document.getElementById('auth-signin-form')?.classList.remove('hidden'); document.getElementById('auth-signup-form')?.classList.add('hidden'); });
+  document.getElementById('auth-tab-signup')?.addEventListener('click', () => { document.getElementById('auth-tab-signup')?.classList.add('active'); document.getElementById('auth-tab-signin')?.classList.remove('active'); document.getElementById('auth-signup-form')?.classList.remove('hidden'); document.getElementById('auth-signin-form')?.classList.add('hidden'); });
+  document.getElementById('auth-signin-submit')?.addEventListener('click', authSignIn);
+  document.getElementById('auth-signup-submit')?.addEventListener('click', authSignUp);
+  document.getElementById('auth-overlay-close')?.addEventListener('click', closeAuthOverlay);
+  document.getElementById('auth-overlay')?.addEventListener('click', (e) => { if (e.target.id === 'auth-overlay') closeAuthOverlay(); });
+  document.getElementById('bazaar-deposit-btn')?.addEventListener('click', bazaarDepositCoins);
+  document.getElementById('bazaar-withdraw-btn')?.addEventListener('click', bazaarWithdrawCoins);
+  document.getElementById('bazaar-link-btn')?.addEventListener('click', bazaarLinkCasino);
+
+  if (supabase) {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      authUser = session?.user ?? null;
+      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); });
+      else updateAuthUI();
+    });
+    supabase.auth.onAuthStateChange((_event, session) => {
+      authUser = session?.user ?? null;
+      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); renderBazaar(); });
+      else { authProfile = null; updateAuthUI(); renderBazaar(); }
+    });
+  } else {
+    updateAuthUI();
+  }
+
+  document.getElementById('casino-generate-link-code-btn')?.addEventListener('click', casinoGenerateLinkCode);
 
   advanceShopRotationIfNeeded();
   renderCoins();

@@ -17,6 +17,12 @@
           <span class="coins-wrap">🪙 <span id="coins">0</span> coins</span>
           <span class="luck-wrap">Luck: <span id="luck-value">1× (normal)</span></span>
           <button type="button" id="luck-btn" class="luck-btn">Boost luck (50 coins)</button>
+          <div class="auth-bar">
+            <span id="auth-user-label" class="auth-user-label hidden"></span>
+            <button type="button" id="auth-signup-btn" class="auth-btn">Sign up</button>
+            <button type="button" id="auth-signin-btn" class="auth-btn">Sign in</button>
+            <button type="button" id="auth-signout-btn" class="auth-btn auth-btn--secondary hidden">Sign out</button>
+          </div>
         </div>
       </header>
       <main class="main">
@@ -33,6 +39,7 @@
             <button type="button" class="tab-btn" data-tab="memory" aria-selected="false">Memory match</button>
             <button type="button" class="tab-btn" data-tab="hub" aria-selected="false">Hub</button>
             <button type="button" class="tab-btn" data-tab="casino" aria-selected="false">Casino</button>
+            <button type="button" class="tab-btn" data-tab="bazaar" aria-selected="false">Bazaar</button>
           </div>
           <div id="tab-past" class="tab-panel" role="tabpanel">
             <p class="tab-desc">Salvage for coins or lock to move to storage.</p>
@@ -112,6 +119,11 @@
               <div class="casino-section">
                 <h3 class="hub-heading">Aura vault</h3>
                 <p class="tab-desc">Deposit auras from Locked storage to use in itemflip.</p>
+                <div class="bazaar-link-code-box">
+                  <p class="tab-desc">Link to Bazaar account: generate a code in Casino, then enter it in the Bazaar tab while signed in.</p>
+                  <button type="button" id="casino-generate-link-code-btn" class="hub-btn">Generate link code</button>
+                  <p id="casino-link-code-display" class="casino-link-code-display"></p>
+                </div>
                 <div id="casino-aura-vault" class="casino-aura-vault"></div>
               </div>
               <div class="casino-section">
@@ -128,8 +140,74 @@
               </div>
             </div>
           </div>
+          <div id="tab-bazaar" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
+            <p class="tab-desc">Sell auras for coins. Sign in to open your shop.</p>
+            <div id="bazaar-guest" class="bazaar-guest">
+              <p>Sign in or sign up to use the Bazaar.</p>
+            </div>
+            <div id="bazaar-authed" class="bazaar-authed hidden">
+              <div class="bazaar-balance">
+                <span>Bazaar balance: <strong id="bazaar-coins">0</strong> coins</span>
+                <div class="casino-balance-actions">
+                  <input type="number" id="bazaar-deposit-amount" class="casino-amount-input" placeholder="Amount" min="1" />
+                  <button type="button" id="bazaar-deposit-btn" class="hub-btn">Deposit</button>
+                  <button type="button" id="bazaar-withdraw-btn" class="hub-btn hub-btn--secondary">Withdraw</button>
+                </div>
+              </div>
+              <div class="bazaar-sections">
+                <div class="casino-section">
+                  <h3 class="hub-heading">Browse listings</h3>
+                  <div id="bazaar-listings" class="casino-list"></div>
+                </div>
+                <div class="casino-section">
+                  <h3 class="hub-heading">My shop</h3>
+                  <div class="bazaar-link-casino">
+                    <p id="bazaar-link-status" class="hub-status"></p>
+                    <div id="bazaar-link-form" class="hub-chat-form">
+                      <input type="text" id="bazaar-link-username" class="hub-input" placeholder="Casino display name" maxlength="24" />
+                      <input type="text" id="bazaar-link-code" class="hub-input" placeholder="6-digit code" maxlength="6" />
+                      <button type="button" id="bazaar-link-btn" class="hub-btn">Link vault</button>
+                    </div>
+                  </div>
+                  <h4 class="bazaar-subheading">Import from Casino vault</h4>
+                  <div id="bazaar-casino-vault" class="casino-aura-vault"></div>
+                  <h4 class="bazaar-subheading">My Bazaar inventory</h4>
+                  <div id="bazaar-inventory" class="casino-aura-vault"></div>
+                  <h4 class="bazaar-subheading">My listings</h4>
+                  <div id="bazaar-my-listings" class="casino-list"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
       </main>
+      <div id="auth-overlay" class="admin-overlay hidden" aria-hidden="true">
+        <div class="admin-panel auth-panel">
+          <div class="auth-panel-tabs">
+            <button type="button" id="auth-tab-signin" class="auth-panel-tab active">Sign in</button>
+            <button type="button" id="auth-tab-signup" class="auth-panel-tab">Sign up</button>
+          </div>
+          <div id="auth-signin-form" class="auth-form">
+            <label for="auth-email">Email</label>
+            <input type="email" id="auth-email" class="admin-input" placeholder="Email" autocomplete="email" />
+            <label for="auth-password">Password</label>
+            <input type="password" id="auth-password" class="admin-input" placeholder="Password" autocomplete="current-password" />
+            <p id="auth-message" class="admin-message"></p>
+            <button type="button" id="auth-signin-submit" class="admin-btn">Sign in</button>
+          </div>
+          <div id="auth-signup-form" class="auth-form hidden">
+            <label for="auth-signup-email">Email</label>
+            <input type="email" id="auth-signup-email" class="admin-input" placeholder="Email" autocomplete="email" />
+            <label for="auth-signup-password">Password</label>
+            <input type="password" id="auth-signup-password" class="admin-input" placeholder="Password" autocomplete="new-password" />
+            <label for="auth-signup-displayname">Display name</label>
+            <input type="text" id="auth-signup-displayname" class="admin-input" placeholder="Display name" maxlength="24" autocomplete="username" />
+            <p id="auth-signup-message" class="admin-message"></p>
+            <button type="button" id="auth-signup-submit" class="admin-btn">Sign up</button>
+          </div>
+          <button type="button" id="auth-overlay-close" class="admin-btn admin-btn--secondary">Close</button>
+        </div>
+      </div>
       <button type="button" id="benny-popup-btn" class="benny-popup-btn hidden" aria-hidden="true">Benny is here! Talk to Benny</button>
       <div id="benny-overlay" class="admin-overlay hidden" aria-hidden="true">
         <div class="admin-panel benny-panel">

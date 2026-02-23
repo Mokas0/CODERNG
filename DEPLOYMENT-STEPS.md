@@ -30,6 +30,7 @@ Do these in order. Check off each step before moving on.
 8. At the bottom you should see: **Success. No rows returned.**  
    - If you see an error, copy it and fix the SQL or ask for help.
 9. **Casino (optional):** Open **`supabase-casino.sql`**, copy all, new query, paste, Run. Then in **Database → Replication**, add **coinflip_challenges** and **itemflip_challenges** to the realtime publication.
+10. **Bazaar (optional):** In **Authentication → Providers**, enable **Email**. Then open **`supabase-bazaar.sql`**, copy all, new query, paste, Run. In **Database → Replication**, add **bazaar_listings** to the realtime publication.
 
 ---
 
@@ -40,7 +41,7 @@ Do these in order. Check off each step before moving on.
 3. Find the publication named **supabase_realtime**.
 4. Click it or **Edit**.
 5. Under **Tables**, make sure **messages** and **trades** are **included** (checked or added).  
-   - If you see a list of tables, check the boxes for `messages` and `trades`.  
+   - If you see a list of tables, check the boxes for `messages` and `trades`; for Casino add `coinflip_challenges` and `itemflip_challenges`; for Bazaar add `bazaar_listings`.  
    - If you see “Add table,” add `messages` and `trades`.
 6. Save / close.
 
@@ -200,3 +201,5 @@ Do these in order. Check off each step before moving on.
 - [ ] Netlify env vars: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`  
 - [ ] Deploy triggered and finished  
 - [ ] Live site opens and Hub works (chat + trades)
+- [ ] (Optional) Casino: `supabase-casino.sql` run; Realtime for coinflip/itemflip tables
+- [ ] (Optional) Bazaar: Email auth enabled; `supabase-bazaar.sql` run; Realtime for `bazaar_listings`
