@@ -1095,12 +1095,17 @@ function renderBazaar() {
     if (coinsEl) coinsEl.textContent = bazaarCoinBalance.toLocaleString();
     const linkStatus = document.getElementById('bazaar-link-status');
     const linkForm = document.getElementById('bazaar-link-form');
+    const linkUsernameInput = document.getElementById('bazaar-link-username');
     if (authProfile?.casino_username) {
       if (linkStatus) linkStatus.textContent = `Linked as ${escapeHtml(authProfile.casino_username)}`;
       if (linkForm) linkForm.classList.add('hidden');
     } else {
       if (linkStatus) linkStatus.textContent = 'Link your Casino vault to import auras.';
       if (linkForm) linkForm.classList.remove('hidden');
+      if (linkUsernameInput && !linkUsernameInput.value) {
+        const hubName = getCasinoUsername();
+        if (hubName) linkUsernameInput.placeholder = `e.g. ${hubName}`;
+      }
     }
     const { data: listings } = await supabase.from('bazaar_listings').select('id, seller_id, item_json, price').eq('status', 'listed').order('created_at', { ascending: false }).limit(50);
     const sellerIds = [...new Set((listings || []).map((l) => l.seller_id))];

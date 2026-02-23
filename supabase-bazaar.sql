@@ -115,12 +115,16 @@ end;
 $$;
 
 -- RPC: link Casino to account (authenticated)
+-- Username: case-insensitive match. Code: pad to 6 digits so "12345" matches "012345".
 create or replace function public.link_casino_to_account(p_username text, p_code text)
 returns table(success boolean, message text)
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_stored_username text;
+  v_code_padded text;
 begin
   if auth.uid() is null then
     return query select false, 'Not signed in'::text;
@@ -130,15 +134,24 @@ begin
     return query select false, 'Username and code required'::text;
     return;
   end if;
-  if not exists (
-    select 1 from casino_link_codes
-    where username = trim(p_username) and code = trim(p_code) and expires_at > now()
-  ) then
+  v_code_padded := lpad(trim(p_code), 6, '0');
+  select c.username into v_stored_username
+  from casino_link_codes c
+  where lower(c.username) = lower(trim(p_username))
+    and (c.code = trim(p_code) or (length(trim(p_code)) <= 6 and c.code = v_code_padded))
+    and c.expires_at > now()
+  limit 1;
+  if v_stored_username is null then
     return query select false, 'Invalid or expired code'::text;
     return;
   end if;
-  update profiles set casino_username = trim(p_username) where id = auth.uid();
-  delete from casino_link_codes where username = trim(p_username);
+  begin
+    update profiles set casino_username = v_stored_username where id = auth.uid();
+  exception when unique_violation then
+    return query select false, 'That Casino username is already linked to another account'::text;
+    return;
+  end;
+  delete from casino_link_codes where username = v_stored_username;
   return query select true, ''::text;
 end;
 $$;
