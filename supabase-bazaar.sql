@@ -44,10 +44,9 @@ create table if not exists public.casino_link_codes (
   expires_at timestamptz not null
 );
 
-alter table public.casino_link_codes enable row level security;
-
-drop policy if exists "Link codes anon verify" on public.casino_link_codes;
-create policy "Link codes anon verify" on public.casino_link_codes for select using (true);
+-- casino_link_codes holds only short-lived 6-digit codes (no sensitive data).
+-- Both RPCs that touch it are security definer and handle all access control in code.
+alter table public.casino_link_codes disable row level security;
 
 -- Bazaar wallet: coins per user (deposit from game, withdraw to game)
 create table if not exists public.bazaar_wallets (
