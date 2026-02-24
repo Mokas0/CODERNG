@@ -285,6 +285,7 @@ body {
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0.875rem;
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -473,6 +474,61 @@ body {
 
 .benny-panel .admin-btn {
   width: 100%;
+}
+
+/* Theo's Workshop */
+.theo-shop {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.theo-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+.theo-avatar {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.theo-name {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.theo-dialogue {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+.theo-balance {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+.theo-balance strong {
+  color: #c8a84b;
+}
+.theo-gear-item .shop-item-effect {
+  color: #7ec8a4;
+}
+.scrap-notif {
+  position: absolute;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #c8a84b;
+  animation: scrap-float 1.8s ease forwards;
+  pointer-events: none;
+  white-space: nowrap;
+}
+@keyframes scrap-float {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-40px); }
 }
 
 /* Memory match */
@@ -967,4 +1023,275 @@ body {
 }
 .bazaar-price-input {
   width: 70px;
+}
+
+/* ── Rare roll cinematic overlay ───────────────────────────────────────── */
+
+.rarity-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  animation: overlay-fadein 0.4s ease forwards;
+}
+.rarity-overlay.hidden {
+  display: none;
+}
+
+/* ── Shared beam layer ── */
+.rarity-overlay__beams {
+  position: absolute;
+  inset: 0;
+  animation: beams-spin 4s linear infinite;
+  transform-origin: center center;
+}
+.rarity-overlay__beams::before,
+.rarity-overlay__beams::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  transform-origin: center center;
+}
+
+/* ── Shared particle layer ── */
+.rarity-overlay__particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.rarity-overlay__particles::before,
+.rarity-overlay__particles::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  animation: particle-float 2s ease-in-out infinite alternate;
+}
+
+/* ── Content ── */
+.rarity-overlay__content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: content-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s both;
+}
+.rarity-overlay__tier {
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  margin: 0;
+  animation: text-pulse 1.2s ease-in-out infinite alternate;
+}
+.rarity-overlay__label {
+  font-size: clamp(2rem, 6vw, 4rem);
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.1;
+  text-shadow: 0 0 40px currentColor, 0 0 80px currentColor;
+  animation: text-pulse 0.8s ease-in-out infinite alternate;
+}
+.rarity-overlay__rarity {
+  font-size: clamp(0.85rem, 1.5vw, 1rem);
+  margin: 0;
+  opacity: 0.8;
+  letter-spacing: 0.1em;
+}
+.rarity-overlay__sub {
+  font-size: 0.8rem;
+  margin: 0.75rem 0 0;
+  opacity: 0.5;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  animation: sub-blink 1.5s ease-in-out infinite;
+}
+
+/* ── GLOBAL tier — dark purple/gold ── */
+.rarity-overlay--global {
+  background: radial-gradient(ellipse at center, #1a0a2e 0%, #0a0015 60%, #000 100%);
+}
+.rarity-overlay--global .rarity-overlay__beams::before {
+  background: conic-gradient(
+    transparent 0deg,
+    rgba(212, 175, 55, 0.18) 20deg,
+    transparent 40deg,
+    rgba(147, 51, 234, 0.15) 80deg,
+    transparent 100deg,
+    rgba(212, 175, 55, 0.18) 160deg,
+    transparent 180deg,
+    rgba(147, 51, 234, 0.12) 240deg,
+    transparent 260deg,
+    rgba(212, 175, 55, 0.15) 320deg,
+    transparent 360deg
+  );
+}
+.rarity-overlay--global .rarity-overlay__beams::after {
+  background: radial-gradient(ellipse at center,
+    rgba(212, 175, 55, 0.25) 0%,
+    rgba(147, 51, 234, 0.1) 40%,
+    transparent 70%
+  );
+  animation: pulse-glow 2s ease-in-out infinite alternate;
+}
+.rarity-overlay--global .rarity-overlay__particles::before {
+  width: 6px; height: 6px;
+  background: #d4af37;
+  top: 20%; left: 15%;
+  box-shadow:
+    80px 60px 0 rgba(212,175,55,0.8),
+    -60px 120px 0 rgba(147,51,234,0.7),
+    140px -40px 0 rgba(212,175,55,0.6),
+    -120px -80px 0 rgba(147,51,234,0.5),
+    200px 140px 0 rgba(212,175,55,0.7),
+    -180px 40px 0 rgba(147,51,234,0.6),
+    60px 200px 0 rgba(212,175,55,0.5),
+    -40px -160px 0 rgba(147,51,234,0.8),
+    300px -20px 0 rgba(212,175,55,0.4),
+    -260px 180px 0 rgba(147,51,234,0.4);
+  animation-delay: 0s;
+}
+.rarity-overlay--global .rarity-overlay__particles::after {
+  width: 4px; height: 4px;
+  background: #a855f7;
+  top: 60%; left: 70%;
+  box-shadow:
+    -100px -80px 0 rgba(212,175,55,0.6),
+    50px 100px 0 rgba(147,51,234,0.7),
+    -150px 60px 0 rgba(212,175,55,0.5),
+    120px -120px 0 rgba(147,51,234,0.6),
+    -200px -40px 0 rgba(212,175,55,0.4),
+    180px 60px 0 rgba(147,51,234,0.5);
+  animation-delay: 0.6s;
+}
+.rarity-overlay--global .rarity-overlay__tier { color: #a855f7; }
+.rarity-overlay--global .rarity-overlay__label { color: #d4af37; }
+.rarity-overlay--global .rarity-overlay__rarity { color: #c084fc; }
+.rarity-overlay--global .rarity-overlay__sub { color: #d4af37; }
+
+/* ── UNIVERSAL tier — black/rainbow cosmic ── */
+.rarity-overlay--universal {
+  background: #000;
+}
+.rarity-overlay--universal .rarity-overlay__beams::before {
+  background: conic-gradient(
+    rgba(255,0,0,0.2) 0deg,
+    rgba(255,165,0,0.2) 40deg,
+    rgba(255,255,0,0.2) 80deg,
+    rgba(0,255,0,0.2) 120deg,
+    rgba(0,200,255,0.2) 160deg,
+    rgba(0,0,255,0.2) 200deg,
+    rgba(148,0,211,0.2) 240deg,
+    rgba(255,0,255,0.2) 280deg,
+    rgba(255,0,128,0.2) 320deg,
+    rgba(255,0,0,0.2) 360deg
+  );
+  animation: beams-spin 3s linear infinite;
+}
+.rarity-overlay--universal .rarity-overlay__beams::after {
+  background: conic-gradient(
+    rgba(255,0,0,0.1) 0deg,
+    rgba(0,255,200,0.15) 60deg,
+    rgba(255,255,0,0.1) 120deg,
+    rgba(255,0,255,0.15) 180deg,
+    rgba(0,200,255,0.1) 240deg,
+    rgba(255,128,0,0.15) 300deg,
+    rgba(255,0,0,0.1) 360deg
+  );
+  animation: beams-spin 7s linear infinite reverse;
+}
+.rarity-overlay--universal .rarity-overlay__particles::before {
+  width: 5px; height: 5px;
+  background: #fff;
+  top: 10%; left: 10%;
+  box-shadow:
+    100px 80px 2px rgba(255,0,200,0.9),
+    -80px 150px 2px rgba(0,255,200,0.9),
+    200px -60px 2px rgba(255,200,0,0.9),
+    -150px -100px 2px rgba(100,0,255,0.9),
+    300px 120px 2px rgba(0,200,255,0.9),
+    -250px 80px 2px rgba(255,0,0,0.9),
+    150px 250px 2px rgba(0,255,100,0.9),
+    -100px -200px 2px rgba(255,100,0,0.9),
+    400px -80px 2px rgba(200,0,255,0.9),
+    -350px 200px 2px rgba(0,255,255,0.9),
+    50px -300px 2px rgba(255,255,0,0.9),
+    -200px 300px 2px rgba(255,0,100,0.9);
+  animation-duration: 1.5s;
+}
+.rarity-overlay--universal .rarity-overlay__particles::after {
+  width: 3px; height: 3px;
+  background: #fff;
+  top: 50%; left: 50%;
+  box-shadow:
+    -120px -90px 1px rgba(255,200,0,0.8),
+    90px 130px 1px rgba(0,200,255,0.8),
+    -200px 70px 1px rgba(255,0,200,0.8),
+    160px -150px 1px rgba(0,255,100,0.8),
+    -280px -50px 1px rgba(200,100,255,0.8),
+    240px 80px 1px rgba(255,150,0,0.8),
+    -60px 240px 1px rgba(0,255,255,0.8),
+    320px -100px 1px rgba(255,0,50,0.8);
+  animation-duration: 2.2s;
+  animation-delay: 0.4s;
+}
+.rarity-overlay--universal .rarity-overlay__tier {
+  background: linear-gradient(90deg, #ff0080, #ff8c00, #ffe000, #00ff80, #00cfff, #8000ff, #ff0080);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow-shift 1.5s linear infinite;
+}
+.rarity-overlay--universal .rarity-overlay__label {
+  background: linear-gradient(90deg, #fff 0%, #ffe000 25%, #00ffff 50%, #ff00ff 75%, #fff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rainbow-shift 2s linear infinite;
+  text-shadow: none;
+  filter: drop-shadow(0 0 20px rgba(255,255,255,0.8));
+}
+.rarity-overlay--universal .rarity-overlay__rarity { color: rgba(255,255,255,0.7); }
+.rarity-overlay--universal .rarity-overlay__sub { color: rgba(255,255,255,0.4); }
+
+/* ── Keyframes ── */
+@keyframes overlay-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes beams-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes pulse-glow {
+  from { opacity: 0.6; transform: scale(0.9); }
+  to   { opacity: 1;   transform: scale(1.1); }
+}
+@keyframes particle-float {
+  from { transform: translateY(0px) scale(1); opacity: 0.8; }
+  to   { transform: translateY(-20px) scale(1.2); opacity: 0.3; }
+}
+@keyframes content-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes text-pulse {
+  from { opacity: 0.7; }
+  to   { opacity: 1; }
+}
+@keyframes sub-blink {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 0.7; }
+}
+@keyframes rainbow-shift {
+  from { background-position: 0% center; }
+  to   { background-position: 200% center; }
 }

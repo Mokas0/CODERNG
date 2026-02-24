@@ -1,0 +1,15 @@
+{
+  "name": "nicos-rng-discord-bot",
+  "version": "1.0.0",
+  "description": "Jerry — Discord bot for Nico's RNG. Announces 1/100M+ aura rolls.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7"
+  }
+}

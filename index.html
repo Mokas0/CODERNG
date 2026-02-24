@@ -53,6 +53,17 @@
             <p class="tab-desc">Buy potions for luck. Rotation resets every 5 minutes.</p>
             <p id="shop-reset-countdown" class="shop-countdown"></p>
             <div id="shop-list" class="shop-list"></div>
+            <div class="theo-shop">
+              <div class="theo-header">
+                <span class="theo-avatar">🔨</span>
+                <div>
+                  <h3 class="theo-name">Theo's Workshop</h3>
+                  <p class="theo-dialogue">I'm always here. Bring me scraps — salvage rare auras and they'll sometimes crumble into something useful. I'll turn them into gears that permanently sharpen your luck.</p>
+                </div>
+              </div>
+              <p class="theo-balance">Your scraps: <strong id="theo-scraps">0</strong> &nbsp;|&nbsp; Gear bonus: <strong id="theo-gear-bonus">none</strong></p>
+              <div id="theo-gear-list" class="shop-list"></div>
+            </div>
           </div>
           <div id="tab-memory" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
             <p class="tab-desc">Match all pairs to earn luck. Win = +0.5× luck for your next roll.</p>
@@ -230,6 +241,17 @@
             <button type="button" id="admin-close" class="admin-btn admin-btn--secondary">Close</button>
           </div>
         </div>
+      </div>
+    </div>
+    <!-- Rare roll cinematic overlay -->
+    <div id="rarity-overlay" class="rarity-overlay hidden" aria-hidden="true">
+      <div class="rarity-overlay__beams"></div>
+      <div class="rarity-overlay__particles"></div>
+      <div class="rarity-overlay__content">
+        <p class="rarity-overlay__tier" id="rarity-overlay-tier"></p>
+        <p class="rarity-overlay__label" id="rarity-overlay-label"></p>
+        <p class="rarity-overlay__rarity" id="rarity-overlay-rarity"></p>
+        <p class="rarity-overlay__sub">Click anywhere to reveal</p>
       </div>
     </div>
     <script type="module" src="/src/main.js"></script>

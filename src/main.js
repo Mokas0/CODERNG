@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   coins: 'rng_coins', history: 'rng_history', luck: 'rng_luck', locked: 'rng_locked', lockedStorage: 'rng_locked_storage',
   shopRotationEnd: 'rng_shop_rotation_end', shopSeed: 'rng_shop_seed',
   bennyNextAt: 'rng_benny_next_at',
+  scraps: 'rng_scraps', gearBonus: 'rng_gear_bonus',
 };
 const SHOP_ROTATION_MS = 5 * 60 * 1000;  // 5 minutes
 const BENNY_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
@@ -15,6 +16,18 @@ function getCoins() {
 }
 function setCoins(n) {
   localStorage.setItem(STORAGE_KEYS.coins, String(Math.max(0, Math.floor(n))));
+}
+function getScraps() {
+  return Number(localStorage.getItem(STORAGE_KEYS.scraps) || 0);
+}
+function setScraps(n) {
+  localStorage.setItem(STORAGE_KEYS.scraps, String(Math.max(0, Math.floor(n))));
+}
+function getGearBonus() {
+  return Number(localStorage.getItem(STORAGE_KEYS.gearBonus) || 0);
+}
+function addGearBonus(amount) {
+  localStorage.setItem(STORAGE_KEYS.gearBonus, String(Math.max(0, getGearBonus() + amount)));
 }
 function getHistory() {
   try {
@@ -113,9 +126,17 @@ function renderCoins() {
 
 function renderLuck() {
   const m = getLuckMultiplier();
+  const gear = getGearBonus();
+  const total = m + gear;
   const el = document.getElementById('luck-value');
   const btn = document.getElementById('luck-btn');
-  if (el) el.textContent = m === 1 ? '1× (normal)' : `${m.toFixed(1)}×`;
+  if (el) {
+    if (gear > 0) {
+      el.textContent = `${total.toFixed(2)}× (${m.toFixed(1)} + ${gear.toFixed(2)} gear)`;
+    } else {
+      el.textContent = m === 1 ? '1× (normal)' : `${m.toFixed(1)}×`;
+    }
+  }
   if (btn) {
     const cost = luckCost(m);
     btn.textContent = `Boost luck (${cost} coins)`;
@@ -126,6 +147,29 @@ function renderLuck() {
 function luckCost(currentMult) {
   if (currentMult <= 1) return 50;
   return Math.floor(100 * (currentMult + 0.5));
+}
+
+// Theo's gears: permanent luck boosters bought with scraps
+const GEAR_TIERS = [
+  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 0.1,  cost: 1,   desc: 'A rusty old gear. Still spins.' },
+  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 0.25, cost: 3,   desc: 'Solid iron. Noticeably luckier.' },
+  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 0.5,  cost: 8,   desc: 'Precision-crafted steel.' },
+  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 1.0,  cost: 20,  desc: 'Glows faintly. Luck surges.' },
+  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 2.5,  cost: 60,  desc: 'Radiates raw fortune.' },
+];
+
+// Scraps drop chance and amount from salvaging
+function scrapsFromSalvage(rarity) {
+  if (rarity < 100) return 0;
+  let chance, min, max;
+  if      (rarity < 1_000)       { chance = 0.12; min = 1; max = 1; }
+  else if (rarity < 10_000)      { chance = 0.25; min = 1; max = 1; }
+  else if (rarity < 100_000)     { chance = 0.40; min = 1; max = 2; }
+  else if (rarity < 1_000_000)   { chance = 0.55; min = 1; max = 3; }
+  else if (rarity < 100_000_000) { chance = 0.70; min = 2; max = 5; }
+  else                           { chance = 1.00; min = 3; max = 8; }
+  if (Math.random() > chance) return 0;
+  return min + Math.floor(Math.random() * (max - min + 1));
 }
 
 // Shop potions: id, name, cost, luckBonus (added to current multiplier for next roll)
@@ -362,6 +406,45 @@ function renderBennyShop() {
   list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
     btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, true));
   });
+}
+
+function renderTheo() {
+  const scrapsEl = document.getElementById('theo-scraps');
+  const gearEl = document.getElementById('theo-gear-bonus');
+  const listEl = document.getElementById('theo-gear-list');
+  if (scrapsEl) scrapsEl.textContent = getScraps();
+  if (gearEl) {
+    const bonus = getGearBonus();
+    gearEl.textContent = bonus > 0 ? `+${bonus.toFixed(2)}× permanent` : 'none';
+  }
+  if (!listEl) return;
+  const scraps = getScraps();
+  listEl.innerHTML = GEAR_TIERS.map((g) => {
+    const canBuy = scraps >= g.cost;
+    return `<div class="shop-item theo-gear-item">
+      <span class="shop-item-emoji">${g.emoji}</span>
+      <div class="shop-item-info">
+        <span class="shop-item-name">${g.name}</span>
+        <span class="shop-item-effect">+${g.luckBonus}× permanent luck — ${g.desc}</span>
+      </div>
+      <button type="button" class="shop-buy-btn theo-buy-btn" data-gear="${g.id}" ${!canBuy ? 'disabled' : ''}>
+        ${g.cost} scrap${g.cost > 1 ? 's' : ''}
+      </button>
+    </div>`;
+  }).join('');
+  listEl.querySelectorAll('.theo-buy-btn').forEach((btn) => {
+    btn.addEventListener('click', () => buyGear(btn.dataset.gear));
+  });
+}
+
+function buyGear(gearId) {
+  const gear = GEAR_TIERS.find((g) => g.id === gearId);
+  if (!gear) return;
+  if (getScraps() < gear.cost) return;
+  setScraps(getScraps() - gear.cost);
+  addGearBonus(gear.luckBonus);
+  renderTheo();
+  renderLuck();
 }
 
 // Memory match: 4×4 grid, 8 pairs. Reward: +0.5 luck on win.
@@ -1256,7 +1339,7 @@ function renderHistory() {
           <button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
-          <button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins">Salvage</button>
+          <button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>
         </li>`;
     })
     .join('');
@@ -1277,6 +1360,16 @@ function renderHistory() {
       const [removed] = history.splice(idx, 1);
       setHistory(history);
       setCoins(getCoins() + coinsForSalvage(removed.rarity));
+      const scrapsGained = scrapsFromSalvage(removed.rarity);
+      if (scrapsGained > 0) {
+        setScraps(getScraps() + scrapsGained);
+        renderTheo();
+        const notif = document.createElement('span');
+        notif.className = 'scrap-notif';
+        notif.textContent = `+${scrapsGained} scrap${scrapsGained > 1 ? 's' : ''}`;
+        btn.parentElement.appendChild(notif);
+        setTimeout(() => notif.remove(), 1800);
+      }
       renderHistory();
       renderCoins();
       renderLuck();
@@ -1334,8 +1427,65 @@ function switchTab(tabName) {
   if (tabName === 'bazaar') renderBazaar();
 }
 
-function roll() {
-  const mult = getLuckMultiplier();
+const RARE_ROLL_THRESHOLD  = 100_000_000;       // Jerry broadcast threshold
+const GLOBAL_THRESHOLD     = 100_000_000;       // 100M — Global aura animation
+const UNIVERSAL_THRESHOLD  = 100_000_000_000;   // 100B — Universal aura animation
+
+function showRarityAnimation(item, tier) {
+  return new Promise((resolve) => {
+    const overlay  = document.getElementById('rarity-overlay');
+    const tierEl   = document.getElementById('rarity-overlay-tier');
+    const labelEl  = document.getElementById('rarity-overlay-label');
+    const rarityEl = document.getElementById('rarity-overlay-rarity');
+    if (!overlay) { resolve(); return; }
+
+    // Set content
+    tierEl.textContent  = tier === 'universal' ? '✦ Universal Aura ✦' : '✦ Global Aura ✦';
+    labelEl.textContent = item.text;
+    labelEl.style.fontFamily = `"${item.font}", sans-serif`;
+    labelEl.style.color = tier === 'universal' ? '' : item.color;
+    rarityEl.textContent = formatRarity(item.rarity);
+
+    // Apply tier class
+    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal');
+    overlay.classList.add(`rarity-overlay--${tier}`);
+    overlay.setAttribute('aria-hidden', 'false');
+
+    const dismiss = () => {
+      clearTimeout(timer);
+      overlay.removeEventListener('click', dismiss);
+      overlay.classList.add('hidden');
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal');
+      resolve();
+    };
+
+    const duration = tier === 'universal' ? 5000 : 3000;
+    const timer = setTimeout(dismiss, duration);
+    overlay.addEventListener('click', dismiss, { once: true });
+  });
+}
+
+async function reportRareRoll(item) {
+  if (!supabase) return;
+  const username = getHubUsername() || null;
+  await supabase.from('rare_rolls').insert({
+    username,
+    aura_text: item.text,
+    aura_rarity: item.rarity,
+    font: item.font || null,
+    color: item.color || null,
+    font_weight: item.fontWeight || null,
+    font_style: item.fontStyle || null,
+    text_shadow: item.textShadow || null,
+  });
+}
+
+async function roll() {
+  const rollBtn = document.getElementById('roll-btn');
+  if (rollBtn) rollBtn.disabled = true;
+
+  const mult = getLuckMultiplier() + getGearBonus();
   const item = weightedRandom(mult);
   const history = getHistory();
   history.push({
@@ -1351,10 +1501,19 @@ function roll() {
   });
   setHistory(history);
   if (mult > 1) setLuckMultiplier(1);
+
+  if (item.rarity >= GLOBAL_THRESHOLD) {
+    const tier = item.rarity >= UNIVERSAL_THRESHOLD ? 'universal' : 'global';
+    await showRarityAnimation(item, tier);
+  }
+
   renderResult(item);
   renderHistory();
   renderCoins();
   renderLuck();
+  if (item.rarity >= RARE_ROLL_THRESHOLD) reportRareRoll(item);
+
+  if (rollBtn) rollBtn.disabled = false;
 }
 
 function buyLuck() {
@@ -1440,6 +1599,7 @@ function init() {
     if (e.target.id === 'admin-overlay') closeAdminPanel();
   });
 
+  renderTheo();
   initBennySchedule();
   setInterval(() => {
     const next = getBennyNextAt();
