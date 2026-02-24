@@ -151,23 +151,23 @@ function luckCost(currentMult) {
 
 // Theo's gears: permanent luck boosters bought with scraps
 const GEAR_TIERS = [
-  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 0.1,  cost: 1,   desc: 'A rusty old gear. Still spins.' },
-  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 0.25, cost: 3,   desc: 'Solid iron. Noticeably luckier.' },
-  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 0.5,  cost: 8,   desc: 'Precision-crafted steel.' },
-  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 1.0,  cost: 20,  desc: 'Glows faintly. Luck surges.' },
-  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 2.5,  cost: 60,  desc: 'Radiates raw fortune.' },
+  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 0.0001,   cost: 100,   desc: 'A rusty old gear. Still spins.' },
+  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 0.00025,  cost: 300,   desc: 'Solid iron. Noticeably luckier.' },
+  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 0.0005,   cost: 800,   desc: 'Precision-crafted steel.' },
+  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 0.001,    cost: 2000,  desc: 'Glows faintly. Luck surges.' },
+  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 0.0025,   cost: 6000,  desc: 'Radiates raw fortune.' },
 ];
 
 // Scraps drop chance and amount from salvaging
 function scrapsFromSalvage(rarity) {
   if (rarity < 100) return 0;
   let chance, min, max;
-  if      (rarity < 1_000)       { chance = 0.12; min = 1; max = 1; }
-  else if (rarity < 10_000)      { chance = 0.25; min = 1; max = 1; }
-  else if (rarity < 100_000)     { chance = 0.40; min = 1; max = 2; }
-  else if (rarity < 1_000_000)   { chance = 0.55; min = 1; max = 3; }
-  else if (rarity < 100_000_000) { chance = 0.70; min = 2; max = 5; }
-  else                           { chance = 1.00; min = 3; max = 8; }
+  if      (rarity < 1_000)       { chance = 0.02; min = 1; max = 1; }
+  else if (rarity < 10_000)      { chance = 0.05; min = 1; max = 1; }
+  else if (rarity < 100_000)     { chance = 0.08; min = 1; max = 1; }
+  else if (rarity < 1_000_000)   { chance = 0.12; min = 1; max = 1; }
+  else if (rarity < 100_000_000) { chance = 0.20; min = 1; max = 2; }
+  else                           { chance = 0.35; min = 1; max = 3; }
   if (Math.random() > chance) return 0;
   return min + Math.floor(Math.random() * (max - min + 1));
 }
