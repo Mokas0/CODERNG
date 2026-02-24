@@ -1430,6 +1430,20 @@ function switchTab(tabName) {
 const RARE_ROLL_THRESHOLD  = 100_000_000;       // Jerry broadcast threshold
 const GLOBAL_THRESHOLD     = 100_000_000;       // 100M — Global aura animation
 const UNIVERSAL_THRESHOLD  = 100_000_000_000;   // 100B — Universal aura animation
+const MYTHIC_THRESHOLD     = 1_000_000_000_000; // 1T  — Mythic aura animation
+
+const MYTHIC_CUTSCENES = {
+  9000: { quote: 'The void stares back.',          bg: '#050010', accentA: '#9900ff', accentB: '#330044' },
+  9001: { quote: 'Here, all things end.',           bg: '#100300', accentA: '#ff6600', accentB: '#ff2200' },
+  9002: { quote: 'Born before time itself.',        bg: '#0a0500', accentA: '#ffcc00', accentB: '#ff4400' },
+  9003: { quote: 'The final light goes out.',       bg: '#000508', accentA: '#aaccff', accentB: '#ffffff' },
+  9004: { quote: 'Nothing is beyond your reach.',   bg: '#000f0a', accentA: '#00ffcc', accentB: '#00aa88' },
+  9005: { quote: 'The rules no longer apply.',      bg: '#0f0008', accentA: '#ff00aa', accentB: '#ff66dd' },
+  9006: { quote: 'Two truths. One aura.',           bg: '#080500', accentA: '#d4af37', accentB: '#ffeeaa' },
+  9007: { quote: 'Beyond question. Beyond doubt.',  bg: '#000008', accentA: '#8888ff', accentB: '#e8e8ff' },
+  9008: { quote: 'This was never supposed to drop.',bg: '#000a02', accentA: '#00ff44', accentB: '#00cc33' },
+  9009: { quote: 'You have transcended everything.', bg: '#000000', accentA: '#ff00ff', accentB: '#ffff00' },
+};
 
 function showRarityAnimation(item, tier) {
   return new Promise((resolve) => {
@@ -1437,17 +1451,47 @@ function showRarityAnimation(item, tier) {
     const tierEl   = document.getElementById('rarity-overlay-tier');
     const labelEl  = document.getElementById('rarity-overlay-label');
     const rarityEl = document.getElementById('rarity-overlay-rarity');
+    const quoteEl  = document.getElementById('rarity-overlay-quote');
     if (!overlay) { resolve(); return; }
 
-    // Set content
-    tierEl.textContent  = tier === 'universal' ? '✦ Universal Aura ✦' : '✦ Global Aura ✦';
+    // Set tier label
+    if (tier === 'mythic') {
+      tierEl.textContent = '✦ Mythic Aura ✦';
+    } else if (tier === 'universal') {
+      tierEl.textContent = '✦ Universal Aura ✦';
+    } else {
+      tierEl.textContent = '✦ Global Aura ✦';
+    }
+
+    // Set aura name
     labelEl.textContent = item.text;
     labelEl.style.fontFamily = `"${item.font}", sans-serif`;
-    labelEl.style.color = tier === 'universal' ? '' : item.color;
+    labelEl.style.color = (tier === 'universal') ? '' : item.color;
+
     rarityEl.textContent = formatRarity(item.rarity);
 
+    // Set quote (mythic only)
+    if (quoteEl) {
+      const mythicConfig = MYTHIC_CUTSCENES[item.id];
+      quoteEl.textContent = mythicConfig ? mythicConfig.quote : '';
+      quoteEl.style.display = mythicConfig ? '' : 'none';
+    }
+
+    // Apply CSS custom properties for mythic theming
+    if (tier === 'mythic') {
+      const cfg = MYTHIC_CUTSCENES[item.id] || { bg: '#000', accentA: '#fff', accentB: '#888' };
+      overlay.style.setProperty('--mythic-bg', cfg.bg);
+      overlay.style.setProperty('--mythic-a', cfg.accentA);
+      overlay.style.setProperty('--mythic-b', cfg.accentB);
+      labelEl.style.color = item.color;
+    } else {
+      overlay.style.removeProperty('--mythic-bg');
+      overlay.style.removeProperty('--mythic-a');
+      overlay.style.removeProperty('--mythic-b');
+    }
+
     // Apply tier class
-    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal');
+    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic');
     overlay.classList.add(`rarity-overlay--${tier}`);
     overlay.setAttribute('aria-hidden', 'false');
 
@@ -1456,11 +1500,11 @@ function showRarityAnimation(item, tier) {
       overlay.removeEventListener('click', dismiss);
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
-      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal');
+      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic');
       resolve();
     };
 
-    const duration = tier === 'universal' ? 5000 : 3000;
+    const duration = tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
     const timer = setTimeout(dismiss, duration);
     overlay.addEventListener('click', dismiss, { once: true });
   });
@@ -1503,7 +1547,9 @@ async function roll() {
   if (mult > 1) setLuckMultiplier(1);
 
   if (item.rarity >= GLOBAL_THRESHOLD) {
-    const tier = item.rarity >= UNIVERSAL_THRESHOLD ? 'universal' : 'global';
+    let tier = 'global';
+    if (item.rarity >= MYTHIC_THRESHOLD) tier = 'mythic';
+    else if (item.rarity >= UNIVERSAL_THRESHOLD) tier = 'universal';
     await showRarityAnimation(item, tier);
   }
 

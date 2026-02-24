@@ -1295,3 +1295,119 @@ body {
   from { background-position: 0% center; }
   to   { background-position: 200% center; }
 }
+
+/* ── MYTHIC tier — CSS variable-driven, per-aura theming ── */
+
+.rarity-overlay--mythic {
+  background: radial-gradient(ellipse at center,
+    var(--mythic-bg, #000) 0%,
+    color-mix(in srgb, var(--mythic-bg, #000) 60%, #000) 100%
+  );
+}
+.rarity-overlay--mythic .rarity-overlay__beams::before {
+  background: conic-gradient(
+    transparent 0deg,
+    color-mix(in srgb, var(--mythic-a, #fff) 35%, transparent) 15deg,
+    transparent 30deg,
+    color-mix(in srgb, var(--mythic-b, #888) 25%, transparent) 70deg,
+    transparent 90deg,
+    color-mix(in srgb, var(--mythic-a, #fff) 30%, transparent) 140deg,
+    transparent 160deg,
+    color-mix(in srgb, var(--mythic-b, #888) 20%, transparent) 220deg,
+    transparent 240deg,
+    color-mix(in srgb, var(--mythic-a, #fff) 35%, transparent) 300deg,
+    transparent 320deg,
+    color-mix(in srgb, var(--mythic-b, #888) 25%, transparent) 350deg,
+    transparent 360deg
+  );
+  animation: beams-spin 5s linear infinite;
+}
+.rarity-overlay--mythic .rarity-overlay__beams::after {
+  background: conic-gradient(
+    transparent 0deg,
+    color-mix(in srgb, var(--mythic-b, #888) 20%, transparent) 30deg,
+    transparent 60deg,
+    color-mix(in srgb, var(--mythic-a, #fff) 15%, transparent) 110deg,
+    transparent 140deg,
+    color-mix(in srgb, var(--mythic-b, #888) 20%, transparent) 200deg,
+    transparent 230deg,
+    color-mix(in srgb, var(--mythic-a, #fff) 15%, transparent) 290deg,
+    transparent 320deg,
+    color-mix(in srgb, var(--mythic-b, #888) 15%, transparent) 355deg,
+    transparent 360deg
+  );
+  animation: beams-spin 8s linear infinite reverse;
+}
+.rarity-overlay--mythic .rarity-overlay__particles::before {
+  width: 5px; height: 5px;
+  background: var(--mythic-a, #fff);
+  top: 15%; left: 20%;
+  box-shadow:
+    90px 70px 3px var(--mythic-b, #888),
+    -70px 140px 2px var(--mythic-a, #fff),
+    180px -50px 3px var(--mythic-b, #888),
+    -140px -90px 2px var(--mythic-a, #fff),
+    250px 110px 3px var(--mythic-b, #888),
+    -220px 70px 2px var(--mythic-a, #fff),
+    120px 210px 3px var(--mythic-b, #888),
+    -80px -180px 2px var(--mythic-a, #fff),
+    320px -30px 2px var(--mythic-b, #888),
+    -280px 160px 3px var(--mythic-a, #fff),
+    60px -280px 2px var(--mythic-b, #888),
+    -160px 280px 3px var(--mythic-a, #fff),
+    400px 60px 2px var(--mythic-b, #888),
+    -360px -60px 3px var(--mythic-a, #fff);
+  animation-duration: 2.5s;
+}
+.rarity-overlay--mythic .rarity-overlay__particles::after {
+  width: 3px; height: 3px;
+  background: var(--mythic-b, #888);
+  top: 70%; left: 60%;
+  box-shadow:
+    -110px -80px 2px var(--mythic-a, #fff),
+    60px 110px 2px var(--mythic-b, #888),
+    -170px 50px 1px var(--mythic-a, #fff),
+    130px -130px 2px var(--mythic-b, #888),
+    -220px -30px 1px var(--mythic-a, #fff),
+    190px 50px 2px var(--mythic-b, #888),
+    -50px 220px 1px var(--mythic-a, #fff),
+    280px -80px 2px var(--mythic-b, #888);
+  animation-duration: 1.8s;
+  animation-delay: 0.5s;
+}
+.rarity-overlay--mythic .rarity-overlay__tier {
+  color: var(--mythic-a, #fff);
+  letter-spacing: 0.5em;
+  animation: mythic-tier-pulse 1s ease-in-out infinite alternate;
+}
+.rarity-overlay--mythic .rarity-overlay__label {
+  text-shadow: 0 0 30px var(--mythic-a, #fff), 0 0 60px var(--mythic-b, #888), 0 0 100px var(--mythic-a, #fff);
+  animation: mythic-label-pulse 0.9s ease-in-out infinite alternate;
+}
+.rarity-overlay--mythic .rarity-overlay__rarity {
+  color: color-mix(in srgb, var(--mythic-a, #fff) 80%, white);
+  opacity: 0.85;
+}
+.rarity-overlay--mythic .rarity-overlay__sub {
+  color: color-mix(in srgb, var(--mythic-b, #888) 70%, white);
+}
+
+/* Quote line shown only for mythic */
+.rarity-overlay__quote {
+  font-size: clamp(0.8rem, 1.4vw, 0.95rem);
+  font-style: italic;
+  margin: 0.25rem 0 0;
+  opacity: 0.75;
+  letter-spacing: 0.05em;
+  color: inherit;
+  animation: sub-blink 2s ease-in-out infinite;
+}
+
+@keyframes mythic-tier-pulse {
+  from { opacity: 0.6; text-shadow: 0 0 10px var(--mythic-a, #fff); }
+  to   { opacity: 1;   text-shadow: 0 0 30px var(--mythic-a, #fff), 0 0 60px var(--mythic-b, #888); }
+}
+@keyframes mythic-label-pulse {
+  from { filter: brightness(0.8) drop-shadow(0 0 15px var(--mythic-a, #fff)); }
+  to   { filter: brightness(1.2) drop-shadow(0 0 40px var(--mythic-a, #fff)); }
+}

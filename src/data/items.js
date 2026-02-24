@@ -292,11 +292,85 @@ function buildUltraAuraItems(startId) {
   return items;
 }
 
+// 10 hand-crafted Mythic auras: 1T–2T rarity, each with a unique identity
+const MYTHIC_ITEMS = [
+  {
+    id: 9000, text: 'THE VOID SOVEREIGN',
+    font: 'Unbounded', color: '#9900ff',
+    fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 30px #9900ff, 0 0 60px #4400aa, 0 0 100px #220055',
+    rarity: 1_000_000_000_000, weight: 1 / 1_000_000_000_000,
+  },
+  {
+    id: 9001, text: "ETERNITY'S END",
+    font: 'Cinzel', color: '#ff6600',
+    fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 25px #ff6600, 0 0 50px #ff2200, 0 0 90px #880000',
+    rarity: 1_100_000_000_000, weight: 1 / 1_100_000_000_000,
+  },
+  {
+    id: 9002, text: 'PRIMORDIAL FLAME',
+    font: 'Bebas Neue', color: '#ffcc00',
+    fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 20px #ffcc00, 0 0 50px #ff8800, 0 0 80px #ff4400',
+    rarity: 1_200_000_000_000, weight: 1 / 1_200_000_000_000,
+  },
+  {
+    id: 9003, text: 'THE LAST STAR',
+    font: 'Cormorant Garamond', color: '#ffffff',
+    fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 20px #ffffff, 0 0 50px #aaccff, 0 0 100px #4488ff',
+    rarity: 1_350_000_000_000, weight: 1 / 1_350_000_000_000,
+  },
+  {
+    id: 9004, text: 'OMNIPOTENCE',
+    font: 'Syne', color: '#00ffcc',
+    fontWeight: '800', fontStyle: 'normal',
+    textShadow: '0 0 25px #00ffcc, 0 0 60px #00aa88, 0 0 100px #004433',
+    rarity: 1_450_000_000_000, weight: 1 / 1_450_000_000_000,
+  },
+  {
+    id: 9005, text: 'REALITY BREAKER',
+    font: 'Press Start 2P', color: '#ff00aa',
+    fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 15px #ff00aa, 0 0 40px #aa0066, 0 0 80px #550033',
+    rarity: 1_550_000_000_000, weight: 1 / 1_550_000_000_000,
+  },
+  {
+    id: 9006, text: 'DIVINE PARADOX',
+    font: 'Playfair Display', color: '#d4af37',
+    fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 20px #d4af37, 0 0 50px #aa8800, 0 0 90px #553300',
+    rarity: 1_650_000_000_000, weight: 1 / 1_650_000_000_000,
+  },
+  {
+    id: 9007, text: 'THE ABSOLUTE',
+    font: 'Raleway', color: '#e8e8ff',
+    fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 30px #ffffff, 0 0 70px #8888ff, 0 0 120px #0000ff',
+    rarity: 1_750_000_000_000, weight: 1 / 1_750_000_000_000,
+  },
+  {
+    id: 9008, text: 'BEYOND ALL',
+    font: 'Space Mono', color: '#00ff44',
+    fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 20px #00ff44, 0 0 50px #00aa22, 0 0 90px #004411',
+    rarity: 1_900_000_000_000, weight: 1 / 1_900_000_000_000,
+  },
+  {
+    id: 9009, text: 'ASCENDANT',
+    font: 'Montserrat', color: '#ffffff',
+    fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 20px #ff00ff, 0 0 40px #ff8800, 0 0 60px #ffff00, 0 0 80px #00ffff, 0 0 100px #0000ff',
+    rarity: 2_000_000_000_000, weight: 1 / 2_000_000_000_000,
+  },
+];
+
 function buildItems() {
   const base = buildBaseItems();
   const auras = buildAuraItems(base.length);
   const ultraAuras = buildUltraAuraItems(base.length + auras.length);
-  const items = [...base, ...auras, ...ultraAuras];
+  const items = [...base, ...auras, ...ultraAuras, ...MYTHIC_ITEMS];
   const totalWeight = items.reduce((s, x) => s + x.weight, 0);
   items.forEach((x) => {
     x.probability = x.weight / totalWeight;
