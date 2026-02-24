@@ -1432,6 +1432,8 @@ const GLOBAL_THRESHOLD     = 100_000_000;       // 100M — Global aura animatio
 const UNIVERSAL_THRESHOLD  = 100_000_000_000;   // 100B — Universal aura animation
 const MYTHIC_THRESHOLD     = 1_000_000_000_000; // 1T  — Mythic aura animation
 
+let isAnimating = false; // blocks rolling while a cutscene is playing
+
 const MYTHIC_CUTSCENES = {
   9000: { quote: 'The void stares back.',          bg: '#050010', accentA: '#9900ff', accentB: '#330044' },
   9001: { quote: 'Here, all things end.',           bg: '#100300', accentA: '#ff6600', accentB: '#ff2200' },
@@ -1504,9 +1506,11 @@ function showRarityAnimation(item, tier) {
       resolve();
     };
 
-    const duration = tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
+    const duration  = tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
+    const minView   = tier === 'mythic' ? 6000 : tier === 'universal' ? 4000 : 2500;
     const timer = setTimeout(dismiss, duration);
-    overlay.addEventListener('click', dismiss, { once: true });
+    // Only allow click-to-dismiss after the minimum mandatory view time
+    setTimeout(() => overlay.addEventListener('click', dismiss, { once: true }), minView);
   });
 }
 
@@ -1526,6 +1530,7 @@ async function reportRareRoll(item) {
 }
 
 async function roll() {
+  if (isAnimating) return;
   const rollBtn = document.getElementById('roll-btn');
   if (rollBtn) rollBtn.disabled = true;
 
@@ -1550,7 +1555,9 @@ async function roll() {
     let tier = 'global';
     if (item.rarity >= MYTHIC_THRESHOLD) tier = 'mythic';
     else if (item.rarity >= UNIVERSAL_THRESHOLD) tier = 'universal';
+    isAnimating = true;
     await showRarityAnimation(item, tier);
+    isAnimating = false;
   }
 
   renderResult(item);
