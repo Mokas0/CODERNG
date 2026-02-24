@@ -338,6 +338,7 @@ end;
 $$;
 
 -- Accept itemflip: lock challenge so only one acceptor wins; acceptor stakes their aura (risk on resolve)
+-- Acceptor's aura must have equal or higher rarity than the creator's aura.
 create or replace function public.casino_accept_itemflip(p_challenge_id bigint, p_username text, p_aura_id bigint)
 returns table(success boolean, message text)
 language plpgsql
@@ -345,14 +346,17 @@ security definer
 set search_path = public
 as $$
 declare
-  v_creator text;
+  v_creator        text;
+  v_creator_aura   bigint;
+  v_creator_rarity numeric;
+  v_acceptor_rarity numeric;
 begin
   if p_username is null or p_username = '' or p_aura_id is null then
     return query select false, 'Invalid input'::text;
     return;
   end if;
   -- Lock row so only one acceptor can win; both auras at risk (transferred to winner on resolve)
-  select creator_username into v_creator
+  select creator_username, creator_aura_id into v_creator, v_creator_aura
   from itemflip_challenges where id = p_challenge_id and status = 'open' for update;
   if not found then
     return query select false, 'Challenge not found or already taken'::text;
@@ -368,6 +372,15 @@ begin
   end if;
   if exists (select 1 from itemflip_challenges where (creator_aura_id = p_aura_id or acceptor_aura_id = p_aura_id) and status in ('open', 'matched') and id != p_challenge_id) then
     return query select false, 'Aura already in a challenge'::text;
+    return;
+  end if;
+  -- Rarity check: acceptor's aura must be >= creator's aura in rarity
+  select (item_json->>'rarity')::numeric into v_creator_rarity
+  from casino_aura_inventory where id = v_creator_aura;
+  select (item_json->>'rarity')::numeric into v_acceptor_rarity
+  from casino_aura_inventory where id = p_aura_id;
+  if v_creator_rarity is not null and v_acceptor_rarity is not null and v_acceptor_rarity < v_creator_rarity then
+    return query select false, ('Your aura must be at least as rare as the staked aura (need rarity ≥ ' || v_creator_rarity::text || ')')::text;
     return;
   end if;
   update itemflip_challenges

@@ -785,9 +785,16 @@ async function loadCasinoItemflipList() {
     const creatorAura = auraMap[c.creator_aura_id];
     const acceptorAura = auraMap[c.acceptor_aura_id];
     if (c.status === 'open' && !creatorMe) {
-      const options = casinoAuraVault.map((a) => `<option value="${a.id}">${escapeHtml(a.text)} (${formatRarity(a.rarity)})</option>`).join('');
-      const opponentAuraHtml = creatorAura ? `${escapeHtml(c.creator_username)} stakes ${renderAuraPreview(creatorAura)}` : `${escapeHtml(c.creator_username)} — 1 aura`;
-      return `<div class="casino-row"><span class="casino-row-desc">${opponentAuraHtml}</span><select class="casino-select casino-select--inline" data-challenge-id="${c.id}">${options ? `<option value="">Your aura</option>${options}` : '<option value="">No auras</option>'}</select><button type="button" class="hub-btn casino-itemflip-accept-btn" data-challenge-id="${c.id}">Accept</button></div>`;
+      const creatorRarity = creatorAura?.rarity ?? 0;
+      const eligible = casinoAuraVault.filter((a) => (a.rarity ?? 0) >= creatorRarity);
+      const options = eligible.map((a) => `<option value="${a.id}">${escapeHtml(a.text)} (${formatRarity(a.rarity)})</option>`).join('');
+      const opponentAuraHtml = creatorAura
+        ? `${escapeHtml(c.creator_username)} stakes ${renderAuraPreview(creatorAura)} <span class="casino-rarity-req">(need ≥ ${formatRarity(creatorRarity)})</span>`
+        : `${escapeHtml(c.creator_username)} — 1 aura`;
+      const noEligible = eligible.length === 0;
+      const disabledAttr = noEligible ? ' disabled' : '';
+      const disabledTitle = noEligible ? ` title="You have no auras rare enough to match (need rarity ≥ ${formatRarity(creatorRarity)})"` : '';
+      return `<div class="casino-row"><span class="casino-row-desc">${opponentAuraHtml}</span><select class="casino-select casino-select--inline" data-challenge-id="${c.id}"${disabledAttr}>${options ? `<option value="">Your aura</option>${options}` : '<option value="">No eligible auras</option>'}</select><button type="button" class="hub-btn casino-itemflip-accept-btn" data-challenge-id="${c.id}"${disabledAttr}${disabledTitle}>Accept</button></div>`;
     }
     if (c.status === 'matched') {
       const me = getCasinoUsername();

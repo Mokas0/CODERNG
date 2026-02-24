@@ -760,6 +760,11 @@ body {
   font-weight: 500;
   margin: 0 0.1rem;
 }
+.casino-rarity-req {
+  font-size: 0.75rem;
+  color: #e07b39;
+  margin-left: 0.25rem;
+}
 .casino-msg {
   margin: 0.25rem 0 0;
   font-size: 0.8125rem;
