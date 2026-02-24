@@ -946,6 +946,13 @@ body {
   background: var(--border);
   color: var(--text);
 }
+.admin-btn--danger {
+  background: #c0392b;
+  color: #fff;
+}
+.admin-btn--danger:hover {
+  background: #e74c3c;
+}
 
 .auth-panel {
   min-width: 300px;

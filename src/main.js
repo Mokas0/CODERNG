@@ -1603,11 +1603,20 @@ function submitAdminCode() {
     if (msg) msg.textContent = `Granted ${ADMIN_COINS.toLocaleString()} coins!`;
     if (msg) msg.style.color = 'var(--roll)';
     input.value = '';
+    // Show the extra admin actions (e.g. reset local data)
+    const extra = document.getElementById('admin-extra-actions');
+    if (extra) extra.classList.remove('hidden');
     setTimeout(closeAdminPanel, 1500);
   } else {
     if (msg) msg.textContent = 'Invalid code.';
     if (msg) msg.style.color = 'var(--danger)';
   }
+}
+
+function resetLocalData() {
+  if (!confirm('This will wipe ALL your local data (coins, history, luck, scraps, gears, locked items). This cannot be undone. Continue?')) return;
+  localStorage.clear();
+  location.reload();
 }
 
 function init() {
@@ -1637,6 +1646,7 @@ function init() {
     });
   }
   document.getElementById('admin-submit')?.addEventListener('click', submitAdminCode);
+  document.getElementById('admin-reset-local')?.addEventListener('click', resetLocalData);
   document.getElementById('admin-close')?.addEventListener('click', closeAdminPanel);
   document.getElementById('admin-code')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') submitAdminCode();
