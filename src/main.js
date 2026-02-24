@@ -151,11 +151,11 @@ function luckCost(currentMult) {
 
 // Theo's gears: permanent luck boosters bought with scraps
 const GEAR_TIERS = [
-  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 0.0001,   cost: 100,   desc: 'A rusty old gear. Still spins.' },
-  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 0.00025,  cost: 300,   desc: 'Solid iron. Noticeably luckier.' },
-  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 0.0005,   cost: 800,   desc: 'Precision-crafted steel.' },
-  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 0.001,    cost: 2000,  desc: 'Glows faintly. Luck surges.' },
-  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 0.0025,   cost: 6000,  desc: 'Radiates raw fortune.' },
+  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 0.0001,   cost: 1,    desc: 'A rusty old gear. Still spins.' },
+  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 0.00025,  cost: 3,    desc: 'Solid iron. Noticeably luckier.' },
+  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 0.0005,   cost: 8,    desc: 'Precision-crafted steel.' },
+  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 0.001,    cost: 20,   desc: 'Glows faintly. Luck surges.' },
+  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 0.0025,   cost: 60,   desc: 'Radiates raw fortune.' },
 ];
 
 // Scraps drop chance and amount from salvaging
@@ -1427,7 +1427,7 @@ function switchTab(tabName) {
   if (tabName === 'bazaar') renderBazaar();
 }
 
-const RARE_ROLL_THRESHOLD  = 100_000_000;       // Jerry broadcast threshold
+const RARE_ROLL_THRESHOLD  = 100_000_000_000;   // Jerry broadcast threshold
 const GLOBAL_THRESHOLD     = 100_000_000;       // 100M — Global aura animation
 const UNIVERSAL_THRESHOLD  = 100_000_000_000;   // 100B — Universal aura animation
 const MYTHIC_THRESHOLD     = 1_000_000_000_000; // 1T  — Mythic aura animation
