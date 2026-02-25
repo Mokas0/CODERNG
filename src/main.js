@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
   elderCurseTotal: 'rng_elder_curse_total',
   elderCoinsSpent: 'rng_elder_coins_spent',
   elderReceived:   'rng_elder_received',
+  elderUnlocked:   'rng_elder_unlocked',
 };
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
@@ -102,7 +103,11 @@ function migrateLockedToStorage() {
   } catch (_) {}
 }
 
-function weightedRandom(multiplier = 1) {
+// Weight assigned to unlocked elder/ascendant auras in the roll pool.
+// Equivalent to a ~rarity-10,000 item: rollable with moderate luck.
+const ELDER_ROLL_WEIGHT = 1 / 10_000;
+
+function weightedRandom(multiplier = 1, extraItems = []) {
   // Compress luck logarithmically so high values don't make all items equally likely.
   // effectiveMult = 1 + log10(luck):
   //   luck=1  → 1.0  (no change — original weights)
@@ -111,14 +116,15 @@ function weightedRandom(multiplier = 1) {
   //   luck=1k → 4.0  (1T mythic ~840× rarer than common)
   //   luck=15k→ 5.2  (1T mythic ~180× rarer — hard but rollable)
   const effectiveMult = 1 + Math.log10(Math.max(multiplier, 1));
-  const weights = ITEMS.map((i) => Math.pow(i.weight, 1 / effectiveMult));
+  const pool = [...ITEMS, ...extraItems];
+  const weights = pool.map((i) => Math.pow(i.weight, 1 / effectiveMult));
   const total = weights.reduce((s, w) => s + w, 0);
   let r = Math.random() * total;
-  for (let i = 0; i < ITEMS.length; i++) {
+  for (let i = 0; i < pool.length; i++) {
     r -= weights[i];
-    if (r <= 0) return { ...ITEMS[i], index: i };
+    if (r <= 0) return { ...pool[i], index: i };
   }
-  return { ...ITEMS[ITEMS.length - 1], index: ITEMS.length - 1 };
+  return { ...pool[pool.length - 1], index: pool.length - 1 };
 }
 
 function formatRarity(rarity) {
@@ -2067,7 +2073,7 @@ async function showElderCutscene(aura) {
   isAnimating = false;
 }
 
-// ─── Elder unlock tracking ────────────────────────────────────────────────────
+// ─── Elder / Ascendant tracking ──────────────────────────────────────────────
 function getElderReceived() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.elderReceived) || '[]'); }
   catch { return []; }
@@ -2077,31 +2083,40 @@ function markElderReceived(id) {
   if (!arr.includes(id)) arr.push(id);
   localStorage.setItem(STORAGE_KEYS.elderReceived, JSON.stringify(arr));
 }
+function getElderUnlocked() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.elderUnlocked) || '[]'); }
+  catch { return []; }
+}
+function markElderUnlocked(id) {
+  const arr = getElderUnlocked();
+  if (!arr.includes(id)) arr.push(id);
+  localStorage.setItem(STORAGE_KEYS.elderUnlocked, JSON.stringify(arr));
+}
 
 function getElderSnehoTotal() { return Number(localStorage.getItem(STORAGE_KEYS.elderSnehoTotal) || 0); }
 function getElderRollTotal()  { return Number(localStorage.getItem(STORAGE_KEYS.elderRollTotal)  || 0); }
 function getElderCurseTotal() { return Number(localStorage.getItem(STORAGE_KEYS.elderCurseTotal) || 0); }
 function getElderCoinsSpent() { return Number(localStorage.getItem(STORAGE_KEYS.elderCoinsSpent) || 0); }
 
-async function grantElderAura(aura) {
-  markElderReceived(aura.id);
-  const history = getHistory();
-  history.push({
-    historyId: `${Date.now()}-elder-${aura.id}`,
-    id: aura.id, text: aura.text, font: aura.font,
-    color: aura.color, fontWeight: aura.fontWeight,
-    fontStyle: aura.fontStyle, textShadow: aura.textShadow,
-    rarity: aura.rarity, isElder: true,
-  });
-  setHistory(history);
-  renderHistory();
-  reportRareRoll(aura);
-  await showElderCutscene(aura);
+// Returns the live pool of unlocked-but-not-yet-rolled elders/ascendants
+// injected into weightedRandom on every roll.
+function getUnlockedElderPool() {
+  const received = getElderReceived();
+  const unlocked = getElderUnlocked();
+  const elderItems = ELDER_AURAS
+    .filter(a => unlocked.includes(a.id) && !received.includes(a.id))
+    .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isElder: true }));
+  const ascendantItems = ASCENDANT_AURAS
+    .filter(a => unlocked.includes(a.id) && !received.includes(a.id))
+    .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isAscendant: true }));
+  return [...elderItems, ...ascendantItems];
 }
 
-async function checkElderUnlock() {
+// Check elder conditions — adds to unlocked pool (does NOT auto-grant)
+function checkElderUnlock() {
   const received = getElderReceived();
-  const pending  = ELDER_AURAS.filter(a => !received.includes(a.id));
+  const unlocked = getElderUnlocked();
+  const pending  = ELDER_AURAS.filter(a => !received.includes(a.id) && !unlocked.includes(a.id));
   if (!pending.length) return;
 
   const sneho  = getElderSnehoTotal();
@@ -2111,39 +2126,21 @@ async function checkElderUnlock() {
   const scraps = getScraps();
 
   for (const aura of pending) {
-    let unlocked = false;
-    if (aura.id === 9950 && sneho  >= 1000)    unlocked = true; // THE GLUTTON
-    if (aura.id === 9951 && scraps >= 500)     unlocked = true; // THE HOARDER
-    if (aura.id === 9952 && rolls  >= 10000)   unlocked = true; // THE ANCIENT
-    if (aura.id === 9953 && curses >= 100)     unlocked = true; // THE FORSAKEN
-    if (aura.id === 9954 && spent  >= 1000000) unlocked = true; // THE DEVOTED
-    if (unlocked) {
-      await grantElderAura(aura);
-      return; // grant one at a time; next will surface next check
-    }
+    let meets = false;
+    if (aura.id === 9950 && sneho  >= 1000)    meets = true; // THE GLUTTON
+    if (aura.id === 9951 && scraps >= 500)     meets = true; // THE HOARDER
+    if (aura.id === 9952 && rolls  >= 10000)   meets = true; // THE ANCIENT
+    if (aura.id === 9953 && curses >= 100)     meets = true; // THE FORSAKEN
+    if (aura.id === 9954 && spent  >= 1000000) meets = true; // THE DEVOTED
+    if (meets) markElderUnlocked(aura.id);
   }
 }
 
-// ─── Ascendant unlock logic (dual-prerequisite) ───────────────────────────────
-async function grantAscendantAura(aura) {
-  markElderReceived(aura.id);
-  const history = getHistory();
-  history.push({
-    historyId: `${Date.now()}-ascendant-${aura.id}`,
-    id: aura.id, text: aura.text, font: aura.font,
-    color: aura.color, fontWeight: aura.fontWeight,
-    fontStyle: aura.fontStyle, textShadow: aura.textShadow,
-    rarity: aura.rarity, isAscendant: true,
-  });
-  setHistory(history);
-  renderHistory();
-  reportRareRoll(aura);
-  await showElderCutscene(aura);
-}
-
-async function checkAscendantUnlock() {
+// Check ascendant conditions — adds to unlocked pool (does NOT auto-grant)
+function checkAscendantUnlock() {
   const received = getElderReceived();
-  const pending  = ASCENDANT_AURAS.filter(a => !received.includes(a.id));
+  const unlocked = getElderUnlocked();
+  const pending  = ASCENDANT_AURAS.filter(a => !received.includes(a.id) && !unlocked.includes(a.id));
   if (!pending.length) return;
 
   const sneho  = getElderSnehoTotal();
@@ -2153,21 +2150,13 @@ async function checkAscendantUnlock() {
   const scraps = getScraps();
 
   for (const aura of pending) {
-    let unlocked = false;
-    // THE PRIMORDIAL — 10k rolls + 500 scraps
-    if (aura.id === 9960 && rolls >= 10000 && scraps >= 500) unlocked = true;
-    // THE CONDEMNED — 100 curses + 1k Sneho purchases
-    if (aura.id === 9961 && curses >= 100 && sneho >= 1000)  unlocked = true;
-    // THE ABSOLUTE — 1M coins spent + 10k rolls
-    if (aura.id === 9962 && spent >= 1000000 && rolls >= 10000) unlocked = true;
-    // THE RELENTLESS — 1k Sneho purchases + 1M coins spent
-    if (aura.id === 9963 && sneho >= 1000 && spent >= 1000000) unlocked = true;
-    // THE OMNISCIENT — 100 curses + 500 scraps
-    if (aura.id === 9964 && curses >= 100 && scraps >= 500) unlocked = true;
-    if (unlocked) {
-      await grantAscendantAura(aura);
-      return;
-    }
+    let meets = false;
+    if (aura.id === 9960 && rolls >= 10000 && scraps >= 500)     meets = true; // THE PRIMORDIAL
+    if (aura.id === 9961 && curses >= 100  && sneho >= 1000)     meets = true; // THE CONDEMNED
+    if (aura.id === 9962 && spent >= 1000000 && rolls >= 10000)  meets = true; // THE ABSOLUTE
+    if (aura.id === 9963 && sneho >= 1000  && spent >= 1000000)  meets = true; // THE RELENTLESS
+    if (aura.id === 9964 && curses >= 100  && scraps >= 500)     meets = true; // THE OMNISCIENT
+    if (meets) markElderUnlocked(aura.id);
   }
 }
 
@@ -2387,12 +2376,41 @@ async function roll() {
   const rollBtn = document.getElementById('roll-btn');
   if (rollBtn) rollBtn.disabled = true;
 
-  // Elder roll tracking
+  // Elder/Ascendant roll tracking (sneho/curse/spent tracked elsewhere)
   const newRolls = getElderRollTotal() + 1;
   localStorage.setItem(STORAGE_KEYS.elderRollTotal, String(newRolls));
 
   const mult = getLuckMultiplier() + getGearBonus();
-  const item = weightedRandom(mult);
+  const item = weightedRandom(mult, getUnlockedElderPool());
+
+  if (mult > 1) setLuckMultiplier(1);
+
+  // ── Elder / Ascendant rolled ───────────────────────────────────────────────
+  if (item.isElder || item.isAscendant) {
+    markElderReceived(item.id);
+    const histE = getHistory();
+    histE.push({
+      historyId: `${Date.now()}-${item.isElder ? 'elder' : 'ascendant'}-${item.id}`,
+      id: item.id, text: item.text, font: item.font,
+      color: item.color, fontWeight: item.fontWeight,
+      fontStyle: item.fontStyle, textShadow: item.textShadow,
+      rarity: item.rarity,
+      isElder: item.isElder || false,
+      isAscendant: item.isAscendant || false,
+    });
+    setHistory(histE);
+    renderResult(item);
+    renderHistory();
+    renderCoins();
+    renderLuck();
+    reportRareRoll(item);
+    if (rollBtn) rollBtn.disabled = false;
+    checkElderUnlock();
+    checkAscendantUnlock();
+    await showElderCutscene(item); // manages isAnimating internally
+    return;
+  }
+  // ── Normal roll ───────────────────────────────────────────────────────────
   const history = getHistory();
   history.push({
     historyId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -2406,7 +2424,6 @@ async function roll() {
     rarity: item.rarity,
   });
   setHistory(history);
-  if (mult > 1) setLuckMultiplier(1);
 
   const cutsceneSetting = getCutsceneThreshold();
   const cutsceneMin = cutsceneSetting === 'never' ? Infinity : Number(cutsceneSetting);
