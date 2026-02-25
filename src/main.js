@@ -87,8 +87,33 @@ function migrateLockedToStorage() {
   } catch (_) {}
 }
 
+// Highest safe mythic rarity (9Q = Number.MAX_SAFE_INTEGER floor).
+// Used to normalise the log-smooth luck scale below.
+const _LOG_MAX_RARITY = Math.log(9_000_000_000_000_000);
+
 function weightedRandom(multiplier = 1) {
-  const weights = ITEMS.map((i) => Math.pow(i.weight, 1 / multiplier));
+  // Each item's weight is scaled by how rare it is (log-smooth luck).
+  //
+  // smoothFactor ∈ [0, 1]:
+  //   • 0 for the most common items  → almost no luck benefit
+  //   • 1 for the rarest mythics     → full linear luck benefit
+  //
+  // adjusted_weight = base_weight × (1 + (multiplier − 1) × smoothFactor)
+  //
+  // This means luck(m) makes a 1T mythic exactly m× more likely relative to
+  // its base chance, while a 1-in-2 common item is essentially unchanged.
+  // The log scale prevents mythics from ever catching up to commons at high luck.
+  //
+  // Reference values at multiplier = 1000 (heavy luck):
+  //   common  (rarity 2):   weight × 1.000  (no change)
+  //   rare    (rarity 1M):  weight × ~441
+  //   mythic  (rarity 1T):  weight × ~800
+  //   apex    (rarity 9Q):  weight × 1000
+  //   → 1T mythic is still ~600 million× rarer than common items.
+  const weights = ITEMS.map((i) => {
+    const sf = Math.log(Math.max(i.rarity, 2)) / _LOG_MAX_RARITY;
+    return Math.max(i.weight * (1 + (multiplier - 1) * sf), 0);
+  });
   const total = weights.reduce((s, w) => s + w, 0);
   let r = Math.random() * total;
   for (let i = 0; i < ITEMS.length; i++) {
@@ -99,9 +124,12 @@ function weightedRandom(multiplier = 1) {
 }
 
 function formatRarity(rarity) {
-  if (rarity >= 1e9) return `1 / ${(rarity / 1e9).toFixed(1)}B`;
-  if (rarity >= 1e6) return `1 / ${(rarity / 1e6).toFixed(1)}M`;
-  if (rarity >= 1e3) return `1 / ${(rarity / 1e3).toFixed(1)}K`;
+  // Use integer-safe comparisons. MAX_SAFE_INTEGER ≈ 9.007×10^15.
+  if (rarity >= 1e15) return `1 / ${(rarity / 1e15).toFixed(2)}Q`;
+  if (rarity >= 1e12) return `1 / ${(rarity / 1e12).toFixed(2)}T`;
+  if (rarity >= 1e9)  return `1 / ${(rarity / 1e9).toFixed(1)}B`;
+  if (rarity >= 1e6)  return `1 / ${(rarity / 1e6).toFixed(1)}M`;
+  if (rarity >= 1e3)  return `1 / ${(rarity / 1e3).toFixed(1)}K`;
   return `1 / ${rarity}`;
 }
 
@@ -1630,44 +1658,12 @@ const MYTHIC_CUTSCENES = {
   9066: { quote: 'What was whole is now split forever.',                         bg: '#1a0800', accentA: '#ff8800', accentB: '#ff0033' },
   9067: { quote: 'You have gone beyond. There is no way back.',                  bg: '#00001a', accentA: '#eeeeff', accentB: '#aaaaff' },
 
-  // Apex: 5Q – 18Q
+  // Apex: 5Q – 9Q (safe ceiling)
   9068: { quote: 'Tyrant of space, time, and every axis between.',               bg: '#1a0000', accentA: '#ff1111', accentB: '#880000' },
   9069: { quote: 'The purest form of nothing becoming something terrible.',      bg: '#1a0000', accentA: '#ff3300', accentB: '#aa0000' },
   9070: { quote: 'The hand that shaped creation. Unseen until now.',             bg: '#111110', accentA: '#ccccbb', accentB: '#888877' },
   9071: { quote: 'A frequency no device can measure.',                           bg: '#001100', accentA: '#00ff00', accentB: '#00aa00' },
   9072: { quote: 'The very last aura ever to be catalogued.',                    bg: '#1a1100', accentA: '#ffcc00', accentB: '#cc9900' },
-  9073: { quote: 'Oblivion reached its apex. You were there.',                   bg: '#000000', accentA: '#ff8800', accentB: '#ff0000' },
-  9074: { quote: 'The spiral that never completed. Until this moment.',          bg: '#1a001a', accentA: '#ff77ff', accentB: '#aa00aa' },
-  9075: { quote: 'The scripture that predates all scripture.',                   bg: '#0d0022', accentA: '#9966ff', accentB: '#5500cc' },
-  9076: { quote: 'Ruin that ascends. Destruction that transcends.',              bg: '#1a0000', accentA: '#ff5522', accentB: '#cc2200' },
-  9077: { quote: 'Absolute. Pale. Inevitable.',                                  bg: '#0a0a14', accentA: '#f0f0ff', accentB: '#aaaacc' },
-
-  // Pinnacle: 20Q – 64Q
-  9078: { quote: 'All timelines converge. All roads end here.',                  bg: '#001122', accentA: '#00aaff', accentB: '#0055cc' },
-  9079: { quote: 'The epoch that never began and never ended.',                  bg: '#111111', accentA: '#888888', accentB: '#cccccc' },
-  9080: { quote: 'Darkness without border, cause, or cure.',                     bg: '#080011', accentA: '#8855ff', accentB: '#4400aa' },
-  9081: { quote: 'Where matter ends, something else begins.',                    bg: '#000011', accentA: '#00ffff', accentB: '#ff00ff' },
-  9082: { quote: 'A saint born in the heart of a singularity.',                  bg: '#1a1008', accentA: '#ffeedd', accentB: '#ffaa77' },
-  9083: { quote: 'The originating nothing. Before everything.',                  bg: '#050505', accentA: '#cccccc', accentB: '#ffffff' },
-  9084: { quote: 'The silence after the last sound in existence.',               bg: '#080814', accentA: '#e8e8ff', accentB: '#9999cc' },
-  9085: { quote: 'This law was not written. It simply is.',                      bg: '#0d0800', accentA: '#ffd700', accentB: '#ff8800' },
-  9086: { quote: 'Even the unknowable has its peak. This is it.',                bg: '#1a0011', accentA: '#ff00aa', accentB: '#880055' },
-  9087: { quote: 'A mandate issued from beyond the edge of all things.',         bg: '#080022', accentA: '#8833ff', accentB: '#4400cc' },
-
-  // Transcendent Finale: 72Q – 100Q
-  9088: { quote: 'It does not conquer realms. It consumes them.',                bg: '#110000', accentA: '#cc0000', accentB: '#880000' },
-  9089: { quote: 'The final movement. No instrument can play it.',               bg: '#08001a', accentA: '#ccbbff', accentB: '#7755cc' },
-  9090: { quote: 'The last star winks out. You hold its light.',                 bg: '#110d00', accentA: '#fffaee', accentB: '#ffcc66' },
-  9091: { quote: 'Godhood is a ceiling. You broke through it.',                  bg: '#110011', accentA: '#ffffff', accentB: '#ff00ff' },
-  9092: { quote: 'It was there before the universe. It will be there after.',    bg: '#001a14', accentA: '#00ffee', accentB: '#00aaaa' },
-  9093: { quote: 'Almost everything. Almost the end. Almost.',                   bg: '#1a0800', accentA: '#ff8800', accentB: '#ff0000' },
-  9094: { quote: 'One step from the edge. You can see it clearly now.',          bg: '#001a08', accentA: '#aaffaa', accentB: '#00ff44' },
-  9095: { quote: 'The threshold. Cross it and nothing is the same.',             bg: '#00001a', accentA: '#ddddff', accentB: '#8888ff' },
-  9096: { quote: 'Past the beyond. There are no maps here.',                     bg: '#000000', accentA: '#ffffff', accentB: '#ff8800' },
-  9097: { quote: 'In the beginning, there was this.',                            bg: '#0d0a00', accentA: '#ffd700', accentB: '#ffffff' },
-  9098: { quote: 'The apex of everything that exists or ever could.',            bg: '#110011', accentA: '#ff00ff', accentB: '#00ffff' },
-  9099: { quote: 'This is where all things end. All stories close. All light stops.', bg: '#080808', accentA: '#ffff00', accentB: '#ffffff' },
-  9100: { quote: 'One hundred quadrillion. Even the universe cannot comprehend this.', bg: '#000000', accentA: '#ffd700', accentB: '#00ffff' },
 };
 
 function showRarityAnimation(item, tier) {
