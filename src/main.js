@@ -1639,20 +1639,23 @@ function renderHistory() {
         : isAscendant ? ' history-item--ascendant'
         : isNull      ? ' history-item--null'
         : '';
-      const badge = isSecret
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isNull;
+      const categoryBadge = isSecret
         ? '<span class="secret-badge">⚠ SECRET</span>'
         : isBiome
           ? `<span class="biome-badge">🌍 BIOME</span>`
           : isElder
-            ? `<span class="elder-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
+            ? `<span class="elder-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
             : isAscendant
-              ? `<span class="ascendant-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
+              ? `<span class="ascendant-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
               : isNull
-                ? `<span class="null-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.2em;color:#666;opacity:.9;">NULL</span>`
-                : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
-      const canSalvage = !isSecret && !isBiome && !isElder && !isAscendant && !isNull;
+                ? `<span class="null-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.2em;color:#666;opacity:.9;">NULL</span>`
+                : '';
+      const lockBtn = `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
+      const canSalvage = !isSpecial;
       return `<li class="history-item${specialClass}" data-index="${idx}" data-history-id="${id}">
-          ${badge}
+          ${categoryBadge}
+          ${lockBtn}
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
           ${canSalvage ? `<button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>` : ''}
