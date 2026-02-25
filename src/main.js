@@ -87,40 +87,39 @@ function migrateLockedToStorage() {
   } catch (_) {}
 }
 
-// Highest safe mythic rarity (9Q = Number.MAX_SAFE_INTEGER floor).
-// Used to normalise the log-smooth luck scale below.
-const _LOG_MAX_RARITY = Math.log(9_000_000_000_000_000);
-
 function weightedRandom(multiplier = 1) {
-  // Each item's weight is scaled by how rare it is (log-smooth luck).
+  // Luck sets a minimum rarity floor: minRarity = (luck − 1)².
+  // Items below that floor are removed from the pool entirely.
+  // Within the eligible pool, probability is still weighted by 1/rarity so
+  // rarer items remain proportionally harder to roll.
   //
-  // smoothFactor ∈ [0, 1]:
-  //   • 0 for the most common items  → almost no luck benefit
-  //   • 1 for the rarest mythics     → full linear luck benefit
-  //
-  // adjusted_weight = base_weight × (1 + (multiplier − 1) × smoothFactor)
-  //
-  // This means luck(m) makes a 1T mythic exactly m× more likely relative to
-  // its base chance, while a 1-in-2 common item is essentially unchanged.
-  // The log scale prevents mythics from ever catching up to commons at high luck.
-  //
-  // Reference values at multiplier = 1000 (heavy luck):
-  //   common  (rarity 2):   weight × 1.000  (no change)
-  //   rare    (rarity 1M):  weight × ~441
-  //   mythic  (rarity 1T):  weight × ~800
-  //   apex    (rarity 9Q):  weight × 1000
-  //   → 1T mythic is still ~600 million× rarer than common items.
-  const weights = ITEMS.map((i) => {
-    const sf = Math.log(Math.max(i.rarity, 2)) / _LOG_MAX_RARITY;
-    return Math.max(i.weight * (1 + (multiplier - 1) * sf), 0);
-  });
-  const total = weights.reduce((s, w) => s + w, 0);
-  let r = Math.random() * total;
+  // Reference floors:
+  //   luck=1   → 0       (all items eligible)
+  //   luck=21  → 400     (Minor Luck Potion)
+  //   luck=101 → 10,000  (IAP Luck S)
+  //   luck=551 → 300,000 (Mythic Fortune Brew)
+  //   luck=1001→ 1M      (IAP Luck L)
+  //   luck=3000→ ~9M     (Legendary Elixir)
+  //   luck=15001→~225M   (Ultraluck — always global tier+)
+  const minRarity = Math.round(Math.max(0, multiplier - 1) ** 2);
+
+  // Build eligible index list in one pass (preserves original ITEMS indices).
+  const pool = [];
   for (let i = 0; i < ITEMS.length; i++) {
-    r -= weights[i];
-    if (r <= 0) return { ...ITEMS[i], index: i };
+    if (ITEMS[i].rarity >= minRarity) pool.push(i);
   }
-  return { ...ITEMS[ITEMS.length - 1], index: ITEMS.length - 1 };
+  const src = pool.length > 0 ? pool : ITEMS.map((_, i) => i);
+
+  let total = 0;
+  for (const idx of src) total += ITEMS[idx].weight;
+
+  let r = Math.random() * total;
+  for (const idx of src) {
+    r -= ITEMS[idx].weight;
+    if (r <= 0) return { ...ITEMS[idx], index: idx };
+  }
+  const last = src[src.length - 1];
+  return { ...ITEMS[last], index: last };
 }
 
 function formatRarity(rarity) {
@@ -164,10 +163,11 @@ function renderLuck() {
   const el = document.getElementById('luck-value');
   const btn = document.getElementById('luck-btn');
   if (el) {
+    const fmt = (n) => Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 1 });
     if (gear > 0) {
-      el.textContent = `${total.toFixed(2)}× (${m.toFixed(1)} + ${gear.toFixed(2)} gear)`;
+      el.textContent = `${fmt(total)}× (${fmt(m)} + ${fmt(gear)} gear)`;
     } else {
-      el.textContent = m === 1 ? '1× (normal)' : `${m.toFixed(1)}×`;
+      el.textContent = m === 1 ? '1× (normal)' : `${fmt(m)}×`;
     }
   }
   if (btn) {
@@ -178,17 +178,17 @@ function renderLuck() {
 }
 
 function luckCost(currentMult) {
-  if (currentMult <= 1) return 50;
-  return Math.floor(100 * (currentMult + 0.5));
+  // Cost scales linearly with current multiplier so each +5 click gets progressively more expensive.
+  return Math.floor(50 * Math.max(currentMult, 1));
 }
 
 // Theo's gears: permanent luck boosters bought with scraps
 const GEAR_TIERS = [
-  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 0.01,  cost: 10,   desc: 'A rusty old gear. Still spins.' },
-  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 0.025, cost: 30,   desc: 'Solid iron. Noticeably luckier.' },
-  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 0.05,  cost: 80,   desc: 'Precision-crafted steel.' },
-  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 0.1,   cost: 200,  desc: 'Glows faintly. Luck surges.' },
-  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 0.25,  cost: 600,  desc: 'Radiates raw fortune.' },
+  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 2,   cost: 10,  desc: 'A rusty old gear. Still spins.' },
+  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 5,   cost: 30,  desc: 'Solid iron. Noticeably luckier.' },
+  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 15,  cost: 80,  desc: 'Precision-crafted steel.' },
+  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 40,  cost: 200, desc: 'Glows faintly. Luck surges.' },
+  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 100, cost: 600, desc: 'Radiates raw fortune.' },
 ];
 
 // Scraps drop chance and amount from salvaging
@@ -207,33 +207,33 @@ function scrapsFromSalvage(rarity) {
 
 // Shop potions: id, name, cost, luckBonus (added to current multiplier for next roll)
 const POTIONS = [
-  { id: 'potion1', name: 'Minor Luck Potion', cost: 25, luckBonus: 0.25, emoji: '🧪' },
-  { id: 'potion2', name: 'Luck Potion', cost: 50, luckBonus: 0.5, emoji: '⚗️' },
-  { id: 'potion3', name: 'Greater Luck Potion', cost: 120, luckBonus: 1, emoji: '🔮' },
-  { id: 'potion4', name: 'Supreme Luck Elixir', cost: 300, luckBonus: 1.5, emoji: '✨' },
-  { id: 'potion5', name: 'Mythic Fortune Brew', cost: 700, luckBonus: 2, emoji: '🌟' },
+  { id: 'potion1', name: 'Minor Luck Potion', cost: 25,  luckBonus: 20,  emoji: '🧪' },
+  { id: 'potion2', name: 'Luck Potion',        cost: 50,  luckBonus: 55,  emoji: '⚗️' },
+  { id: 'potion3', name: 'Greater Luck Potion',cost: 120, luckBonus: 110, emoji: '🔮' },
+  { id: 'potion4', name: 'Supreme Luck Elixir',cost: 300, luckBonus: 275, emoji: '✨' },
+  { id: 'potion5', name: 'Mythic Fortune Brew', cost: 700, luckBonus: 550, emoji: '🌟' },
 ];
 // Very rare spawn in rotating shop only (not in Benny's list)
 const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: '3000× Luck Elixir', cost: 5000, luckBonus: 2999, emoji: '👑' };
 const LEGENDARY_POTION_SPAWN_CHANCE = 0.008;
 // Benny-exclusive potions (not sold anywhere else)
 const BENNY_EXCLUSIVE_POTIONS = [
-  { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,   luckBonus: 0.5,  emoji: '🎒', desc: "Dirt cheap and it works." },
-  { id: 'potionBennyTonic',      name: "Old Road Tonic",        cost: 18,  luckBonus: 1.5,  emoji: '🫙', desc: "Brewed on the road. Surprisingly potent." },
-  { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,  luckBonus: 5.0,  emoji: '🔩', desc: "Concocted from leftover parts. Great deal." },
+  { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,    luckBonus: 10,    emoji: '🎒', desc: "Dirt cheap and it works." },
+  { id: 'potionBennyTonic',      name: "Old Road Tonic",        cost: 18,   luckBonus: 25,    emoji: '🫙', desc: "Brewed on the road. Surprisingly potent." },
+  { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,   luckBonus: 75,    emoji: '🔩', desc: "Concocted from leftover parts. Great deal." },
   { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 15000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable." },
 ];
 
 // ——— Sneho's forbidden shop ———
 // Each item has a cursedChance: if the curse triggers the luck effect is negative (cursedPenalty)
 const SNEHO_ITEMS = [
-  { id: 'sneho1', name: 'Shadowed Vial',       cost: 8,    luckBonus: 1.5,  cursedChance: 0.50, cursedPenalty: -1.0,   emoji: '🫗',  desc: 'Could go either way.' },
-  { id: 'sneho2', name: "Demon's Brew",         cost: 30,   luckBonus: 5.0,  cursedChance: 0.40, cursedPenalty: -3.0,   emoji: '😈',  desc: 'Smells of sulfur. High risk, high reward.' },
-  { id: 'sneho3', name: 'Void Essence',         cost: 150,  luckBonus: 15.0, cursedChance: 0.30, cursedPenalty: -10.0,  emoji: '🕳️', desc: 'Bottled nothing. Unstable.' },
-  { id: 'sneho4', name: 'Blood Moon Extract',   cost: 800,  luckBonus: 50.0, cursedChance: 0.25, cursedPenalty: -35.0,  emoji: '🌑',  desc: 'Only available on the wrong night.' },
-  { id: 'sneho5', name: 'Forbidden Pact Seal',  cost: 5000, luckBonus: 200.0,cursedChance: 0.20, cursedPenalty: -150.0, emoji: '📜',  desc: 'Sign your soul away. Might be worth it.' },
-  { id: 'sneho6', name: 'Cursed Coin',          cost: 50,   luckBonus: 3.0,  cursedChance: 0.65, cursedPenalty: -2.0,   emoji: '🪙',  desc: 'Suspiciously cheap.' },
-  { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 30.0, cursedChance: 0.35, cursedPenalty: -20.0,  emoji: '💀',  desc: 'Handle with care. Or don\'t.' },
+  { id: 'sneho1', name: 'Shadowed Vial',       cost: 8,    luckBonus: 8,    cursedChance: 0.50, cursedPenalty: -5,    emoji: '🫗',  desc: 'Could go either way.' },
+  { id: 'sneho2', name: "Demon's Brew",         cost: 30,   luckBonus: 25,   cursedChance: 0.40, cursedPenalty: -15,   emoji: '😈',  desc: 'Smells of sulfur. High risk, high reward.' },
+  { id: 'sneho3', name: 'Void Essence',         cost: 150,  luckBonus: 75,   cursedChance: 0.30, cursedPenalty: -50,   emoji: '🕳️', desc: 'Bottled nothing. Unstable.' },
+  { id: 'sneho4', name: 'Blood Moon Extract',   cost: 800,  luckBonus: 200,  cursedChance: 0.25, cursedPenalty: -130,  emoji: '🌑',  desc: 'Only available on the wrong night.' },
+  { id: 'sneho5', name: 'Forbidden Pact Seal',  cost: 5000, luckBonus: 600,  cursedChance: 0.20, cursedPenalty: -400,  emoji: '📜',  desc: 'Sign your soul away. Might be worth it.' },
+  { id: 'sneho6', name: 'Cursed Coin',          cost: 50,   luckBonus: 20,   cursedChance: 0.65, cursedPenalty: -12,   emoji: '🪙',  desc: 'Suspiciously cheap.' },
+  { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 120,  cursedChance: 0.35, cursedPenalty: -75,   emoji: '💀',  desc: 'Handle with care. Or don\'t.' },
 ];
 
 // ——— Rotating shop (resets every 5 min) ———
@@ -625,7 +625,7 @@ function onMemoryCardClick(index) {
       if (match) {
         memoryMatched.add(memoryCards[a].symbol);
         if (memoryMatched.size === MEMORY_SYMBOLS.length) {
-          setLuckMultiplier(getLuckMultiplier() + 0.5);
+          setLuckMultiplier(getLuckMultiplier() + 10);
           renderLuck();
         }
       }
@@ -645,7 +645,7 @@ function renderMemoryMatch() {
     return;
   }
   const won = memoryMatched.size === MEMORY_SYMBOLS.length;
-  if (status) status.textContent = won ? 'You won! +0.5× luck. Play again?' : `Matches: ${memoryMatched.size} / ${MEMORY_SYMBOLS.length}`;
+  if (status) status.textContent = won ? 'You won! +10× luck. Play again?' : `Matches: ${memoryMatched.size} / ${MEMORY_SYMBOLS.length}`;
   grid.innerHTML = memoryCards
     .map((card, i) => {
       const isFlipped = memoryFlipped.includes(i) || memoryMatched.has(card.symbol);
@@ -1794,7 +1794,7 @@ function buyLuck() {
   const cost = luckCost(getLuckMultiplier());
   if (getCoins() < cost) return;
   setCoins(getCoins() - cost);
-  setLuckMultiplier(getLuckMultiplier() + 0.5);
+  setLuckMultiplier(getLuckMultiplier() + 5);
   renderCoins();
   renderLuck();
 }
