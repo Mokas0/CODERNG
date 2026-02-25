@@ -671,6 +671,35 @@ function getUsernameSetAt() {
 function isAdminUser() {
   return authUser?.email === ADMIN_EMAIL;
 }
+
+function refreshUsernameUI() {
+  const ms = getUsernameCooldownMs();
+  const admin = isAdminUser();
+  const locked = ms > 0 && !admin;
+
+  const hubInput = document.getElementById('hub-username');
+  const hubMsg   = document.getElementById('hub-username-cooldown');
+  if (hubInput) {
+    hubInput.disabled = locked;
+    hubInput.title = locked ? `Username locked for ${formatCooldown(ms)}` : admin ? '(Admin — no cooldown)' : '';
+  }
+  if (hubMsg) {
+    hubMsg.textContent = locked
+      ? `Username locked — can change again in ${formatCooldown(ms)}`
+      : admin ? '✓ Admin — change anytime' : '';
+    hubMsg.style.color = locked ? '' : admin ? 'var(--roll)' : '';
+  }
+
+  const casinoInput = document.getElementById('casino-username');
+  const casinoMsg   = document.getElementById('casino-username-cooldown');
+  if (casinoInput) {
+    casinoInput.disabled = locked;
+    casinoInput.title = locked ? `Username locked for ${formatCooldown(ms)}` : '';
+  }
+  if (casinoMsg) {
+    casinoMsg.textContent = locked ? `Username locked — can change again in ${formatCooldown(ms)}` : '';
+  }
+}
 function getUsernameCooldownMs() {
   if (isAdminUser()) return 0; // admin can change anytime
   const setAt = getUsernameSetAt();
@@ -2454,23 +2483,10 @@ function init() {
     if (e.target.id === 'benny-overlay') closeBenny();
   });
 
+  // Wire up username inputs — listeners only, UI state set by refreshUsernameUI()
   const hubUsernameInput = document.getElementById('hub-username');
   if (hubUsernameInput) {
     const hubUsernameCooldownMsg = document.getElementById('hub-username-cooldown');
-    const updateHubCooldownUI = () => {
-      const ms = getUsernameCooldownMs();
-      if (ms > 0) {
-        hubUsernameInput.disabled = true;
-        hubUsernameInput.title = `Username locked for ${formatCooldown(ms)}`;
-        if (hubUsernameCooldownMsg) { hubUsernameCooldownMsg.textContent = `Username locked — can change again in ${formatCooldown(ms)}`; hubUsernameCooldownMsg.style.color = ''; }
-      } else {
-        hubUsernameInput.disabled = false;
-        hubUsernameInput.title = isAdminUser() ? '(Admin — no cooldown)' : '';
-        if (hubUsernameCooldownMsg) { hubUsernameCooldownMsg.textContent = isAdminUser() ? '✓ Admin — change anytime' : ''; hubUsernameCooldownMsg.style.color = isAdminUser() ? 'var(--roll)' : ''; }
-      }
-    };
-    updateHubCooldownUI();
-    setInterval(updateHubCooldownUI, 60000);
     hubUsernameInput.addEventListener('change', async () => {
       const before = getHubUsername();
       hubUsernameInput.disabled = true;
@@ -2480,9 +2496,9 @@ function init() {
         if (hubUsernameCooldownMsg) { hubUsernameCooldownMsg.textContent = err; hubUsernameCooldownMsg.style.color = 'var(--danger)'; }
       } else {
         if (hubUsernameCooldownMsg) { hubUsernameCooldownMsg.textContent = '✓ Username set'; hubUsernameCooldownMsg.style.color = 'var(--roll)'; }
-        setTimeout(() => updateHubCooldownUI(), 2000);
+        setTimeout(() => refreshUsernameUI(), 2000);
       }
-      hubUsernameInput.disabled = getUsernameCooldownMs() > 0;
+      refreshUsernameUI();
     });
   }
   document.getElementById('hub-chat-send')?.addEventListener('click', sendHubMessage);
@@ -2492,19 +2508,6 @@ function init() {
   const casinoUsernameInput = document.getElementById('casino-username');
   if (casinoUsernameInput) {
     const casinoUsernameCooldownMsg = document.getElementById('casino-username-cooldown');
-    const updateCasinoCooldownUI = () => {
-      const ms = getUsernameCooldownMs();
-      if (ms > 0) {
-        casinoUsernameInput.disabled = true;
-        casinoUsernameInput.title = `Username locked for ${formatCooldown(ms)}`;
-        if (casinoUsernameCooldownMsg) casinoUsernameCooldownMsg.textContent = `Username locked — can change again in ${formatCooldown(ms)}`;
-      } else {
-        casinoUsernameInput.disabled = false;
-        casinoUsernameInput.title = '';
-        if (casinoUsernameCooldownMsg) casinoUsernameCooldownMsg.textContent = '';
-      }
-    };
-    updateCasinoCooldownUI();
     casinoUsernameInput.addEventListener('change', async () => {
       const before = getHubUsername();
       casinoUsernameInput.disabled = true;
@@ -2514,9 +2517,9 @@ function init() {
         if (casinoUsernameCooldownMsg) { casinoUsernameCooldownMsg.textContent = err; casinoUsernameCooldownMsg.style.color = 'var(--danger)'; }
       } else {
         if (casinoUsernameCooldownMsg) { casinoUsernameCooldownMsg.textContent = '✓ Username set'; casinoUsernameCooldownMsg.style.color = 'var(--roll)'; }
-        setTimeout(() => updateCasinoCooldownUI(), 2000);
+        setTimeout(() => refreshUsernameUI(), 2000);
       }
-      casinoUsernameInput.disabled = getUsernameCooldownMs() > 0;
+      refreshUsernameUI();
     });
   }
   document.getElementById('casino-deposit-btn')?.addEventListener('click', casinoDepositCoins);
@@ -2548,20 +2551,23 @@ function init() {
   if (supabase) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       authUser = session?.user ?? null;
-      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); });
-      else updateAuthUI();
+      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); refreshUsernameUI(); });
+      else { updateAuthUI(); refreshUsernameUI(); }
     });
     supabase.auth.onAuthStateChange((_event, session) => {
       authUser = session?.user ?? null;
-      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); renderBazaar(); });
-      else { authProfile = null; updateAuthUI(); renderBazaar(); }
+      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); renderBazaar(); refreshUsernameUI(); });
+      else { authProfile = null; updateAuthUI(); renderBazaar(); refreshUsernameUI(); }
     });
   } else {
     updateAuthUI();
+    refreshUsernameUI();
   }
 
   document.getElementById('casino-generate-link-code-btn')?.addEventListener('click', casinoGenerateLinkCode);
 
+  refreshUsernameUI();
+  setInterval(refreshUsernameUI, 60_000);
   subscribeActiveBiome();
   advanceShopRotationIfNeeded();
   renderCoins();
