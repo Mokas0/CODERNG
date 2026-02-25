@@ -713,6 +713,63 @@ const MYTHIC_ITEMS = [
 // Highest mythic (ID 9072, LAST KNOWN AURA) has rarity 9×10^15, which is safe.
 // All items with rarity > MAX_SAFE_INTEGER were removed to preserve weight accuracy.
 
+// ─── BIOME AURAS ───────────────────────────────────────────────────────────
+// Not in the normal roll pool.  Only rollable during an active Global Biome
+// (1/500K chance per roll while biome is active).  Rarity values are in the
+// quintillion range (>MAX_SAFE_INTEGER) — used for display only, never as
+// a weight in the weighted-random pool, so precision is safe.
+export const BIOME_AURAS = [
+  // ── Volcanic Biome ──────────────────────────────────────────────────────
+  { id: 9910, text: 'MAGMA SOVEREIGN',
+    font: 'Oswald', color: '#ff6600', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 20px #ff6600, 0 0 55px #ff2200, 0 0 100px #880000',
+    rarity: 1e18, biome: 'volcanic' },
+  { id: 9911, text: 'PYROCLAST ETERNAL',
+    font: 'Bebas Neue', color: '#ff4400', fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 15px #ff4400, 0 0 45px #cc2200, 3px 0 0 #ff8800',
+    rarity: 1.5e18, biome: 'volcanic' },
+
+  // ── Celestial Biome ─────────────────────────────────────────────────────
+  { id: 9912, text: 'STAR COURT',
+    font: 'Cinzel', color: '#ffd700', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 20px #ffd700, 0 0 60px #ff8800, 0 0 100px #ff4400',
+    rarity: 2e18, biome: 'celestial' },
+  { id: 9913, text: 'NEBULA IMPERIUM',
+    font: 'DM Serif Display', color: '#cc88ff', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 20px #cc88ff, 0 0 60px #8800ff, 0 0 100px #330066',
+    rarity: 2.5e18, biome: 'celestial' },
+
+  // ── Void Biome ──────────────────────────────────────────────────────────
+  { id: 9914, text: 'VOID ABSOLUTE',
+    font: 'Unbounded', color: '#8800ff', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 20px #8800ff, 0 0 60px #440088, 0 0 100px #110022',
+    rarity: 3e18, biome: 'void' },
+  { id: 9915, text: 'THE UNBORN',
+    font: 'Space Mono', color: '#aa44ff', fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 10px #aa44ff, 0 0 35px #550088, 0 0 70px #220033',
+    rarity: 3.5e18, biome: 'void' },
+
+  // ── Crystal Biome ───────────────────────────────────────────────────────
+  { id: 9916, text: 'PRISM INFINITY',
+    font: 'Syne', color: '#aaffff', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 15px #aaffff, 0 0 45px #00ccff, 0 0 90px #004455',
+    rarity: 4e18, biome: 'crystal' },
+  { id: 9917, text: 'GLACIAL GENESIS',
+    font: 'Raleway', color: '#88ccff', fontWeight: '800', fontStyle: 'normal',
+    textShadow: '0 0 15px #88ccff, 0 0 45px #4488ff, 0 0 90px #002266',
+    rarity: 5e18, biome: 'crystal' },
+
+  // ── Storm Biome ─────────────────────────────────────────────────────────
+  { id: 9918, text: 'THUNDER PRIME',
+    font: 'Oswald', color: '#ffffff', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 10px #ffffff, 0 0 35px #aaaaff, 0 0 70px #0000ff',
+    rarity: 6e18, biome: 'storm' },
+  { id: 9919, text: 'STATIC DEITY',
+    font: 'Space Mono', color: '#ffff00', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 10px #ffff00, 0 0 35px #ffaa00, 0 0 70px #884400',
+    rarity: 8e18, biome: 'storm' },
+];
+
 // ─── SECRET AURAS ──────────────────────────────────────────────────────────
 // Not rollable. Triggered only by the Ultraluck Potion (1/10M chance per use).
 // rarity: 0 is the sentinel for "SECRET" display.

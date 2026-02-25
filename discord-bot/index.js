@@ -7,6 +7,17 @@ const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
+// ── Global Biome Config ────────────────────────────────────────────────────
+const BIOME_CHANCE          = 1 / 10_000; // checked every minute
+const BIOME_DURATION_MINUTES = 10;
+const BIOMES = [
+  { type: 'volcanic',  name: 'Volcanic Surge',      emoji: '🌋', color: 0xFF4400, desc: 'The earth cracks open. Magma mythics rise from the deep.' },
+  { type: 'celestial', name: 'Celestial Alignment',  emoji: '✨', color: 0xFFD700, desc: 'The cosmos aligns. Starbound auras manifest across the sky.' },
+  { type: 'void',      name: 'Void Convergence',     emoji: '🌑', color: 0x8800FF, desc: 'Ancient darkness stirs. Void auras breach the surface.' },
+  { type: 'crystal',   name: 'Crystal Resonance',    emoji: '💎', color: 0x00FFFF, desc: 'Reality crystallizes. Prismatic auras take form from thin air.' },
+  { type: 'storm',     name: 'Tempest Protocol',     emoji: '⚡', color: 0xFFFFFF, desc: 'The sky tears apart. Storm auras overcharge with raw power.' },
+];
+
 if (!DISCORD_BOT_TOKEN || !DISCORD_CHANNEL_ID || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('Missing required environment variables. Copy .env.example to .env and fill it in.');
   process.exit(1);
@@ -138,6 +149,46 @@ discord.once('ready', async () => {
   }
 
   subscribeRealtime();
+
+  // ── Biome trigger — checked every 60 seconds ─────────────────────────────
+  setInterval(async () => {
+    if (Math.random() >= BIOME_CHANCE) return;
+
+    const biome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
+    const endsAt = new Date(Date.now() + BIOME_DURATION_MINUTES * 60_000).toISOString();
+
+    const { error } = await supabase.from('active_biome').insert({
+      biome_type: biome.type,
+      biome_name: biome.name,
+      ends_at: endsAt,
+    });
+
+    if (error) {
+      console.error('[biome] Failed to insert biome:', error.message);
+      return;
+    }
+
+    console.log(`[biome] Triggered: ${biome.name} (${biome.type}) for ${BIOME_DURATION_MINUTES} min`);
+
+    const channel = await fetchChannel();
+    if (!channel) return;
+
+    const embed = new EmbedBuilder()
+      .setTitle(`${biome.emoji} GLOBAL BIOME — ${biome.name.toUpperCase()}`)
+      .setDescription(
+        `${biome.desc}\n\n` +
+        `**Biome-exclusive quintillion-rare auras** can now be discovered for the next **${BIOME_DURATION_MINUTES} minutes**.\n\n` +
+        `Roll now on [Nico's RNG](https://nicos-rng.netlify.app) before it ends!`
+      )
+      .setColor(biome.color)
+      .setFooter({ text: `Nico's RNG • Biome ends in ${BIOME_DURATION_MINUTES} minutes` });
+
+    try {
+      await channel.send({ embeds: [embed] });
+    } catch (err) {
+      console.error('[biome] Failed to announce:', err.message);
+    }
+  }, 60_000);
 });
 
 discord.login(DISCORD_BOT_TOKEN);

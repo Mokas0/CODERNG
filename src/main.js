@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -108,7 +108,7 @@ function weightedRandom(multiplier = 1) {
 
 function formatRarity(rarity) {
   if (rarity === 0) return 'SECRET';
-  // Use integer-safe comparisons. MAX_SAFE_INTEGER ≈ 9.007×10^15.
+  if (rarity >= 1e18) return `1 / ${(rarity / 1e18).toFixed(2)}Qi`; // quintillion
   if (rarity >= 1e15) return `1 / ${(rarity / 1e15).toFixed(2)}Q`;
   if (rarity >= 1e12) return `1 / ${(rarity / 1e12).toFixed(2)}T`;
   if (rarity >= 1e9)  return `1 / ${(rarity / 1e9).toFixed(1)}B`;
@@ -1469,11 +1469,19 @@ function renderHistory() {
       const idx = history.length - 1 - i;
       const id = h.historyId || `legacy-${idx}`;
       const isSecret = h.isSecret || h.rarity === 0;
-      return `<li class="history-item${isSecret ? ' history-item--secret' : ''}" data-index="${idx}" data-history-id="${id}">
-          ${isSecret ? '<span class="secret-badge">⚠ SECRET</span>' : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`}
+      const isBiome  = h.isBiome  || false;
+      const specialClass = isSecret ? ' history-item--secret' : isBiome ? ' history-item--biome' : '';
+      const badge = isSecret
+        ? '<span class="secret-badge">⚠ SECRET</span>'
+        : isBiome
+          ? `<span class="biome-badge">🌍 BIOME</span>`
+          : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
+      const canSalvage = !isSecret && !isBiome;
+      return `<li class="history-item${specialClass}" data-index="${idx}" data-history-id="${id}">
+          ${badge}
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
-          ${isSecret ? '' : `<button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>`}
+          ${canSalvage ? `<button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>` : ''}
         </li>`;
     })
     .join('');
@@ -1653,6 +1661,18 @@ const MYTHIC_CUTSCENES = {
   9071: { quote: 'A frequency no device can measure.',                           bg: '#001100', accentA: '#00ff00', accentB: '#00aa00' },
   9072: { quote: 'The very last aura ever to be catalogued.',                    bg: '#1a1100', accentA: '#ffcc00', accentB: '#cc9900' },
 
+  // ─── Biome Auras (only during active Global Biomes) ─────────────────────
+  9910: { quote: 'The earth folded. You caught what poured out.',                bg: '#1a0300', accentA: '#ff6600', accentB: '#ff2200' },
+  9911: { quote: 'Forged in pressure. Born in flame. Never meant to cool.',      bg: '#1a0000', accentA: '#ff4400', accentB: '#cc0000' },
+  9912: { quote: 'A seat at the table of stars. Earned by impossible odds.',     bg: '#0a0800', accentA: '#ffd700', accentB: '#ff8800' },
+  9913: { quote: 'An empire stretching light-years in every direction. Yours.',  bg: '#0a0015', accentA: '#cc88ff', accentB: '#8800ff' },
+  9914: { quote: 'Beyond emptiness. The form that nothingness takes.',           bg: '#060010', accentA: '#8800ff', accentB: '#440088' },
+  9915: { quote: 'It existed before it was created. Think about that.',          bg: '#030008', accentA: '#aa44ff', accentB: '#550088' },
+  9916: { quote: 'Every angle a different truth. All of them correct.',          bg: '#001515', accentA: '#aaffff', accentB: '#00cccc' },
+  9917: { quote: 'The first ice ever to form anywhere. Still unmelted.',         bg: '#000a15', accentA: '#88ccff', accentB: '#4488ff' },
+  9918: { quote: 'The original storm. All others are echoes of this one.',       bg: '#070710', accentA: '#ffffff', accentB: '#aaaaff' },
+  9919: { quote: 'Everything electrical bows to this frequency.',                bg: '#0a0a00', accentA: '#ffff00', accentB: '#ff8800' },
+
   // ─── Secret Auras (Ultraluck-only, 1/10M per use) ────────────────────────
   9900: { quote: 'This aura does not exist. You should not be seeing this.',     bg: '#000000', accentA: '#ff0000', accentB: '#ff4444' },
   9901: { quote: 'The data has been classified. Yet here you are.',              bg: '#050505', accentA: '#cccccc', accentB: '#888888' },
@@ -1678,6 +1698,9 @@ function showRarityAnimation(item, tier) {
     // Set tier label
     if (tier === 'secret') {
       tierEl.textContent = '⚠ Secret Aura ⚠';
+    } else if (tier === 'biome') {
+      const biomeCfg = activeBiome ? (BIOME_CONFIG[activeBiome.biome_type] || {}) : {};
+      tierEl.textContent = `${biomeCfg.emoji || '🌍'} Biome Exclusive`;
     } else if (tier === 'mythic') {
       tierEl.textContent = '✦ Mythic Aura ✦';
     } else if (tier === 'universal') {
@@ -1700,8 +1723,8 @@ function showRarityAnimation(item, tier) {
       quoteEl.style.display = cfg ? '' : 'none';
     }
 
-    // Apply CSS custom properties for mythic/secret theming
-    if (tier === 'mythic' || tier === 'secret') {
+    // Apply CSS custom properties for mythic/secret/biome theming
+    if (tier === 'mythic' || tier === 'secret' || tier === 'biome') {
       const cfg = MYTHIC_CUTSCENES[item.id] || { bg: '#000', accentA: '#fff', accentB: '#888' };
       overlay.style.setProperty('--mythic-bg', cfg.bg);
       overlay.style.setProperty('--mythic-a', cfg.accentA);
@@ -1714,7 +1737,7 @@ function showRarityAnimation(item, tier) {
     }
 
     // Apply tier class
-    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret');
+    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome');
     overlay.classList.add(`rarity-overlay--${tier}`);
     overlay.setAttribute('aria-hidden', 'false');
 
@@ -1723,16 +1746,98 @@ function showRarityAnimation(item, tier) {
       overlay.removeEventListener('click', dismiss);
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
-      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret');
+      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome');
       resolve();
     };
 
-    const duration  = tier === 'secret' ? 10000 : tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
-    const minView   = tier === 'secret' ? 8000  : tier === 'mythic' ? 6000 : tier === 'universal' ? 4000 : 2500;
+    const duration  = tier === 'secret' ? 10000 : tier === 'biome' ? 8000 : tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
+    const minView   = tier === 'secret' ? 8000  : tier === 'biome' ? 6500 : tier === 'mythic' ? 6000 : tier === 'universal' ? 4000 : 2500;
     const timer = setTimeout(dismiss, duration);
     // Only allow click-to-dismiss after the minimum mandatory view time
     setTimeout(() => overlay.addEventListener('click', dismiss, { once: true }), minView);
   });
+}
+
+// ─── Global Biome System ───────────────────────────────────────────────────
+const BIOME_CONFIG = {
+  volcanic:  { name: 'Volcanic Surge',       emoji: '🌋', color: '#ff4400', glow: '#ff220066', desc: 'Magma mythics rise from the deep.' },
+  celestial: { name: 'Celestial Alignment',  emoji: '✨', color: '#ffd700', glow: '#ffd70055', desc: 'The cosmos aligns. Star auras manifest.' },
+  void:      { name: 'Void Convergence',     emoji: '🌑', color: '#8800ff', glow: '#8800ff55', desc: 'Ancient darkness stirs. Void auras awaken.' },
+  crystal:   { name: 'Crystal Resonance',    emoji: '💎', color: '#00ffff', glow: '#00ffff44', desc: 'Reality crystallizes. Prismatic auras take form.' },
+  storm:     { name: 'Tempest Protocol',     emoji: '⚡', color: '#ffffff', glow: '#ffffff33', desc: 'The sky tears open. Storm auras overcharge.' },
+};
+const BIOME_ROLL_CHANCE = 1 / 500_000; // chance per roll during active biome
+
+let activeBiome = null;         // current active_biome row
+let biomeTimerInterval = null;  // countdown interval ID
+
+function showBiomeBanner(biome) {
+  const cfg = BIOME_CONFIG[biome.biome_type] || { name: biome.biome_name, emoji: '🌍', color: '#ffffff', glow: '#ffffff33', desc: '' };
+  const banner = document.getElementById('biome-banner');
+  if (!banner) return;
+  document.getElementById('biome-emoji').textContent = cfg.emoji;
+  document.getElementById('biome-name').textContent = cfg.name;
+  document.getElementById('biome-desc').textContent = cfg.desc;
+  banner.style.setProperty('--biome-color', cfg.color);
+  banner.style.setProperty('--biome-glow', cfg.glow);
+  banner.classList.remove('hidden');
+
+  clearInterval(biomeTimerInterval);
+  const timerEl = document.getElementById('biome-timer');
+  function tick() {
+    const msLeft = new Date(biome.ends_at) - Date.now();
+    if (msLeft <= 0) {
+      hideBiomeBanner();
+      return;
+    }
+    const m = Math.floor(msLeft / 60000);
+    const s = Math.floor((msLeft % 60000) / 1000);
+    if (timerEl) timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  }
+  tick();
+  biomeTimerInterval = setInterval(tick, 1000);
+}
+
+function hideBiomeBanner() {
+  clearInterval(biomeTimerInterval);
+  biomeTimerInterval = null;
+  activeBiome = null;
+  document.getElementById('biome-banner')?.classList.add('hidden');
+}
+
+async function loadActiveBiome() {
+  if (!supabase) return;
+  const { data } = await supabase
+    .from('active_biome')
+    .select('*')
+    .gt('ends_at', new Date().toISOString())
+    .order('started_at', { ascending: false })
+    .limit(1);
+  if (data && data.length > 0) {
+    activeBiome = data[0];
+    showBiomeBanner(activeBiome);
+  }
+}
+
+function subscribeActiveBiome() {
+  if (!supabase) return;
+  supabase.channel('active-biome-feed')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'active_biome' }, (payload) => {
+      const biome = payload.new;
+      if (new Date(biome.ends_at) > new Date()) {
+        activeBiome = biome;
+        showBiomeBanner(biome);
+      }
+    })
+    .subscribe();
+  loadActiveBiome();
+}
+
+function tryBiomeRoll(biomeType) {
+  if (Math.random() >= BIOME_ROLL_CHANCE) return null;
+  const eligible = BIOME_AURAS.filter(a => a.biome === biomeType);
+  if (!eligible.length) return null;
+  return { ...eligible[Math.floor(Math.random() * eligible.length)] };
 }
 
 // ─── Secret Aura Trigger ───────────────────────────────────────────────────
@@ -1819,6 +1924,32 @@ async function roll() {
   renderCoins();
   renderLuck();
   if (item.rarity >= RARE_ROLL_THRESHOLD) reportRareRoll(item);
+
+  // Biome bonus roll — only fires during an active biome
+  if (activeBiome && new Date(activeBiome.ends_at) > Date.now()) {
+    const biomeAura = tryBiomeRoll(activeBiome.biome_type);
+    if (biomeAura) {
+      const history2 = getHistory();
+      history2.push({
+        historyId: `${Date.now()}-biome-${Math.random().toString(36).slice(2)}`,
+        id: biomeAura.id,
+        text: biomeAura.text,
+        font: biomeAura.font,
+        color: biomeAura.color,
+        fontWeight: biomeAura.fontWeight,
+        fontStyle: biomeAura.fontStyle,
+        textShadow: biomeAura.textShadow,
+        rarity: biomeAura.rarity,
+        isBiome: true,
+      });
+      setHistory(history2);
+      renderHistory();
+      reportRareRoll(biomeAura);
+      isAnimating = true;
+      await showRarityAnimation(biomeAura, 'biome');
+      isAnimating = false;
+    }
+  }
 
   if (rollBtn) rollBtn.disabled = false;
 }
@@ -2320,6 +2451,7 @@ function init() {
 
   document.getElementById('casino-generate-link-code-btn')?.addEventListener('click', casinoGenerateLinkCode);
 
+  subscribeActiveBiome();
   advanceShopRotationIfNeeded();
   renderCoins();
   renderLuck();

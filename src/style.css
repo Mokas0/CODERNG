@@ -351,6 +351,109 @@ body {
   white-space: nowrap;
 }
 
+.history-item--biome {
+  border: 1px solid rgba(100, 200, 255, 0.4);
+  background: rgba(0, 40, 60, 0.3);
+  animation: biome-history-pulse 3s ease-in-out infinite;
+}
+.biome-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #aaffff;
+  background: rgba(0, 60, 80, 0.7);
+  border: 1px solid rgba(0, 200, 255, 0.5);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+@keyframes biome-history-pulse {
+  0%, 100% { border-color: rgba(100, 200, 255, 0.3); }
+  50%       { border-color: rgba(100, 200, 255, 0.7); box-shadow: 0 0 6px rgba(100, 200, 255, 0.3); }
+}
+
+/* ── Global Biome Banner ────────────────────────────────────────────────── */
+.biome-banner {
+  --biome-color: #ffffff;
+  --biome-glow: #ffffff33;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 1.2rem;
+  background: linear-gradient(90deg,
+    rgba(0, 0, 0, 0.85) 0%,
+    color-mix(in srgb, var(--biome-color) 12%, transparent) 50%,
+    rgba(0, 0, 0, 0.85) 100%);
+  border-bottom: 1px solid color-mix(in srgb, var(--biome-color) 40%, transparent);
+  box-shadow: 0 2px 20px var(--biome-glow);
+  animation: biome-banner-pulse 2s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+  z-index: 100;
+}
+.biome-banner.hidden { display: none; }
+
+.biome-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 40px,
+    color-mix(in srgb, var(--biome-color) 4%, transparent) 40px,
+    color-mix(in srgb, var(--biome-color) 4%, transparent) 41px
+  );
+  pointer-events: none;
+}
+
+.biome-banner__emoji {
+  font-size: 1.4rem;
+  animation: biome-emoji-bounce 1.5s ease-in-out infinite;
+}
+.biome-banner__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.biome-banner__name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--biome-color);
+  text-shadow: 0 0 12px var(--biome-color);
+  text-transform: uppercase;
+}
+.biome-banner__desc {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.03em;
+}
+.biome-banner__timer {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--biome-color);
+  opacity: 0.9;
+  letter-spacing: 0.1em;
+  animation: biome-timer-tick 1s step-end infinite;
+}
+
+@keyframes biome-banner-pulse {
+  0%, 100% { box-shadow: 0 2px 15px var(--biome-glow); }
+  50%       { box-shadow: 0 2px 35px var(--biome-glow), 0 0 60px var(--biome-glow); }
+}
+@keyframes biome-emoji-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+@keyframes biome-timer-tick {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
 .salvage-btn {
   padding: 0.35rem 0.6rem;
   font-size: 0.75rem;
@@ -1953,4 +2056,102 @@ body {
   84%      { opacity: 0.1; }
   86%      { opacity: 0.75; }
   100%     { opacity: 0.75; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BIOME AURA OVERLAY
+   ══════════════════════════════════════════════════════════════ */
+.rarity-overlay--biome {
+  background: var(--mythic-bg, #000810);
+}
+
+.rarity-overlay--biome .rarity-overlay__beams {
+  animation: beams-spin 3s linear infinite;
+}
+.rarity-overlay--biome .rarity-overlay__beams::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--mythic-a, #00ffff) 20%, transparent) 15deg,
+    transparent 30deg,
+    color-mix(in srgb, var(--mythic-a, #00ffff) 10%, transparent) 50deg,
+    transparent 70deg,
+    color-mix(in srgb, var(--mythic-b, #004455) 25%, transparent) 100deg,
+    transparent 130deg,
+    color-mix(in srgb, var(--mythic-a, #00ffff) 18%, transparent) 180deg,
+    transparent 210deg,
+    color-mix(in srgb, var(--mythic-b, #004455) 15%, transparent) 260deg,
+    transparent 300deg,
+    color-mix(in srgb, var(--mythic-a, #00ffff) 20%, transparent) 340deg,
+    transparent 360deg
+  );
+  animation: beams-spin 5s linear infinite reverse;
+}
+.rarity-overlay--biome .rarity-overlay__beams::after {
+  background: radial-gradient(ellipse 55% 55% at 50% 50%,
+    color-mix(in srgb, var(--mythic-a, #00ffff) 15%, transparent) 0%,
+    color-mix(in srgb, var(--mythic-b, #004455) 10%, transparent) 45%,
+    transparent 70%
+  );
+  animation: biome-core-pulse 2.5s ease-in-out infinite;
+}
+
+.rarity-overlay--biome .rarity-overlay__particles::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(2px 2px at 10% 20%, var(--mythic-a, #00ffff) 0%, transparent 100%),
+    radial-gradient(2px 2px at 30% 55%, var(--mythic-a, #00ffff) 0%, transparent 100%),
+    radial-gradient(2px 2px at 50% 15%, var(--mythic-b, #004455) 0%, transparent 100%),
+    radial-gradient(2px 2px at 70% 70%, var(--mythic-a, #00ffff) 0%, transparent 100%),
+    radial-gradient(2px 2px at 85% 35%, var(--mythic-a, #00ffff) 0%, transparent 100%),
+    radial-gradient(3px 3px at 20% 80%, var(--mythic-b, #004455) 0%, transparent 100%),
+    radial-gradient(2px 2px at 60% 45%, var(--mythic-a, #00ffff) 0%, transparent 100%),
+    radial-gradient(2px 2px at 92% 60%, var(--mythic-b, #004455) 0%, transparent 100%);
+  animation: biome-particles-float 4s ease-in-out infinite;
+}
+.rarity-overlay--biome .rarity-overlay__particles::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(2px 2px at 15% 40%, var(--mythic-a, #00ffff) 0%, transparent 100%),
+    radial-gradient(2px 2px at 45% 85%, var(--mythic-b, #004455) 0%, transparent 100%),
+    radial-gradient(3px 3px at 75% 25%, var(--mythic-a, #00ffff) 0%, transparent 100%),
+    radial-gradient(2px 2px at 88% 80%, var(--mythic-b, #004455) 0%, transparent 100%);
+  animation: biome-particles-float 6s ease-in-out infinite reverse;
+}
+
+.rarity-overlay--biome .rarity-overlay__tier {
+  font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+  letter-spacing: 0.2em;
+  color: var(--mythic-a, #00ffff);
+  text-shadow: 0 0 15px var(--mythic-a, #00ffff);
+  animation: mythic-tier-pulse 1.8s ease-in-out infinite alternate;
+}
+.rarity-overlay--biome .rarity-overlay__label {
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  animation: mythic-label-pulse 1.5s ease-in-out infinite alternate;
+}
+.rarity-overlay--biome .rarity-overlay__rarity {
+  color: var(--mythic-a, #00ffff);
+  animation: sub-blink 2s ease-in-out infinite;
+}
+.rarity-overlay--biome .rarity-overlay__quote {
+  color: color-mix(in srgb, var(--mythic-a, #00ffff) 70%, white);
+  animation: sub-blink 3s ease-in-out infinite;
+}
+.rarity-overlay--biome .rarity-overlay__sub {
+  color: color-mix(in srgb, var(--mythic-a, #00ffff) 50%, transparent);
+}
+
+@keyframes biome-core-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+@keyframes biome-particles-float {
+  0%, 100% { transform: translateY(0) scale(1);    opacity: 0.8; }
+  33%       { transform: translateY(-8px) scale(1.2); opacity: 1; }
+  66%       { transform: translateY(5px) scale(0.9);  opacity: 0.6; }
 }
