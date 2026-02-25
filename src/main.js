@@ -1579,7 +1579,20 @@ const MYTHIC_CUTSCENES = {
   9021: { quote: 'Even divinity must fall eventually.',    bg: '#080004', accentA: '#ff44ff', accentB: '#ff2200' },
   9022: { quote: 'There is nothing left to surpass.',      bg: '#000508', accentA: '#00eeff', accentB: '#003344' },
   9023: { quote: 'It was here before names were spoken.',  bg: '#060500', accentA: '#ffee88', accentB: '#443300' },
-  9024: { quote: 'When all else fades — this endures.',    bg: '#000004', accentA: '#e0e0ff', accentB: '#0000aa' },
+  9024: { quote: 'When all else fades — this endures.',       bg: '#000004', accentA: '#e0e0ff', accentB: '#0000aa' },
+  9025: { quote: 'Older than the first law of nature.',       bg: '#080200', accentA: '#ff7700', accentB: '#cc3300' },
+  9026: { quote: 'No chain can hold what has no limit.',      bg: '#000806', accentA: '#66ffee', accentB: '#00aaaa' },
+  9027: { quote: 'The void does not bow. It rules.',          bg: '#060008', accentA: '#aa00ff', accentB: '#550088' },
+  9028: { quote: 'After this, there is nothing to build.',    bg: '#080400', accentA: '#ffddaa', accentB: '#ff8800' },
+  9029: { quote: 'One. Just one. There can be no other.',     bg: '#030303', accentA: '#ffffff', accentB: '#888888' },
+  9030: { quote: 'Everything folds inward. Even infinity.',   bg: '#000005', accentA: '#3300ff', accentB: '#aa00ff' },
+  9031: { quote: 'Two truths collide. Only one survives.',    bg: '#060002', accentA: '#ff44aa', accentB: '#ffcc00' },
+  9032: { quote: 'Ideas end here. This is the last one.',     bg: '#000a04', accentA: '#aaffcc', accentB: '#00ff88' },
+  9033: { quote: 'The blueprint that made everything else.',  bg: '#040400', accentA: '#ffcc44', accentB: '#4433ff' },
+  9034: { quote: 'This was written before you were born.',    bg: '#080000', accentA: '#ff0000', accentB: '#880000' },
+  9035: { quote: 'The universe did not contain it. It IS it.',bg: '#010101', accentA: '#ff00ff', accentB: '#00ffff' },
+  9036: { quote: 'Not darkness. The absence of everything.',  bg: '#000000', accentA: '#aaaaff', accentB: '#ffffff' },
+  9037: { quote: 'One hundred trillion. You have no words.',  bg: '#000000', accentA: '#ffd700', accentB: '#ff00ff' },
 };
 
 function showRarityAnimation(item, tier) {
