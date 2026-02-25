@@ -1,5 +1,7 @@
 node_modules
 dist
 .env
+.env.local
 *.local
 discord-bot/.env
+# Never commit real credentials — .env.example must only contain placeholders
