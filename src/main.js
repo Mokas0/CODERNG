@@ -694,47 +694,50 @@ async function claimUsername(newName) {
   const current = getHubUsername();
   if (trimmed === current) return null; // no change needed
 
-  // Re-fetch auth fresh so we don't depend on cached authUser timing
+  // Re-fetch auth fresh — use safe destructuring so any failure keeps isAdmin false
   let isAdmin = false;
-  if (supabase) {
-    const { data: { user } } = await supabase.auth.getUser();
-    isAdmin = user?.email === ADMIN_EMAIL;
-  }
+  try {
+    if (supabase) {
+      const result = await supabase.auth.getUser();
+      isAdmin = result?.data?.user?.email === ADMIN_EMAIL;
+    }
+  } catch (_) { /* auth unavailable — not admin */ }
 
   if (!isAdmin) {
     const cooldown = getUsernameCooldownMs();
     if (cooldown > 0) return `Username locked — can change again in ${formatCooldown(cooldown)}.`;
   }
 
+  // Uniqueness check + claim (skip entirely if table doesn't exist yet)
   if (supabase) {
-    const myToken = getDeviceToken();
+    try {
+      const myToken = getDeviceToken();
 
-    if (!isAdmin) {
-      // Check if name is already taken by a different device
-      const { data: existing } = await supabase
-        .from('usernames')
-        .select('token')
-        .eq('username', trimmed)
-        .maybeSingle();
+      if (!isAdmin) {
+        const { data: existing } = await supabase
+          .from('usernames')
+          .select('token')
+          .eq('username', trimmed)
+          .maybeSingle();
 
-      if (existing && existing.token !== myToken) {
-        return `"${trimmed}" is already taken. Choose a different name.`;
+        if (existing && existing.token !== myToken) {
+          return `"${trimmed}" is already taken. Choose a different name.`;
+        }
       }
-    }
 
-    // Release old username claim (admin force-deletes regardless of token)
-    if (current) {
-      const deleteQuery = supabase.from('usernames').delete().eq('username', current);
-      if (!isAdmin) deleteQuery.eq('token', myToken);
-      await deleteQuery;
-    }
+      // Release old username claim
+      if (current) {
+        let del = supabase.from('usernames').delete().eq('username', current);
+        if (!isAdmin) del = del.eq('token', myToken);
+        await del;
+      }
 
-    // Claim the new username (admin overwrites any existing claim)
-    const { error } = await supabase.from('usernames').upsert(
-      { username: trimmed, token: myToken, updated_at: new Date().toISOString() },
-      { onConflict: 'username' }
-    );
-    if (error && !isAdmin) return 'Could not claim username. Try again.';
+      // Claim the new username
+      await supabase.from('usernames').upsert(
+        { username: trimmed, token: myToken, updated_at: new Date().toISOString() },
+        { onConflict: 'username' }
+      );
+    } catch (_) { /* table may not exist yet — allow change anyway */ }
   }
 
   localStorage.setItem(HUB_USERNAME_KEY, trimmed);
