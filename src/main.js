@@ -88,38 +88,14 @@ function migrateLockedToStorage() {
 }
 
 function weightedRandom(multiplier = 1) {
-  // Luck sets a minimum rarity floor: minRarity = (luck − 1)².
-  // Items below that floor are removed from the pool entirely.
-  // Within the eligible pool, probability is still weighted by 1/rarity so
-  // rarer items remain proportionally harder to roll.
-  //
-  // Reference floors:
-  //   luck=1   → 0       (all items eligible)
-  //   luck=21  → 400     (Minor Luck Potion)
-  //   luck=101 → 10,000  (IAP Luck S)
-  //   luck=551 → 300,000 (Mythic Fortune Brew)
-  //   luck=1001→ 1M      (IAP Luck L)
-  //   luck=3000→ ~9M     (Legendary Elixir)
-  //   luck=15001→~225M   (Ultraluck — always global tier+)
-  const minRarity = Math.round(Math.max(0, multiplier - 1) ** 2);
-
-  // Build eligible index list in one pass (preserves original ITEMS indices).
-  const pool = [];
-  for (let i = 0; i < ITEMS.length; i++) {
-    if (ITEMS[i].rarity >= minRarity) pool.push(i);
-  }
-  const src = pool.length > 0 ? pool : ITEMS.map((_, i) => i);
-
-  let total = 0;
-  for (const idx of src) total += ITEMS[idx].weight;
-
+  const weights = ITEMS.map((i) => Math.pow(i.weight, 1 / multiplier));
+  const total = weights.reduce((s, w) => s + w, 0);
   let r = Math.random() * total;
-  for (const idx of src) {
-    r -= ITEMS[idx].weight;
-    if (r <= 0) return { ...ITEMS[idx], index: idx };
+  for (let i = 0; i < ITEMS.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return { ...ITEMS[i], index: i };
   }
-  const last = src[src.length - 1];
-  return { ...ITEMS[last], index: last };
+  return { ...ITEMS[ITEMS.length - 1], index: ITEMS.length - 1 };
 }
 
 function formatRarity(rarity) {
