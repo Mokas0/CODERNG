@@ -164,12 +164,12 @@ const GEAR_TIERS = [
 function scrapsFromSalvage(rarity) {
   if (rarity < 100) return 0;
   let chance, min, max;
-  if      (rarity < 1_000)       { chance = 0.02; min = 1; max = 1; }
-  else if (rarity < 10_000)      { chance = 0.05; min = 1; max = 1; }
-  else if (rarity < 100_000)     { chance = 0.08; min = 1; max = 1; }
-  else if (rarity < 1_000_000)   { chance = 0.12; min = 1; max = 1; }
-  else if (rarity < 100_000_000) { chance = 0.20; min = 1; max = 2; }
-  else                           { chance = 0.35; min = 1; max = 3; }
+  if      (rarity < 1_000)       { chance = 0.08; min = 1; max = 1; }
+  else if (rarity < 10_000)      { chance = 0.18; min = 1; max = 1; }
+  else if (rarity < 100_000)     { chance = 0.30; min = 1; max = 2; }
+  else if (rarity < 1_000_000)   { chance = 0.45; min = 1; max = 2; }
+  else if (rarity < 100_000_000) { chance = 0.60; min = 1; max = 3; }
+  else                           { chance = 0.85; min = 2; max = 5; }
   if (Math.random() > chance) return 0;
   return min + Math.floor(Math.random() * (max - min + 1));
 }
