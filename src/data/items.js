@@ -816,6 +816,30 @@ export const SECRET_AURAS = [
     rarity: 0 },
 ];
 
+// Ascendant Auras – like Elders but require TWO simultaneous prerequisites.
+export const ASCENDANT_AURAS = [
+  { id: 9960, text: 'THE PRIMORDIAL',
+    font: 'Cormorant Garamond', color: '#00ddaa', fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 14px #00ddaa, 0 0 50px #004433',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9961, text: 'THE CONDEMNED',
+    font: 'Cinzel', color: '#ff0044', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 18px #ff0044, 0 0 55px #880022',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9962, text: 'THE ABSOLUTE',
+    font: 'DM Serif Display', color: '#ffeeaa', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 16px #ffeeaa, 0 0 50px #cc9900',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9963, text: 'THE RELENTLESS',
+    font: 'Unbounded', color: '#ff6600', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 16px #ff6600, 0 0 55px #881100',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9964, text: 'THE OMNISCIENT',
+    font: 'Syne', color: '#cc66ff', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 16px #cc66ff, 0 0 50px #550099',
+    rarity: 9_000_000_000_000_000 },
+];
+
 // Elder Auras – not in the normal roll pool; granted when secret conditions are met.
 // Rarity is 9Q (9_000_000_000_000_000) for display only.
 export const ELDER_AURAS = [

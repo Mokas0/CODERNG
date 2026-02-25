@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -41,7 +41,7 @@ function getScraps() {
 function setScraps(n) {
   localStorage.setItem(STORAGE_KEYS.scraps, String(Math.max(0, Math.floor(n))));
   // THE HOARDER check happens after scraps settle; defer so getters are current
-  setTimeout(() => checkElderUnlock(), 0);
+  setTimeout(() => { checkElderUnlock(); checkAscendantUnlock(); }, 0);
 }
 function getGearBonus() {
   return Number(localStorage.getItem(STORAGE_KEYS.gearBonus) || 0);
@@ -536,6 +536,7 @@ function buySnehoItem(itemId) {
     setTimeout(() => feedback.classList.add('hidden'), 3000);
   }
   checkElderUnlock();
+  checkAscendantUnlock();
 }
 
 function renderSneho() {
@@ -1621,18 +1622,25 @@ function renderHistory() {
     .map((h, i) => {
       const idx = history.length - 1 - i;
       const id = h.historyId || `legacy-${idx}`;
-      const isSecret = h.isSecret || h.rarity === 0;
-      const isBiome  = h.isBiome  || false;
-      const isElder  = h.isElder  || false;
-      const specialClass = isSecret ? ' history-item--secret' : isBiome ? ' history-item--biome' : isElder ? ' history-item--elder' : '';
+      const isSecret    = h.isSecret    || h.rarity === 0;
+      const isBiome     = h.isBiome     || false;
+      const isElder     = h.isElder     || false;
+      const isAscendant = h.isAscendant || false;
+      const specialClass = isSecret ? ' history-item--secret'
+        : isBiome     ? ' history-item--biome'
+        : isElder     ? ' history-item--elder'
+        : isAscendant ? ' history-item--ascendant'
+        : '';
       const badge = isSecret
         ? '<span class="secret-badge">⚠ SECRET</span>'
         : isBiome
           ? `<span class="biome-badge">🌍 BIOME</span>`
           : isElder
             ? `<span class="elder-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
-            : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
-      const canSalvage = !isSecret && !isBiome && !isElder;
+            : isAscendant
+              ? `<span class="ascendant-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
+              : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
+      const canSalvage = !isSecret && !isBiome && !isElder && !isAscendant;
       return `<li class="history-item${specialClass}" data-index="${idx}" data-history-id="${id}">
           ${badge}
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
@@ -1847,6 +1855,13 @@ const MYTHIC_CUTSCENES = {
   9952: { bg: '#050505', accentA: '#b8b8b8', accentB: '#666666' },
   9953: { bg: '#040008', accentA: '#9900dd', accentB: '#440066' },
   9954: { bg: '#080808', accentA: '#ffffff', accentB: '#aaaaaa' },
+
+  // ─── Ascendant Auras (dual-prerequisite unlocks, unskippable cutscene) ────
+  9960: { bg: '#001a12', accentA: '#00ddaa', accentB: '#004433' },
+  9961: { bg: '#1a0008', accentA: '#ff0044', accentB: '#880022' },
+  9962: { bg: '#0f0f00', accentA: '#ffeeaa', accentB: '#cc9900' },
+  9963: { bg: '#1a0800', accentA: '#ff6600', accentB: '#881100' },
+  9964: { bg: '#0d0020', accentA: '#cc66ff', accentB: '#550099' },
 };
 
 // ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
@@ -1880,6 +1895,38 @@ const ELDER_STAGES = {
     'Gone.',
     'Every. Single. One.',
     'Some devotions are rewarded.',
+  ],
+
+  // Ascendant stage texts (dual-prerequisite)
+  9960: [
+    'Ten thousand turns of the wheel.',
+    'Five hundred fragments kept safe.',
+    'You have outlasted everything that tried to stop you.',
+    'Even time has grown tired of watching.',
+  ],
+  9961: [
+    'A thousand transactions with the dark.',
+    'A hundred curses endured.',
+    'Sneho does not know what to make of you.',
+    'Neither does the darkness.',
+  ],
+  9962: [
+    'A million coins. Ten thousand chances.',
+    'You left nothing on the table.',
+    'Not greed. Not desperation.',
+    'Pure, unyielding resolve.',
+  ],
+  9963: [
+    'Every coin.',
+    'Every deal.',
+    'A thousand transactions. A million spent.',
+    'You did not stop. You did not stop at all.',
+  ],
+  9964: [
+    'Broken a hundred times.',
+    'And you kept every piece.',
+    'The cursed and the collected.',
+    'Two refusals to let go. One consequence.',
   ],
 };
 
@@ -2043,14 +2090,61 @@ async function checkElderUnlock() {
 
   for (const aura of pending) {
     let unlocked = false;
-    if (aura.id === 9950 && sneho  >= 1000) unlocked = true;  // THE GLUTTON
-    if (aura.id === 9951 && scraps >= 500)  unlocked = true;  // THE HOARDER
-    if (aura.id === 9952 && rolls  >= 10000) unlocked = true; // THE ANCIENT
-    if (aura.id === 9953 && curses >= 100)  unlocked = true;  // THE FORSAKEN
+    if (aura.id === 9950 && sneho  >= 1000)    unlocked = true; // THE GLUTTON
+    if (aura.id === 9951 && scraps >= 500)     unlocked = true; // THE HOARDER
+    if (aura.id === 9952 && rolls  >= 10000)   unlocked = true; // THE ANCIENT
+    if (aura.id === 9953 && curses >= 100)     unlocked = true; // THE FORSAKEN
     if (aura.id === 9954 && spent  >= 1000000) unlocked = true; // THE DEVOTED
     if (unlocked) {
       await grantElderAura(aura);
       return; // grant one at a time; next will surface next check
+    }
+  }
+}
+
+// ─── Ascendant unlock logic (dual-prerequisite) ───────────────────────────────
+async function grantAscendantAura(aura) {
+  markElderReceived(aura.id);
+  const history = getHistory();
+  history.push({
+    historyId: `${Date.now()}-ascendant-${aura.id}`,
+    id: aura.id, text: aura.text, font: aura.font,
+    color: aura.color, fontWeight: aura.fontWeight,
+    fontStyle: aura.fontStyle, textShadow: aura.textShadow,
+    rarity: aura.rarity, isAscendant: true,
+  });
+  setHistory(history);
+  renderHistory();
+  reportRareRoll(aura);
+  await showElderCutscene(aura);
+}
+
+async function checkAscendantUnlock() {
+  const received = getElderReceived();
+  const pending  = ASCENDANT_AURAS.filter(a => !received.includes(a.id));
+  if (!pending.length) return;
+
+  const sneho  = getElderSnehoTotal();
+  const rolls  = getElderRollTotal();
+  const curses = getElderCurseTotal();
+  const spent  = getElderCoinsSpent();
+  const scraps = getScraps();
+
+  for (const aura of pending) {
+    let unlocked = false;
+    // THE PRIMORDIAL — 10k rolls + 500 scraps
+    if (aura.id === 9960 && rolls >= 10000 && scraps >= 500) unlocked = true;
+    // THE CONDEMNED — 100 curses + 1k Sneho purchases
+    if (aura.id === 9961 && curses >= 100 && sneho >= 1000)  unlocked = true;
+    // THE ABSOLUTE — 1M coins spent + 10k rolls
+    if (aura.id === 9962 && spent >= 1000000 && rolls >= 10000) unlocked = true;
+    // THE RELENTLESS — 1k Sneho purchases + 1M coins spent
+    if (aura.id === 9963 && sneho >= 1000 && spent >= 1000000) unlocked = true;
+    // THE OMNISCIENT — 100 curses + 500 scraps
+    if (aura.id === 9964 && curses >= 100 && scraps >= 500) unlocked = true;
+    if (unlocked) {
+      await grantAscendantAura(aura);
+      return;
     }
   }
 }
@@ -2326,6 +2420,7 @@ async function roll() {
 
   if (rollBtn) rollBtn.disabled = false;
   checkElderUnlock();
+  checkAscendantUnlock();
 }
 
 function buyLuck() {

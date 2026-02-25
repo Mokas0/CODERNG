@@ -2318,3 +2318,21 @@ body {
   opacity: 0.85;
   text-shadow: 0 0 8px gold;
 }
+
+/* History badge for ascendant auras */
+.history-item--ascendant {
+  border-left: 3px solid #00ddaa;
+  background: linear-gradient(90deg, rgba(0, 221, 170, 0.10) 0%, transparent 60%);
+}
+.history-item--ascendant::after {
+  content: 'ASCENDANT';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #00ddaa;
+  opacity: 0.9;
+  text-shadow: 0 0 8px #00ddaa;
+}
