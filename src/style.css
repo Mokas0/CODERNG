@@ -531,6 +531,88 @@ body {
   100% { opacity: 0; transform: translateY(-40px); }
 }
 
+/* Sneho's Forbidden Shop */
+.sneho-shop {
+  margin-top: 2rem;
+  padding: 1.2rem;
+  border-radius: 12px;
+  border: 1.5px solid #6b0000;
+  background: linear-gradient(135deg, #1a0000 0%, #0d0d0d 100%);
+  box-shadow: 0 0 18px rgba(180, 0, 0, 0.18);
+}
+.sneho-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.sneho-avatar {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px #c00);
+}
+.sneho-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e05050;
+  margin: 0 0 0.3rem;
+  letter-spacing: 0.02em;
+}
+.sneho-dialogue {
+  font-size: 0.82rem;
+  color: #b07070;
+  margin: 0;
+  font-style: italic;
+}
+.sneho-countdown-line {
+  font-size: 0.78rem;
+  color: #7a3030;
+  margin: 0 0 0.6rem;
+}
+.sneho-countdown {
+  font-weight: 700;
+  color: #c04040;
+}
+.sneho-item {
+  border-color: #4a0000 !important;
+  background: rgba(80, 0, 0, 0.18) !important;
+}
+.sneho-item-name {
+  color: #e05050 !important;
+}
+.sneho-odds {
+  font-size: 0.74rem;
+  color: #a05050;
+  display: block;
+  margin-top: 0.15rem;
+}
+.sneho-buy-btn {
+  background: #6b0000 !important;
+  color: #ffb0b0 !important;
+  border: 1px solid #c00 !important;
+}
+.sneho-buy-btn:hover:not(:disabled) {
+  background: #9b0000 !important;
+}
+.sneho-feedback {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+.sneho-feedback--cursed {
+  background: rgba(150, 0, 0, 0.35);
+  color: #ff6060;
+  border: 1px solid #c00;
+}
+.sneho-feedback--blessed {
+  background: rgba(0, 100, 50, 0.3);
+  color: #80ffb0;
+  border: 1px solid #0a0;
+}
+
 /* Memory match */
 .memory-status {
   margin-bottom: 0.75rem;

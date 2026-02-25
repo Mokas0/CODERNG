@@ -7,9 +7,11 @@ const STORAGE_KEYS = {
   shopRotationEnd: 'rng_shop_rotation_end', shopSeed: 'rng_shop_seed',
   bennyNextAt: 'rng_benny_next_at',
   scraps: 'rng_scraps', gearBonus: 'rng_gear_bonus',
+  snehoRotationEnd: 'rng_sneho_rotation_end', snehoSeed: 'rng_sneho_seed',
 };
-const SHOP_ROTATION_MS = 5 * 60 * 1000;  // 5 minutes
-const BENNY_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
+const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
+const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
+const BENNY_INTERVAL_MS = 60 * 60 * 1000;  // 60 minutes
 
 function getCoins() {
   return Number(localStorage.getItem(STORAGE_KEYS.coins) || 0);
@@ -183,8 +185,25 @@ const POTIONS = [
 // Very rare spawn in rotating shop only (not in Benny's list)
 const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: '3000× Luck Elixir', cost: 5000, luckBonus: 2999, emoji: '👑' };
 const LEGENDARY_POTION_SPAWN_CHANCE = 0.008;
-// Benny-exclusive: not sold in the rotating shop
-const BENNY_ULTRALUCK_POTION = { id: 'potionBennyUltraluck', name: 'Ultraluck Potion', cost: 500000, luckBonus: 15000, emoji: '⚡' };
+// Benny-exclusive potions (not sold anywhere else)
+const BENNY_EXCLUSIVE_POTIONS = [
+  { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,   luckBonus: 0.5,  emoji: '🎒', desc: "Dirt cheap and it works." },
+  { id: 'potionBennyTonic',      name: "Old Road Tonic",        cost: 18,  luckBonus: 1.5,  emoji: '🫙', desc: "Brewed on the road. Surprisingly potent." },
+  { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,  luckBonus: 5.0,  emoji: '🔩', desc: "Concocted from leftover parts. Great deal." },
+  { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 500000, luckBonus: 15000, emoji: '⚡', desc: "Benny's rarest. Not cheap." },
+];
+
+// ——— Sneho's forbidden shop ———
+// Each item has a cursedChance: if the curse triggers the luck effect is negative (cursedPenalty)
+const SNEHO_ITEMS = [
+  { id: 'sneho1', name: 'Shadowed Vial',       cost: 8,    luckBonus: 1.5,  cursedChance: 0.50, cursedPenalty: -1.0,   emoji: '🫗',  desc: 'Could go either way.' },
+  { id: 'sneho2', name: "Demon's Brew",         cost: 30,   luckBonus: 5.0,  cursedChance: 0.40, cursedPenalty: -3.0,   emoji: '😈',  desc: 'Smells of sulfur. High risk, high reward.' },
+  { id: 'sneho3', name: 'Void Essence',         cost: 150,  luckBonus: 15.0, cursedChance: 0.30, cursedPenalty: -10.0,  emoji: '🕳️', desc: 'Bottled nothing. Unstable.' },
+  { id: 'sneho4', name: 'Blood Moon Extract',   cost: 800,  luckBonus: 50.0, cursedChance: 0.25, cursedPenalty: -35.0,  emoji: '🌑',  desc: 'Only available on the wrong night.' },
+  { id: 'sneho5', name: 'Forbidden Pact Seal',  cost: 5000, luckBonus: 200.0,cursedChance: 0.20, cursedPenalty: -150.0, emoji: '📜',  desc: 'Sign your soul away. Might be worth it.' },
+  { id: 'sneho6', name: 'Cursed Coin',          cost: 1,    luckBonus: 3.0,  cursedChance: 0.65, cursedPenalty: -2.0,   emoji: '🪙',  desc: 'Suspiciously cheap.' },
+  { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 30.0, cursedChance: 0.35, cursedPenalty: -20.0,  emoji: '💀',  desc: 'Handle with care. Or don\'t.' },
+];
 
 // ——— Rotating shop (resets every 5 min) ———
 function getShopRotationEnd() {
@@ -255,7 +274,9 @@ function updateShopCountdown() {
 }
 
 function buyPotion(potionId, fromBenny = false) {
-  const pool = fromBenny ? [...POTIONS, BENNY_ULTRALUCK_POTION] : getCurrentShopOffers();
+  const pool = fromBenny
+    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS]
+    : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
   if (!potion || getCoins() < potion.cost) return;
   setCoins(getCoins() - potion.cost);
@@ -268,7 +289,7 @@ function buyPotion(potionId, fromBenny = false) {
 
 function buyPotionMax(potionId, fromBenny = false) {
   const pool = fromBenny
-    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), BENNY_ULTRALUCK_POTION]
+    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS]
     : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
   if (!potion || potion.cost < 1) return;
@@ -376,7 +397,7 @@ function renderBennyShop() {
   const coins = getCoins();
   const bennyPrices = [
     ...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })),
-    BENNY_ULTRALUCK_POTION,
+    ...BENNY_EXCLUSIVE_POTIONS,
   ];
   list.innerHTML = bennyPrices.map(
     (p) => {
@@ -405,6 +426,100 @@ function renderBennyShop() {
   });
   list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
     btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, true));
+  });
+}
+
+// ——— Sneho (forbidden rotating shop, 10-min rotation) ———
+function getSnehoRotationEnd() { return Number(localStorage.getItem(STORAGE_KEYS.snehoRotationEnd) || 0); }
+function setSnehoRotationEnd(ts) { localStorage.setItem(STORAGE_KEYS.snehoRotationEnd, String(ts)); }
+function getSnehoSeed() { return Number(localStorage.getItem(STORAGE_KEYS.snehoSeed) || 0); }
+function setSnehoSeed(s) { localStorage.setItem(STORAGE_KEYS.snehoSeed, String(s)); }
+
+function advanceSnehoRotationIfNeeded() {
+  const now = Date.now();
+  let end = getSnehoRotationEnd();
+  if (end === 0 || now >= end) {
+    end = now + SNEHO_ROTATION_MS;
+    setSnehoRotationEnd(end);
+    setSnehoSeed(Math.floor(Math.random() * 1e9));
+  }
+  return end;
+}
+
+function getSnehoOffers() {
+  advanceSnehoRotationIfNeeded();
+  const seed = getSnehoSeed();
+  const indices = SNEHO_ITEMS.map((_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(seededRandom(seed + i) * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  return indices.slice(0, 3).map((i) => SNEHO_ITEMS[i]);
+}
+
+function updateSnehoCountdown() {
+  const el = document.getElementById('sneho-countdown');
+  if (!el) return;
+  const end = getSnehoRotationEnd();
+  const now = Date.now();
+  if (end <= now) { el.textContent = 'Resetting…'; return; }
+  const s = Math.ceil((end - now) / 1000);
+  el.textContent = `Resets in ${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+}
+
+function buySnehoItem(itemId) {
+  advanceSnehoRotationIfNeeded();
+  const offers = getSnehoOffers();
+  const item = offers.find((i) => i.id === itemId);
+  if (!item || getCoins() < item.cost) return;
+  setCoins(getCoins() - item.cost);
+  const cursed = Math.random() < item.cursedChance;
+  const effect = cursed ? item.cursedPenalty : item.luckBonus;
+  const newLuck = Math.max(1, getLuckMultiplier() + effect);
+  setLuckMultiplier(newLuck);
+  renderCoins();
+  renderLuck();
+  renderSneho();
+  // Show feedback
+  const feedback = document.getElementById('sneho-feedback');
+  if (feedback) {
+    if (cursed) {
+      feedback.textContent = `☠️ CURSED! ${effect.toLocaleString()}× luck applied.`;
+      feedback.className = 'sneho-feedback sneho-feedback--cursed';
+    } else {
+      feedback.textContent = `✨ Blessed! +${effect.toLocaleString()}× luck!`;
+      feedback.className = 'sneho-feedback sneho-feedback--blessed';
+    }
+    feedback.classList.remove('hidden');
+    setTimeout(() => feedback.classList.add('hidden'), 3000);
+  }
+}
+
+function renderSneho() {
+  const list = document.getElementById('sneho-list');
+  if (!list) return;
+  advanceSnehoRotationIfNeeded();
+  updateSnehoCountdown();
+  const offers = getSnehoOffers();
+  const coins  = getCoins();
+  list.innerHTML = offers.map((item) => {
+    const canBuy = coins >= item.cost;
+    const pctCursed = Math.round(item.cursedChance * 100);
+    return `<div class="shop-item sneho-item">
+      <span class="shop-item-emoji">${item.emoji}</span>
+      <div class="shop-item-info">
+        <span class="shop-item-name sneho-item-name">${item.name}</span>
+        <span class="shop-item-cost">${item.cost.toLocaleString()} coins</span>
+        <span class="sneho-odds">${100 - pctCursed}% blessed (+${item.luckBonus}×) &nbsp;|&nbsp; ${pctCursed}% cursed (${item.cursedPenalty}×)</span>
+        <span class="shop-item-desc">${item.desc}</span>
+      </div>
+      <div class="shop-item-actions">
+        <button type="button" class="shop-buy-btn sneho-buy-btn" data-sneho="${item.id}" ${!canBuy ? 'disabled' : ''}>Buy</button>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.sneho-buy-btn').forEach((btn) => {
+    btn.addEventListener('click', () => buySnehoItem(btn.dataset.sneho));
   });
 }
 
@@ -1663,12 +1778,14 @@ function init() {
   });
 
   renderTheo();
+  renderSneho();
   initBennySchedule();
   setInterval(() => {
     const next = getBennyNextAt();
     if (next > 0 && Date.now() >= next) showBennyButton();
   }, 1000);
   setInterval(updateShopCountdown, 1000);
+  setInterval(updateSnehoCountdown, 1000);
 
   document.getElementById('benny-popup-btn')?.addEventListener('click', openBenny);
   document.getElementById('benny-close')?.addEventListener('click', closeBenny);
