@@ -681,16 +681,44 @@ function setHubUsername(name) {
   if (trimmed) localStorage.setItem(HUB_USERNAME_SET_AT_KEY, String(Date.now()));
 }
 
+const CHAT_KEEP = 50; // max messages kept in DB at once
+
 async function loadHubMessages() {
   const list = document.getElementById('hub-chat-list');
   if (!list || !supabase) return;
-  const { data, error } = await supabase.from('messages').select('id, username, body, created_at').order('created_at', { ascending: true }).limit(100);
+  const { data, error } = await supabase
+    .from('messages')
+    .select('id, username, body, created_at')
+    .order('created_at', { ascending: true })
+    .limit(CHAT_KEEP);
   if (error) {
     list.innerHTML = `<p class="hub-error">Could not load chat. Check your Supabase setup.</p>`;
     return;
   }
-  list.innerHTML = (data || []).map((m) => `<div class="hub-msg"><span class="hub-msg-user">${escapeHtml(m.username || '?')}</span>: <span class="hub-msg-body">${escapeHtml(m.body || '')}</span></div>`).join('');
+  const msgs = data || [];
+  const countEl = document.getElementById('hub-chat-count');
+  if (countEl) countEl.textContent = msgs.length ? `(${msgs.length}/${CHAT_KEEP})` : '';
+  list.innerHTML = msgs.map((m) => {
+    const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `<div class="hub-msg">
+      <span class="hub-msg-time">${time}</span>
+      <span class="hub-msg-user">${escapeHtml(m.username || '?')}</span>
+      <span class="hub-msg-body">${escapeHtml(m.body || '')}</span>
+    </div>`;
+  }).join('');
   list.scrollTop = list.scrollHeight;
+}
+
+async function trimOldMessages() {
+  if (!supabase) return;
+  // Fetch all IDs oldest-first, delete any beyond CHAT_KEEP
+  const { data } = await supabase
+    .from('messages')
+    .select('id')
+    .order('created_at', { ascending: true });
+  if (!data || data.length <= CHAT_KEEP) return;
+  const toDelete = data.slice(0, data.length - CHAT_KEEP).map((r) => r.id);
+  await supabase.from('messages').delete().in('id', toDelete);
 }
 
 async function sendHubMessage() {
@@ -698,8 +726,14 @@ async function sendHubMessage() {
   const body = (input?.value || '').trim().slice(0, 500);
   const username = getHubUsername();
   if (!body || !username || !supabase) return;
+  const sendBtn = document.getElementById('hub-chat-send');
+  if (sendBtn) sendBtn.disabled = true;
   const { error } = await supabase.from('messages').insert({ username, body });
-  if (!error) input.value = '';
+  if (!error) {
+    input.value = '';
+    await trimOldMessages(); // keep DB clean (fallback if DB trigger not set up)
+  }
+  if (sendBtn) sendBtn.disabled = false;
   loadHubMessages();
 }
 

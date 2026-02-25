@@ -1112,24 +1112,64 @@ body {
   border-radius: 10px;
   padding: 0.75rem 1rem;
 }
+.hub-section--chat {
+  display: flex;
+  flex-direction: column;
+}
 .hub-heading {
   margin: 0 0 0.5rem;
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text);
 }
-.hub-chat-list, .hub-trades-list {
-  max-height: 180px;
+.hub-chat-list {
+  height: 420px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  line-height: var(--line-normal);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  scroll-behavior: smooth;
+}
+.hub-trades-list {
+  max-height: 200px;
   overflow-y: auto;
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   line-height: var(--line-normal);
 }
-.hub-msg, .hub-trade {
+.hub-msg {
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.hub-msg:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.hub-trade {
   padding: 0.25rem 0;
   border-bottom: 1px solid var(--border);
 }
-.hub-msg-user, .hub-trade-user {
+.hub-msg-time {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-right: 0.35rem;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+.hub-msg-user {
+  color: var(--accent);
+  font-weight: 700;
+  margin-right: 0.2rem;
+}
+.hub-msg-user::after {
+  content: ':';
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.hub-trade-user {
   color: var(--text);
   font-weight: 600;
 }
