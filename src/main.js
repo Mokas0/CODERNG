@@ -647,9 +647,20 @@ function renderMemoryMatch() {
 // ——— Hub (global chat + trading) ———
 const HUB_USERNAME_KEY = 'rng_hub_username';
 const HUB_USERNAME_SET_AT_KEY = 'rng_hub_username_set_at';
+const DEVICE_TOKEN_KEY = 'rng_device_token';
 const USERNAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
+const ADMIN_EMAIL = 'nicholas.mj.choe@gmail.com'; // bypasses username cooldown
 let hubChatSubscription = null;
 let hubTradesSubscription = null;
+
+function getDeviceToken() {
+  let token = localStorage.getItem(DEVICE_TOKEN_KEY);
+  if (!token) {
+    token = crypto.randomUUID();
+    localStorage.setItem(DEVICE_TOKEN_KEY, token);
+  }
+  return token;
+}
 
 function getHubUsername() {
   return (localStorage.getItem(HUB_USERNAME_KEY) || '').trim().slice(0, 24);
@@ -657,7 +668,11 @@ function getHubUsername() {
 function getUsernameSetAt() {
   return parseInt(localStorage.getItem(HUB_USERNAME_SET_AT_KEY) || '0', 10);
 }
+function isAdminUser() {
+  return authUser?.email === ADMIN_EMAIL;
+}
 function getUsernameCooldownMs() {
+  if (isAdminUser()) return 0; // admin can change anytime
   const setAt = getUsernameSetAt();
   if (!setAt) return 0;
   return Math.max(0, setAt + USERNAME_COOLDOWN_MS - Date.now());
@@ -671,14 +686,47 @@ function formatCooldown(ms) {
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
-function setHubUsername(name) {
-  const trimmed = (name || '').trim().slice(0, 24);
+
+// Returns null on success, or an error string explaining why it failed.
+async function claimUsername(newName) {
+  const trimmed = (newName || '').trim().slice(0, 24);
+  if (!trimmed) return 'Name cannot be empty.';
   const current = getHubUsername();
-  if (trimmed === current) return; // no actual change
+  if (trimmed === current) return null; // no change needed
+
   const cooldown = getUsernameCooldownMs();
-  if (cooldown > 0) return; // blocked — caller should check and show message
+  if (cooldown > 0) return `Username locked — can change again in ${formatCooldown(cooldown)}.`;
+
+  if (supabase) {
+    const myToken = getDeviceToken();
+
+    // Check if name is already taken by a different device
+    const { data: existing } = await supabase
+      .from('usernames')
+      .select('token')
+      .eq('username', trimmed)
+      .maybeSingle();
+
+    if (existing && existing.token !== myToken) {
+      return `"${trimmed}" is already taken. Choose a different name.`;
+    }
+
+    // Release old username claim
+    if (current) {
+      await supabase.from('usernames').delete().eq('username', current).eq('token', myToken);
+    }
+
+    // Claim the new username
+    const { error } = await supabase.from('usernames').upsert(
+      { username: trimmed, token: myToken, updated_at: new Date().toISOString() },
+      { onConflict: 'username' }
+    );
+    if (error) return 'Could not claim username. Try again.';
+  }
+
   localStorage.setItem(HUB_USERNAME_KEY, trimmed);
   if (trimmed) localStorage.setItem(HUB_USERNAME_SET_AT_KEY, String(Date.now()));
+  return null; // success
 }
 
 const CHAT_KEEP = 50; // max messages kept in DB at once
@@ -768,8 +816,9 @@ let casinoAuraVault = [];
 function getCasinoUsername() {
   return getHubUsername();
 }
-function setCasinoUsername(name) {
-  setHubUsername(name);
+// Casino username shares storage with hub; use claimUsername() for changes.
+async function setCasinoUsername(name) {
+  return claimUsername(name);
 }
 
 async function casinoFetchBalance() {
@@ -2397,21 +2446,27 @@ function init() {
       if (ms > 0) {
         hubUsernameInput.disabled = true;
         hubUsernameInput.title = `Username locked for ${formatCooldown(ms)}`;
-        if (hubUsernameCooldownMsg) hubUsernameCooldownMsg.textContent = `Username locked — can change again in ${formatCooldown(ms)}`;
+        if (hubUsernameCooldownMsg) { hubUsernameCooldownMsg.textContent = `Username locked — can change again in ${formatCooldown(ms)}`; hubUsernameCooldownMsg.style.color = ''; }
       } else {
         hubUsernameInput.disabled = false;
-        hubUsernameInput.title = '';
-        if (hubUsernameCooldownMsg) hubUsernameCooldownMsg.textContent = '';
+        hubUsernameInput.title = isAdminUser() ? '(Admin — no cooldown)' : '';
+        if (hubUsernameCooldownMsg) { hubUsernameCooldownMsg.textContent = isAdminUser() ? '✓ Admin — change anytime' : ''; hubUsernameCooldownMsg.style.color = isAdminUser() ? 'var(--roll)' : ''; }
       }
     };
     updateHubCooldownUI();
     setInterval(updateHubCooldownUI, 60000);
-    hubUsernameInput.addEventListener('change', () => {
+    hubUsernameInput.addEventListener('change', async () => {
       const before = getHubUsername();
-      setHubUsername(hubUsernameInput.value);
-      const after = getHubUsername();
-      if (after !== before) updateHubCooldownUI();
-      else hubUsernameInput.value = before; // revert if blocked
+      hubUsernameInput.disabled = true;
+      const err = await claimUsername(hubUsernameInput.value);
+      if (err) {
+        hubUsernameInput.value = before;
+        if (hubUsernameCooldownMsg) { hubUsernameCooldownMsg.textContent = err; hubUsernameCooldownMsg.style.color = 'var(--danger)'; }
+      } else {
+        if (hubUsernameCooldownMsg) { hubUsernameCooldownMsg.textContent = '✓ Username set'; hubUsernameCooldownMsg.style.color = 'var(--roll)'; }
+        setTimeout(() => updateHubCooldownUI(), 2000);
+      }
+      hubUsernameInput.disabled = getUsernameCooldownMs() > 0;
     });
   }
   document.getElementById('hub-chat-send')?.addEventListener('click', sendHubMessage);
@@ -2434,12 +2489,18 @@ function init() {
       }
     };
     updateCasinoCooldownUI();
-    casinoUsernameInput.addEventListener('change', () => {
+    casinoUsernameInput.addEventListener('change', async () => {
       const before = getHubUsername();
-      setCasinoUsername(casinoUsernameInput.value);
-      const after = getHubUsername();
-      if (after !== before) updateCasinoCooldownUI();
-      else casinoUsernameInput.value = before;
+      casinoUsernameInput.disabled = true;
+      const err = await claimUsername(casinoUsernameInput.value);
+      if (err) {
+        casinoUsernameInput.value = before;
+        if (casinoUsernameCooldownMsg) { casinoUsernameCooldownMsg.textContent = err; casinoUsernameCooldownMsg.style.color = 'var(--danger)'; }
+      } else {
+        if (casinoUsernameCooldownMsg) { casinoUsernameCooldownMsg.textContent = '✓ Username set'; casinoUsernameCooldownMsg.style.color = 'var(--roll)'; }
+        setTimeout(() => updateCasinoCooldownUI(), 2000);
+      }
+      casinoUsernameInput.disabled = getUsernameCooldownMs() > 0;
     });
   }
   document.getElementById('casino-deposit-btn')?.addEventListener('click', casinoDepositCoins);
