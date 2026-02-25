@@ -8,8 +8,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 // ── Global Biome Config ────────────────────────────────────────────────────
-const BIOME_CHANCE          = 1 / 10_000; // checked every minute
-const BIOME_DURATION_MINUTES = 10;
+const BIOME_CHANCE          = 1 / 5; // 20% per minute → avg 1 biome every 5 min
+const BIOME_DURATION_MINUTES = 5;
 const BIOMES = [
   { type: 'volcanic',  name: 'Volcanic Surge',      emoji: '🌋', color: 0xFF4400, desc: 'The earth cracks open. Magma mythics rise from the deep.' },
   { type: 'celestial', name: 'Celestial Alignment',  emoji: '✨', color: 0xFFD700, desc: 'The cosmos aligns. Starbound auras manifest across the sky.' },
@@ -154,6 +154,14 @@ discord.once('ready', async () => {
   setInterval(async () => {
     if (Math.random() >= BIOME_CHANCE) return;
 
+    // Don't stack biomes — skip if one is already active
+    const { data: existing } = await supabase
+      .from('active_biome')
+      .select('id')
+      .gt('ends_at', new Date().toISOString())
+      .limit(1);
+    if (existing && existing.length > 0) return;
+
     const biome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
     const endsAt = new Date(Date.now() + BIOME_DURATION_MINUTES * 60_000).toISOString();
 
@@ -181,7 +189,7 @@ discord.once('ready', async () => {
         `Roll now on [Nico's RNG](https://nicos-rng.netlify.app) before it ends!`
       )
       .setColor(biome.color)
-      .setFooter({ text: `Nico's RNG • Biome ends in ${BIOME_DURATION_MINUTES} minutes` });
+      .setFooter({ text: `Nico's RNG • Active for the next ${BIOME_DURATION_MINUTES} minutes` });
 
     try {
       await channel.send({ embeds: [embed] });
