@@ -2195,3 +2195,126 @@ body {
   33%       { transform: translateY(-8px) scale(1.2); opacity: 1; }
   66%       { transform: translateY(5px) scale(0.9);  opacity: 0.6; }
 }
+
+/* ─── Elder Aura Overlay ──────────────────────────────────────────────────── */
+.rarity-overlay--elder {
+  background: var(--mythic-bg, #000);
+  cursor: default; /* unskippable — no pointer hint */
+}
+
+/* Slow ominous radial glow instead of spinning beams */
+.rarity-overlay--elder .rarity-overlay__beams {
+  opacity: 1;
+  animation: none;
+}
+.rarity-overlay--elder .rarity-overlay__beams::before {
+  background: radial-gradient(
+    ellipse 55% 45% at 50% 50%,
+    color-mix(in srgb, var(--mythic-a, #fff) 12%, transparent) 0%,
+    transparent 70%
+  );
+  animation: elder-core-breathe 5s ease-in-out infinite;
+  opacity: 1;
+}
+.rarity-overlay--elder .rarity-overlay__beams::after {
+  display: none;
+}
+.rarity-overlay--elder .rarity-overlay__particles::before,
+.rarity-overlay--elder .rarity-overlay__particles::after {
+  display: none;
+}
+
+/* Scanline texture overlay */
+.rarity-overlay--elder::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.18) 3px,
+    rgba(0, 0, 0, 0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Stage text — full-centre, large, JS-driven opacity */
+.rarity-overlay--elder .rarity-overlay__quote {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 78%;
+  margin: 0;
+  font-size: clamp(1.1rem, 2.8vw, 1.9rem);
+  font-style: normal;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.92);
+  text-align: center;
+  text-shadow: 0 0 30px color-mix(in srgb, var(--mythic-a, #fff) 40%, transparent);
+  animation: none;
+  opacity: 0; /* JS controls */
+  z-index: 2;
+}
+
+/* Tier badge */
+.rarity-overlay--elder .rarity-overlay__tier {
+  font-size: clamp(0.65rem, 1.4vw, 0.85rem);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--mythic-a, #fff);
+  text-shadow: 0 0 18px var(--mythic-a, #fff), 0 0 40px var(--mythic-a, #fff);
+  animation: none;
+  opacity: 0;
+  z-index: 2;
+}
+
+/* Aura name */
+.rarity-overlay--elder .rarity-overlay__label {
+  font-size: clamp(2.8rem, 7.5vw, 6.5rem);
+  animation: none;
+  opacity: 0;
+  transform-origin: center;
+  z-index: 2;
+}
+
+/* Rarity */
+.rarity-overlay--elder .rarity-overlay__rarity {
+  color: var(--mythic-a, #fff);
+  text-shadow: 0 0 14px var(--mythic-a, #fff);
+  animation: none;
+  opacity: 0;
+  z-index: 2;
+}
+
+/* Hide the "Click anywhere" prompt */
+.rarity-overlay--elder .rarity-overlay__sub {
+  display: none !important;
+}
+
+@keyframes elder-core-breathe {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50%       { opacity: 0.85; transform: scale(1.15); }
+}
+
+/* History badge for elder auras */
+.history-item--elder {
+  border-left: 3px solid gold;
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.10) 0%, transparent 60%);
+}
+.history-item--elder::after {
+  content: 'ELDER';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: gold;
+  opacity: 0.85;
+  text-shadow: 0 0 8px gold;
+}

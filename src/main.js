@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -11,6 +11,12 @@ const STORAGE_KEYS = {
   tycoonCpc: 'rng_tycoon_cpc', tycoonUpgrades: 'rng_tycoon_upgrades',
   tycoonClicks: 'rng_tycoon_clicks', tycoonEarned: 'rng_tycoon_earned',
   cutsceneThreshold: 'rng_settings_cutscene_threshold',
+  // Elder aura progress tracking
+  elderSnehoTotal: 'rng_elder_sneho_total',
+  elderRollTotal:  'rng_elder_roll_total',
+  elderCurseTotal: 'rng_elder_curse_total',
+  elderCoinsSpent: 'rng_elder_coins_spent',
+  elderReceived:   'rng_elder_received',
 };
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
@@ -20,13 +26,22 @@ function getCoins() {
   return Number(localStorage.getItem(STORAGE_KEYS.coins) || 0);
 }
 function setCoins(n) {
-  localStorage.setItem(STORAGE_KEYS.coins, String(Math.max(0, Math.floor(n))));
+  const prev = getCoins();
+  const next = Math.max(0, Math.floor(n));
+  if (next < prev) {
+    const spent = prev - next;
+    const total = Number(localStorage.getItem(STORAGE_KEYS.elderCoinsSpent) || 0) + spent;
+    localStorage.setItem(STORAGE_KEYS.elderCoinsSpent, String(total));
+  }
+  localStorage.setItem(STORAGE_KEYS.coins, String(next));
 }
 function getScraps() {
   return Number(localStorage.getItem(STORAGE_KEYS.scraps) || 0);
 }
 function setScraps(n) {
   localStorage.setItem(STORAGE_KEYS.scraps, String(Math.max(0, Math.floor(n))));
+  // THE HOARDER check happens after scraps settle; defer so getters are current
+  setTimeout(() => checkElderUnlock(), 0);
 }
 function getGearBonus() {
   return Number(localStorage.getItem(STORAGE_KEYS.gearBonus) || 0);
@@ -495,6 +510,15 @@ function buySnehoItem(itemId) {
   const effect = cursed ? item.cursedPenalty : item.luckBonus;
   const newLuck = Math.max(1, getLuckMultiplier() + effect);
   setLuckMultiplier(newLuck);
+
+  // Elder tracking
+  const newSneho = getElderSnehoTotal() + 1;
+  localStorage.setItem(STORAGE_KEYS.elderSnehoTotal, String(newSneho));
+  if (cursed) {
+    const newCurse = getElderCurseTotal() + 1;
+    localStorage.setItem(STORAGE_KEYS.elderCurseTotal, String(newCurse));
+  }
+
   renderCoins();
   renderLuck();
   renderSneho();
@@ -511,6 +535,7 @@ function buySnehoItem(itemId) {
     feedback.classList.remove('hidden');
     setTimeout(() => feedback.classList.add('hidden'), 3000);
   }
+  checkElderUnlock();
 }
 
 function renderSneho() {
@@ -1598,13 +1623,16 @@ function renderHistory() {
       const id = h.historyId || `legacy-${idx}`;
       const isSecret = h.isSecret || h.rarity === 0;
       const isBiome  = h.isBiome  || false;
-      const specialClass = isSecret ? ' history-item--secret' : isBiome ? ' history-item--biome' : '';
+      const isElder  = h.isElder  || false;
+      const specialClass = isSecret ? ' history-item--secret' : isBiome ? ' history-item--biome' : isElder ? ' history-item--elder' : '';
       const badge = isSecret
         ? '<span class="secret-badge">⚠ SECRET</span>'
         : isBiome
           ? `<span class="biome-badge">🌍 BIOME</span>`
-          : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
-      const canSalvage = !isSecret && !isBiome;
+          : isElder
+            ? `<span class="elder-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
+            : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
+      const canSalvage = !isSecret && !isBiome && !isElder;
       return `<li class="history-item${specialClass}" data-index="${idx}" data-history-id="${id}">
           ${badge}
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
@@ -1812,7 +1840,220 @@ const MYTHIC_CUTSCENES = {
   9907: { quote: "It can't exist and it does. Pick one.",                        bg: '#080008', accentA: '#ff00ff', accentB: '#00ffff' },
   9908: { quote: 'The very first thing this game ever created.',                 bg: '#0a0800', accentA: '#ffffff', accentB: '#ffaa00' },
   9909: { quote: 'Even the developer does not know where this came from.',       bg: '#000a0a', accentA: '#aaffff', accentB: '#003344' },
+
+  // ─── Elder Auras (hidden condition unlocks, unskippable cutscene) ─────────
+  9950: { bg: '#0a0000', accentA: '#cc2200', accentB: '#660000' },
+  9951: { bg: '#0a0800', accentA: '#d4af37', accentB: '#886600' },
+  9952: { bg: '#050505', accentA: '#b8b8b8', accentB: '#666666' },
+  9953: { bg: '#040008', accentA: '#9900dd', accentB: '#440066' },
+  9954: { bg: '#080808', accentA: '#ffffff', accentB: '#aaaaaa' },
 };
+
+// ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
+const ELDER_STAGES = {
+  9950: [
+    'You returned to Sneho.',
+    'Again. And again. And again.',
+    'One thousand transactions.',
+    'Something ancient has noticed your hunger.',
+  ],
+  9951: [
+    'Others discarded it without a thought.',
+    'You kept every fragment.',
+    'Five hundred pieces of nothing.',
+    'Together, they became something else entirely.',
+  ],
+  9952: [
+    'The wheel has turned ten thousand times for you.',
+    'Each roll a thread.',
+    'Each thread, a year.',
+    'You have become part of the pattern.',
+  ],
+  9953: [
+    'Cursed once.',
+    'Then again. And again. One hundred times broken.',
+    'But you came back every single time.',
+    'And something cursed came back with you.',
+  ],
+  9954: [
+    'A million coins.',
+    'Gone.',
+    'Every. Single. One.',
+    'Some devotions are rewarded.',
+  ],
+};
+
+// ─── Elder Aura helpers ──────────────────────────────────────────────────────
+function elderSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function elderFade(el, toOpacity, durationMs) {
+  return new Promise(r => {
+    if (!el) { setTimeout(r, durationMs); return; }
+    el.style.transition = `opacity ${durationMs}ms ease`;
+    el.style.opacity = String(toOpacity);
+    setTimeout(r, durationMs + 30);
+  });
+}
+
+async function showElderCutscene(aura) {
+  while (isAnimating) await elderSleep(200);
+  isAnimating = true;
+
+  const overlay  = document.getElementById('rarity-overlay');
+  if (!overlay) { isAnimating = false; return; }
+
+  const tierEl   = document.getElementById('rarity-overlay-tier');
+  const labelEl  = document.getElementById('rarity-overlay-label');
+  const rarityEl = document.getElementById('rarity-overlay-rarity');
+  const quoteEl  = document.getElementById('rarity-overlay-quote');
+  const subEl    = overlay.querySelector('.rarity-overlay__sub');
+
+  const cfg    = MYTHIC_CUTSCENES[aura.id] || { bg: '#000', accentA: '#fff', accentB: '#888' };
+  const stages = ELDER_STAGES[aura.id] || [];
+
+  // Apply theme vars
+  overlay.style.setProperty('--mythic-bg', cfg.bg);
+  overlay.style.setProperty('--mythic-a',  cfg.accentA);
+  overlay.style.setProperty('--mythic-b',  cfg.accentB);
+
+  // Strip other tier classes, add elder
+  overlay.classList.remove(
+    'hidden',
+    'rarity-overlay--global', 'rarity-overlay--universal',
+    'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome'
+  );
+  overlay.classList.add('rarity-overlay--elder');
+  overlay.style.opacity = '1';
+  overlay.setAttribute('aria-hidden', 'false');
+
+  // Reset all overlay elements to invisible
+  for (const el of [tierEl, labelEl, rarityEl, quoteEl]) {
+    if (!el) continue;
+    el.style.transition = 'none';
+    el.style.opacity    = '0';
+    el.style.transform  = '';
+  }
+  if (subEl) subEl.style.display = 'none';
+
+  // --- Stage text sequence ---
+  for (let i = 0; i < stages.length; i++) {
+    if (!quoteEl) break;
+    quoteEl.textContent  = stages[i];
+    quoteEl.style.display = '';
+    await elderFade(quoteEl, 1, 650);
+    await elderSleep(2000);
+    await elderFade(quoteEl, 0, 450);
+    await elderSleep(250);
+  }
+
+  // --- Final aura reveal ---
+  if (tierEl)   tierEl.textContent   = '\u2B21 Elder Aura \u2B21';
+  if (labelEl) {
+    labelEl.textContent  = aura.text;
+    labelEl.style.fontFamily = `"${aura.font}", serif`;
+    labelEl.style.color      = aura.color;
+    labelEl.style.textShadow = aura.textShadow || '';
+    labelEl.style.transform  = 'scale(0.55)';
+    labelEl.style.transition = 'none';
+  }
+  if (rarityEl) rarityEl.textContent = formatRarity(aura.rarity);
+
+  await elderFade(tierEl, 1, 900);
+  await elderSleep(500);
+
+  // Label bursts in
+  if (labelEl) {
+    labelEl.style.transition = 'opacity 0.85s ease, transform 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    labelEl.style.opacity    = '1';
+    labelEl.style.transform  = 'scale(1)';
+    await elderSleep(900);
+  }
+
+  await elderSleep(400);
+  await elderFade(rarityEl, 0.85, 700);
+  await elderSleep(3500);
+
+  // Fade out the whole overlay
+  await elderFade(overlay, 0, 900);
+
+  // Clean up
+  overlay.classList.add('hidden');
+  overlay.classList.remove('rarity-overlay--elder');
+  overlay.style.opacity = '';
+  overlay.style.removeProperty('--mythic-bg');
+  overlay.style.removeProperty('--mythic-a');
+  overlay.style.removeProperty('--mythic-b');
+  overlay.setAttribute('aria-hidden', 'true');
+  for (const el of [tierEl, labelEl, rarityEl, quoteEl]) {
+    if (!el) continue;
+    el.style.opacity    = '';
+    el.style.transition = '';
+    el.style.transform  = '';
+    el.style.fontFamily = '';
+    el.style.color      = '';
+    el.style.textShadow = '';
+  }
+  if (subEl) subEl.style.display = '';
+
+  isAnimating = false;
+}
+
+// ─── Elder unlock tracking ────────────────────────────────────────────────────
+function getElderReceived() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.elderReceived) || '[]'); }
+  catch { return []; }
+}
+function markElderReceived(id) {
+  const arr = getElderReceived();
+  if (!arr.includes(id)) arr.push(id);
+  localStorage.setItem(STORAGE_KEYS.elderReceived, JSON.stringify(arr));
+}
+
+function getElderSnehoTotal() { return Number(localStorage.getItem(STORAGE_KEYS.elderSnehoTotal) || 0); }
+function getElderRollTotal()  { return Number(localStorage.getItem(STORAGE_KEYS.elderRollTotal)  || 0); }
+function getElderCurseTotal() { return Number(localStorage.getItem(STORAGE_KEYS.elderCurseTotal) || 0); }
+function getElderCoinsSpent() { return Number(localStorage.getItem(STORAGE_KEYS.elderCoinsSpent) || 0); }
+
+async function grantElderAura(aura) {
+  markElderReceived(aura.id);
+  const history = getHistory();
+  history.push({
+    historyId: `${Date.now()}-elder-${aura.id}`,
+    id: aura.id, text: aura.text, font: aura.font,
+    color: aura.color, fontWeight: aura.fontWeight,
+    fontStyle: aura.fontStyle, textShadow: aura.textShadow,
+    rarity: aura.rarity, isElder: true,
+  });
+  setHistory(history);
+  renderHistory();
+  reportRareRoll(aura);
+  await showElderCutscene(aura);
+}
+
+async function checkElderUnlock() {
+  const received = getElderReceived();
+  const pending  = ELDER_AURAS.filter(a => !received.includes(a.id));
+  if (!pending.length) return;
+
+  const sneho  = getElderSnehoTotal();
+  const rolls  = getElderRollTotal();
+  const curses = getElderCurseTotal();
+  const spent  = getElderCoinsSpent();
+  const scraps = getScraps();
+
+  for (const aura of pending) {
+    let unlocked = false;
+    if (aura.id === 9950 && sneho  >= 1000) unlocked = true;  // THE GLUTTON
+    if (aura.id === 9951 && scraps >= 500)  unlocked = true;  // THE HOARDER
+    if (aura.id === 9952 && rolls  >= 10000) unlocked = true; // THE ANCIENT
+    if (aura.id === 9953 && curses >= 100)  unlocked = true;  // THE FORSAKEN
+    if (aura.id === 9954 && spent  >= 1000000) unlocked = true; // THE DEVOTED
+    if (unlocked) {
+      await grantElderAura(aura);
+      return; // grant one at a time; next will surface next check
+    }
+  }
+}
 
 function showRarityAnimation(item, tier) {
   return new Promise((resolve) => {
@@ -2019,6 +2260,10 @@ async function roll() {
   const rollBtn = document.getElementById('roll-btn');
   if (rollBtn) rollBtn.disabled = true;
 
+  // Elder roll tracking
+  const newRolls = getElderRollTotal() + 1;
+  localStorage.setItem(STORAGE_KEYS.elderRollTotal, String(newRolls));
+
   const mult = getLuckMultiplier() + getGearBonus();
   const item = weightedRandom(mult);
   const history = getHistory();
@@ -2080,6 +2325,7 @@ async function roll() {
   }
 
   if (rollBtn) rollBtn.disabled = false;
+  checkElderUnlock();
 }
 
 function buyLuck() {

@@ -816,6 +816,31 @@ export const SECRET_AURAS = [
     rarity: 0 },
 ];
 
+// Elder Auras – not in the normal roll pool; granted when secret conditions are met.
+// Rarity is 9Q (9_000_000_000_000_000) for display only.
+export const ELDER_AURAS = [
+  { id: 9950, text: 'THE GLUTTON',
+    font: 'Cinzel', color: '#cc2200', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 18px #cc2200, 0 0 55px #660000',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9951, text: 'THE HOARDER',
+    font: 'Unbounded', color: '#d4af37', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 14px #d4af37, 0 0 50px #886600',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9952, text: 'THE ANCIENT',
+    font: 'Cormorant Garamond', color: '#b8b8b8', fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 12px #b8b8b8, 0 0 40px #666666',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9953, text: 'THE FORSAKEN',
+    font: 'Space Mono', color: '#9900dd', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 16px #9900dd, 0 0 50px #440066',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9954, text: 'THE DEVOTED',
+    font: 'DM Serif Display', color: '#ffffff', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 10px #ffffff, 0 0 40px #aaaaaa',
+    rarity: 9_000_000_000_000_000 },
+];
+
 function buildItems() {
   const base = buildBaseItems();
   const auras = buildAuraItems(base.length);
