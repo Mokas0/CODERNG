@@ -104,8 +104,8 @@ function migrateLockedToStorage() {
 }
 
 // Weight assigned to unlocked elder/ascendant auras in the roll pool.
-// Equivalent to a ~rarity-10,000 item: rollable with moderate luck.
-const ELDER_ROLL_WEIGHT = 1 / 10_000;
+// Matches their 9Q display rarity — extremely rare even once unlocked.
+const ELDER_ROLL_WEIGHT = 1 / 9_000_000_000_000_000;
 
 function weightedRandom(multiplier = 1, extraItems = []) {
   // Compress luck logarithmically so high values don't make all items equally likely.
