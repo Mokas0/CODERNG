@@ -694,34 +694,47 @@ async function claimUsername(newName) {
   const current = getHubUsername();
   if (trimmed === current) return null; // no change needed
 
-  const cooldown = getUsernameCooldownMs();
-  if (cooldown > 0) return `Username locked — can change again in ${formatCooldown(cooldown)}.`;
+  // Re-fetch auth fresh so we don't depend on cached authUser timing
+  let isAdmin = false;
+  if (supabase) {
+    const { data: { user } } = await supabase.auth.getUser();
+    isAdmin = user?.email === ADMIN_EMAIL;
+  }
+
+  if (!isAdmin) {
+    const cooldown = getUsernameCooldownMs();
+    if (cooldown > 0) return `Username locked — can change again in ${formatCooldown(cooldown)}.`;
+  }
 
   if (supabase) {
     const myToken = getDeviceToken();
 
-    // Check if name is already taken by a different device
-    const { data: existing } = await supabase
-      .from('usernames')
-      .select('token')
-      .eq('username', trimmed)
-      .maybeSingle();
+    if (!isAdmin) {
+      // Check if name is already taken by a different device
+      const { data: existing } = await supabase
+        .from('usernames')
+        .select('token')
+        .eq('username', trimmed)
+        .maybeSingle();
 
-    if (existing && existing.token !== myToken) {
-      return `"${trimmed}" is already taken. Choose a different name.`;
+      if (existing && existing.token !== myToken) {
+        return `"${trimmed}" is already taken. Choose a different name.`;
+      }
     }
 
-    // Release old username claim
+    // Release old username claim (admin force-deletes regardless of token)
     if (current) {
-      await supabase.from('usernames').delete().eq('username', current).eq('token', myToken);
+      const deleteQuery = supabase.from('usernames').delete().eq('username', current);
+      if (!isAdmin) deleteQuery.eq('token', myToken);
+      await deleteQuery;
     }
 
-    // Claim the new username
+    // Claim the new username (admin overwrites any existing claim)
     const { error } = await supabase.from('usernames').upsert(
       { username: trimmed, token: myToken, updated_at: new Date().toISOString() },
       { onConflict: 'username' }
     );
-    if (error) return 'Could not claim username. Try again.';
+    if (error && !isAdmin) return 'Could not claim username. Try again.';
   }
 
   localStorage.setItem(HUB_USERNAME_KEY, trimmed);
