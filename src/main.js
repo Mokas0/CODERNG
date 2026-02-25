@@ -1562,7 +1562,22 @@ const MYTHIC_CUTSCENES = {
   9006: { quote: 'Two truths. One aura.',           bg: '#080500', accentA: '#d4af37', accentB: '#ffeeaa' },
   9007: { quote: 'Beyond question. Beyond doubt.',  bg: '#000008', accentA: '#8888ff', accentB: '#e8e8ff' },
   9008: { quote: 'This was never supposed to drop.',bg: '#000a02', accentA: '#00ff44', accentB: '#00cc33' },
-  9009: { quote: 'You have transcended everything.', bg: '#000000', accentA: '#ff00ff', accentB: '#ffff00' },
+  9009: { quote: 'You have transcended everything.',       bg: '#000000', accentA: '#ff00ff', accentB: '#ffff00' },
+  9010: { quote: 'It does not destroy. It erases.',        bg: '#0a0000', accentA: '#ff2200', accentB: '#880000' },
+  9011: { quote: 'No word exists for what this is.',       bg: '#070707', accentA: '#e8e8e8', accentB: '#888888' },
+  9012: { quote: 'The throne sits above all thrones.',     bg: '#060008', accentA: '#bb00ff', accentB: '#440055' },
+  9013: { quote: 'Even gods answer to this.',              bg: '#000208', accentA: '#ffd700', accentB: '#003399' },
+  9014: { quote: 'Before the beginning, there was this.', bg: '#000a04', accentA: '#00ff88', accentB: '#004422' },
+  9015: { quote: 'It has always been. It always will be.', bg: '#000308', accentA: '#c0e8ff', accentB: '#002244' },
+  9016: { quote: 'Worlds are merely a meal.',              bg: '#080100', accentA: '#ff4400', accentB: '#550000' },
+  9017: { quote: 'Will shapes reality. Yours bends it.',   bg: '#030003', accentA: '#ff00ff', accentB: '#ffff00' },
+  9018: { quote: 'The blueprint of existence itself.',     bg: '#000008', accentA: '#4488ff', accentB: '#d4af37' },
+  9019: { quote: 'It has no shape. No name. No limit.',    bg: '#050505', accentA: '#aaaaaa', accentB: '#333333' },
+  9020: { quote: 'The last word in every language.',       bg: '#000000', accentA: '#ffffff', accentB: '#555555' },
+  9021: { quote: 'Even divinity must fall eventually.',    bg: '#080004', accentA: '#ff44ff', accentB: '#ff2200' },
+  9022: { quote: 'There is nothing left to surpass.',      bg: '#000508', accentA: '#00eeff', accentB: '#003344' },
+  9023: { quote: 'It was here before names were spoken.',  bg: '#060500', accentA: '#ffee88', accentB: '#443300' },
+  9024: { quote: 'When all else fades — this endures.',    bg: '#000004', accentA: '#e0e0ff', accentB: '#0000aa' },
 };
 
 function showRarityAnimation(item, tier) {
