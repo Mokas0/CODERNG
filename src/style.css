@@ -613,6 +613,144 @@ body {
   border: 1px solid #0a0;
 }
 
+/* Tycoon */
+.tycoon-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.tycoon-clicker-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  min-width: 160px;
+}
+.tycoon-click-btn {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  border: 3px solid var(--accent, #c8a84b);
+  background: radial-gradient(circle at 40% 35%, #fffbe6 0%, #c8a84b 60%, #7a5c00 100%);
+  cursor: pointer;
+  font-size: 3.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(200, 168, 75, 0.35);
+  transition: transform 0.07s ease, box-shadow 0.07s ease;
+  user-select: none;
+}
+.tycoon-click-btn:active {
+  transform: scale(0.92);
+  box-shadow: 0 0 8px rgba(200, 168, 75, 0.2);
+}
+.tycoon-cpc-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent, #c8a84b);
+  margin: 0;
+}
+.tycoon-stat {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+.tycoon-floats {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.tycoon-float {
+  position: absolute;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #c8a84b;
+  animation: tycoon-float-up 0.9s ease forwards;
+  pointer-events: none;
+  white-space: nowrap;
+}
+@keyframes tycoon-float-up {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-55px); }
+}
+.tycoon-upgrades-section {
+  flex: 1;
+  min-width: 260px;
+}
+.tycoon-upgrades-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.2rem;
+}
+.tycoon-upgrades-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+  font-style: italic;
+}
+.tycoon-upgrade-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.tycoon-upgrade {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  flex-wrap: wrap;
+}
+.tycoon-upgrade--owned {
+  opacity: 0.45;
+  background: rgba(200, 168, 75, 0.05);
+}
+.tycoon-upgrade--available {
+  border-color: var(--accent, #c8a84b);
+  background: rgba(200, 168, 75, 0.08);
+}
+.tycoon-upgrade--locked {
+  opacity: 0.35;
+}
+.tycoon-upgrade-name {
+  font-weight: 700;
+  min-width: 80px;
+}
+.tycoon-upgrade-effect {
+  color: var(--accent, #c8a84b);
+  flex: 1;
+}
+.tycoon-upgrade-cost {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.tycoon-upgrade-badge {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.tycoon-buy-btn {
+  margin-left: auto;
+}
+.tycoon-maxed {
+  text-align: center;
+  font-style: italic;
+  color: var(--accent, #c8a84b);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
 /* Memory match */
 .memory-status {
   margin-bottom: 0.75rem;

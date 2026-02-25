@@ -8,6 +8,8 @@ const STORAGE_KEYS = {
   bennyNextAt: 'rng_benny_next_at',
   scraps: 'rng_scraps', gearBonus: 'rng_gear_bonus',
   snehoRotationEnd: 'rng_sneho_rotation_end', snehoSeed: 'rng_sneho_seed',
+  tycoonCpc: 'rng_tycoon_cpc', tycoonUpgrades: 'rng_tycoon_upgrades',
+  tycoonClicks: 'rng_tycoon_clicks', tycoonEarned: 'rng_tycoon_earned',
 };
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
@@ -201,7 +203,7 @@ const SNEHO_ITEMS = [
   { id: 'sneho3', name: 'Void Essence',         cost: 150,  luckBonus: 15.0, cursedChance: 0.30, cursedPenalty: -10.0,  emoji: '🕳️', desc: 'Bottled nothing. Unstable.' },
   { id: 'sneho4', name: 'Blood Moon Extract',   cost: 800,  luckBonus: 50.0, cursedChance: 0.25, cursedPenalty: -35.0,  emoji: '🌑',  desc: 'Only available on the wrong night.' },
   { id: 'sneho5', name: 'Forbidden Pact Seal',  cost: 5000, luckBonus: 200.0,cursedChance: 0.20, cursedPenalty: -150.0, emoji: '📜',  desc: 'Sign your soul away. Might be worth it.' },
-  { id: 'sneho6', name: 'Cursed Coin',          cost: 1,    luckBonus: 3.0,  cursedChance: 0.65, cursedPenalty: -2.0,   emoji: '🪙',  desc: 'Suspiciously cheap.' },
+  { id: 'sneho6', name: 'Cursed Coin',          cost: 50,   luckBonus: 3.0,  cursedChance: 0.65, cursedPenalty: -2.0,   emoji: '🪙',  desc: 'Suspiciously cheap.' },
   { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 30.0, cursedChance: 0.35, cursedPenalty: -20.0,  emoji: '💀',  desc: 'Handle with care. Or don\'t.' },
 ];
 
@@ -1528,7 +1530,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'memory', 'hub', 'casino', 'bazaar'].forEach((id) => {
+  ['past', 'locked', 'shop', 'memory', 'hub', 'casino', 'bazaar', 'tycoon'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -1540,6 +1542,7 @@ function switchTab(tabName) {
   if (tabName === 'hub') renderHub();
   if (tabName === 'casino') renderCasino();
   if (tabName === 'bazaar') renderBazaar();
+  if (tabName === 'tycoon') renderTycoon();
 }
 
 const RARE_ROLL_THRESHOLD  = 100_000_000_000;   // Jerry broadcast threshold
@@ -1741,6 +1744,107 @@ function resetLocalData() {
   location.reload();
 }
 
+// ——— Tycoon ———
+function getTycoonCpc()      { return Number(localStorage.getItem(STORAGE_KEYS.tycoonCpc)      || 1); }
+function setTycoonCpc(n)     { localStorage.setItem(STORAGE_KEYS.tycoonCpc, String(n)); }
+function getTycoonUpgrades() { return Number(localStorage.getItem(STORAGE_KEYS.tycoonUpgrades) || 0); }
+function setTycoonUpgrades(n){ localStorage.setItem(STORAGE_KEYS.tycoonUpgrades, String(n)); }
+function getTycoonClicks()   { return Number(localStorage.getItem(STORAGE_KEYS.tycoonClicks)   || 0); }
+function setTycoonClicks(n)  { localStorage.setItem(STORAGE_KEYS.tycoonClicks, String(n)); }
+function getTycoonEarned()   { return Number(localStorage.getItem(STORAGE_KEYS.tycoonEarned)   || 0); }
+function setTycoonEarned(n)  { localStorage.setItem(STORAGE_KEYS.tycoonEarned, String(n)); }
+
+// Upgrade N (0-indexed): costs 100,000 * 2^N coins, gives +1 CPC. Cap at 20 upgrades.
+const TYCOON_MAX_UPGRADES   = 20;
+const TYCOON_BASE_COST      = 100_000;
+function tycoonUpgradeCost(upgradeIndex) {
+  return TYCOON_BASE_COST * Math.pow(2, upgradeIndex);
+}
+
+function tycoonClick() {
+  const cpc = getTycoonCpc();
+  setCoins(getCoins() + cpc);
+  setTycoonClicks(getTycoonClicks() + 1);
+  setTycoonEarned(getTycoonEarned() + cpc);
+  renderCoins();
+  renderTycoonStats();
+  spawnTycoonFloat(`+${cpc}`);
+}
+
+function buyTycoonUpgrade() {
+  const bought = getTycoonUpgrades();
+  if (bought >= TYCOON_MAX_UPGRADES) return;
+  const cost = tycoonUpgradeCost(bought);
+  if (getCoins() < cost) return;
+  setCoins(getCoins() - cost);
+  setTycoonCpc(getTycoonCpc() + 1);
+  setTycoonUpgrades(bought + 1);
+  renderCoins();
+  renderTycoon();
+}
+
+function spawnTycoonFloat(text) {
+  const container = document.getElementById('tycoon-floats');
+  if (!container) return;
+  const el = document.createElement('span');
+  el.className = 'tycoon-float';
+  el.textContent = text;
+  // randomise horizontal position slightly
+  el.style.left = `${30 + Math.random() * 40}%`;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function renderTycoonStats() {
+  const cpcEl     = document.getElementById('tycoon-cpc');
+  const clicksEl  = document.getElementById('tycoon-clicks');
+  const earnedEl  = document.getElementById('tycoon-earned');
+  if (cpcEl)    cpcEl.textContent    = getTycoonCpc().toLocaleString();
+  if (clicksEl) clicksEl.textContent = getTycoonClicks().toLocaleString();
+  if (earnedEl) earnedEl.textContent = getTycoonEarned().toLocaleString();
+}
+
+function renderTycoon() {
+  renderTycoonStats();
+  const list   = document.getElementById('tycoon-upgrade-list');
+  if (!list) return;
+  const bought = getTycoonUpgrades();
+  const coins  = getCoins();
+  let html = '';
+  for (let i = 0; i < TYCOON_MAX_UPGRADES; i++) {
+    const cost      = tycoonUpgradeCost(i);
+    const isNext    = i === bought;
+    const isPast    = i < bought;
+    const canAfford = coins >= cost;
+    if (isPast) {
+      html += `<div class="tycoon-upgrade tycoon-upgrade--owned">
+        <span class="tycoon-upgrade-name">Upgrade ${i + 1}</span>
+        <span class="tycoon-upgrade-effect">+1 CPC</span>
+        <span class="tycoon-upgrade-badge">✓ Owned</span>
+      </div>`;
+    } else if (isNext) {
+      html += `<div class="tycoon-upgrade tycoon-upgrade--available">
+        <span class="tycoon-upgrade-name">Upgrade ${i + 1}</span>
+        <span class="tycoon-upgrade-effect">+1 coin per click</span>
+        <span class="tycoon-upgrade-cost">${cost.toLocaleString()} coins</span>
+        <button type="button" class="shop-buy-btn tycoon-buy-btn" id="tycoon-buy-btn" ${!canAfford ? 'disabled' : ''}>Buy</button>
+      </div>`;
+    } else {
+      html += `<div class="tycoon-upgrade tycoon-upgrade--locked">
+        <span class="tycoon-upgrade-name">Upgrade ${i + 1}</span>
+        <span class="tycoon-upgrade-effect">+1 coin per click</span>
+        <span class="tycoon-upgrade-cost">${cost.toLocaleString()} coins</span>
+        <span class="tycoon-upgrade-badge">🔒 Locked</span>
+      </div>`;
+    }
+  }
+  if (bought >= TYCOON_MAX_UPGRADES) {
+    html += `<p class="tycoon-maxed">Maximum upgrades reached. You are a coin god.</p>`;
+  }
+  list.innerHTML = html;
+  document.getElementById('tycoon-buy-btn')?.addEventListener('click', buyTycoonUpgrade);
+}
+
 function init() {
   migrateLockedToStorage();
   const rollBtn = document.getElementById('roll-btn');
@@ -1779,6 +1883,10 @@ function init() {
 
   renderTheo();
   renderSneho();
+
+  // Tycoon click button (persistent listener, not inside renderTycoon)
+  document.getElementById('tycoon-click-btn')?.addEventListener('click', tycoonClick);
+
   initBennySchedule();
   setInterval(() => {
     const next = getBennyNextAt();

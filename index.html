@@ -40,6 +40,7 @@
             <button type="button" class="tab-btn" data-tab="hub" aria-selected="false">Hub</button>
             <button type="button" class="tab-btn" data-tab="casino" aria-selected="false">Casino</button>
             <button type="button" class="tab-btn" data-tab="bazaar" aria-selected="false">Bazaar</button>
+            <button type="button" class="tab-btn" data-tab="tycoon" aria-selected="false">Tycoon</button>
           </div>
           <div id="tab-past" class="tab-panel" role="tabpanel">
             <p class="tab-desc">Salvage for coins or lock to move to storage.</p>
@@ -202,6 +203,25 @@
                   <h4 class="bazaar-subheading">My listings</h4>
                   <div id="bazaar-my-listings" class="casino-list"></div>
                 </div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-tycoon" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
+            <p class="tab-desc">Click to earn coins. Upgrades cost a fortune — but every coin counts.</p>
+            <div class="tycoon-layout">
+              <div class="tycoon-clicker-section">
+                <button type="button" id="tycoon-click-btn" class="tycoon-click-btn">
+                  <span class="tycoon-coin-icon">🪙</span>
+                </button>
+                <p class="tycoon-cpc-label"><span id="tycoon-cpc">1</span> coin per click</p>
+                <p class="tycoon-stat">Total clicks: <strong id="tycoon-clicks">0</strong></p>
+                <p class="tycoon-stat">Coins earned here: <strong id="tycoon-earned">0</strong></p>
+                <div id="tycoon-floats" class="tycoon-floats"></div>
+              </div>
+              <div class="tycoon-upgrades-section">
+                <h3 class="tycoon-upgrades-title">Upgrades</h3>
+                <p class="tycoon-upgrades-hint">Each upgrade costs more than the last. Way more.</p>
+                <div id="tycoon-upgrade-list" class="tycoon-upgrade-list"></div>
               </div>
             </div>
           </div>
