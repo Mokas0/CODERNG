@@ -192,7 +192,7 @@ const BENNY_EXCLUSIVE_POTIONS = [
   { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,   luckBonus: 0.5,  emoji: '🎒', desc: "Dirt cheap and it works." },
   { id: 'potionBennyTonic',      name: "Old Road Tonic",        cost: 18,  luckBonus: 1.5,  emoji: '🫙', desc: "Brewed on the road. Surprisingly potent." },
   { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,  luckBonus: 5.0,  emoji: '🔩', desc: "Concocted from leftover parts. Great deal." },
-  { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 500000, luckBonus: 15000, emoji: '⚡', desc: "Benny's rarest. Not cheap." },
+  { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 15000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable." },
 ];
 
 // ——— Sneho's forbidden shop ———
@@ -1771,10 +1771,12 @@ function getTycoonEarned()   { return Number(localStorage.getItem(STORAGE_KEYS.t
 function setTycoonEarned(n)  { localStorage.setItem(STORAGE_KEYS.tycoonEarned, String(n)); }
 
 // Upgrade N (0-indexed): costs 100,000 * 2^N coins, gives +1 CPC. Cap at 20 upgrades.
-const TYCOON_MAX_UPGRADES   = 20;
-const TYCOON_BASE_COST      = 100_000;
+const TYCOON_MAX_UPGRADES   = 50;
+const TYCOON_BASE_COST      = 500;
+const TYCOON_CPC_PER_UPGRADE = 10;
 function tycoonUpgradeCost(upgradeIndex) {
-  return TYCOON_BASE_COST * Math.pow(2, upgradeIndex);
+  // 1.5x scaling instead of 2x — hard but not astronomically hard
+  return Math.floor(TYCOON_BASE_COST * Math.pow(1.5, upgradeIndex));
 }
 
 function tycoonClick() {
@@ -1793,7 +1795,7 @@ function buyTycoonUpgrade() {
   const cost = tycoonUpgradeCost(bought);
   if (getCoins() < cost) return;
   setCoins(getCoins() - cost);
-  setTycoonCpc(getTycoonCpc() + 1);
+  setTycoonCpc(getTycoonCpc() + TYCOON_CPC_PER_UPGRADE);
   setTycoonUpgrades(bought + 1);
   renderCoins();
   renderTycoon();
@@ -1841,14 +1843,14 @@ function renderTycoon() {
     } else if (isNext) {
       html += `<div class="tycoon-upgrade tycoon-upgrade--available">
         <span class="tycoon-upgrade-name">Upgrade ${i + 1}</span>
-        <span class="tycoon-upgrade-effect">+1 coin per click</span>
+        <span class="tycoon-upgrade-effect">+${TYCOON_CPC_PER_UPGRADE} coins per click</span>
         <span class="tycoon-upgrade-cost">${cost.toLocaleString()} coins</span>
         <button type="button" class="shop-buy-btn tycoon-buy-btn" id="tycoon-buy-btn" ${!canAfford ? 'disabled' : ''}>Buy</button>
       </div>`;
     } else {
       html += `<div class="tycoon-upgrade tycoon-upgrade--locked">
         <span class="tycoon-upgrade-name">Upgrade ${i + 1}</span>
-        <span class="tycoon-upgrade-effect">+1 coin per click</span>
+        <span class="tycoon-upgrade-effect">+${TYCOON_CPC_PER_UPGRADE} coins per click</span>
         <span class="tycoon-upgrade-cost">${cost.toLocaleString()} coins</span>
         <span class="tycoon-upgrade-badge">🔒 Locked</span>
       </div>`;
