@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   snehoRotationEnd: 'rng_sneho_rotation_end', snehoSeed: 'rng_sneho_seed',
   tycoonCpc: 'rng_tycoon_cpc', tycoonUpgrades: 'rng_tycoon_upgrades',
   tycoonClicks: 'rng_tycoon_clicks', tycoonEarned: 'rng_tycoon_earned',
+  cutsceneThreshold: 'rng_settings_cutscene_threshold',
 };
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
@@ -1685,7 +1686,9 @@ async function roll() {
   setHistory(history);
   if (mult > 1) setLuckMultiplier(1);
 
-  if (item.rarity >= GLOBAL_THRESHOLD) {
+  const cutsceneSetting = getCutsceneThreshold();
+  const cutsceneMin = cutsceneSetting === 'never' ? Infinity : Number(cutsceneSetting);
+  if (item.rarity >= GLOBAL_THRESHOLD && item.rarity >= cutsceneMin) {
     let tier = 'global';
     if (item.rarity >= MYTHIC_THRESHOLD) tier = 'mythic';
     else if (item.rarity >= UNIVERSAL_THRESHOLD) tier = 'universal';
@@ -1758,6 +1761,25 @@ function resetLocalData() {
   if (!confirm('This will wipe ALL your local data (coins, history, luck, scraps, gears, locked items). This cannot be undone. Continue?')) return;
   localStorage.clear();
   location.reload();
+}
+
+// ——— Settings ———
+function getCutsceneThreshold() {
+  return localStorage.getItem(STORAGE_KEYS.cutsceneThreshold) ?? '100000000';
+}
+function setCutsceneThreshold(val) {
+  localStorage.setItem(STORAGE_KEYS.cutsceneThreshold, val);
+}
+
+function openSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  const sel = document.getElementById('settings-cutscene-threshold');
+  if (sel) sel.value = getCutsceneThreshold();
+  if (overlay) { overlay.classList.remove('hidden'); overlay.setAttribute('aria-hidden', 'false'); }
+}
+function closeSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  if (overlay) { overlay.classList.add('hidden'); overlay.setAttribute('aria-hidden', 'true'); }
 }
 
 // ——— Tycoon ———
@@ -2054,6 +2076,16 @@ function init() {
 
   // Tycoon click button (persistent listener, not inside renderTycoon)
   document.getElementById('tycoon-click-btn')?.addEventListener('click', tycoonClick);
+
+  // Settings
+  document.getElementById('settings-btn')?.addEventListener('click', openSettings);
+  document.getElementById('settings-close')?.addEventListener('click', closeSettings);
+  document.getElementById('settings-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'settings-overlay') closeSettings();
+  });
+  document.getElementById('settings-cutscene-threshold')?.addEventListener('change', (e) => {
+    setCutsceneThreshold(e.target.value);
+  });
 
   // Store redeem
   document.getElementById('store-claim-btn')?.addEventListener('click', redeemClaimCode);

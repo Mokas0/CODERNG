@@ -19,6 +19,7 @@
           <span class="coins-wrap">🪙 <span id="coins">0</span> coins</span>
           <span class="luck-wrap">Luck: <span id="luck-value">1× (normal)</span></span>
           <button type="button" id="luck-btn" class="luck-btn">Boost luck (50 coins)</button>
+          <button type="button" id="settings-btn" class="settings-btn" title="Settings">⚙️</button>
           <div class="auth-bar">
             <span id="auth-user-label" class="auth-user-label hidden"></span>
             <button type="button" id="auth-signup-btn" class="auth-btn">Sign up</button>
@@ -269,6 +270,27 @@
             <button type="button" id="auth-signup-submit" class="admin-btn">Sign up</button>
           </div>
           <button type="button" id="auth-overlay-close" class="admin-btn admin-btn--secondary">Close</button>
+        </div>
+      </div>
+      <!-- Settings modal -->
+      <div id="settings-overlay" class="admin-overlay hidden" aria-hidden="true">
+        <div class="admin-panel settings-panel">
+          <h2 class="admin-title">⚙️ Settings</h2>
+          <div class="settings-row">
+            <label class="settings-label" for="settings-cutscene-threshold">
+              Show cutscene for rolls of rarity:
+            </label>
+            <select id="settings-cutscene-threshold" class="settings-select">
+              <option value="100000000">Global and above (1/100M+)</option>
+              <option value="100000000000">Universal and above (1/100B+)</option>
+              <option value="1000000000000">Mythic only (1/1T+)</option>
+              <option value="never">Never</option>
+            </select>
+          </div>
+          <p class="settings-hint">Changes apply immediately and are saved to this device.</p>
+          <div class="admin-actions">
+            <button type="button" id="settings-close" class="admin-btn">Done</button>
+          </div>
         </div>
       </div>
       <button type="button" id="benny-popup-btn" class="benny-popup-btn hidden" aria-hidden="true">Benny is here! Talk to Benny</button>

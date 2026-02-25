@@ -613,6 +613,51 @@ body {
   border: 1px solid #0a0;
 }
 
+/* Settings */
+.settings-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+.settings-btn:hover {
+  opacity: 1;
+}
+.settings-panel {
+  min-width: 320px;
+  max-width: 420px;
+}
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.settings-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.settings-select {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card, #1a1a2e);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.settings-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+  font-style: italic;
+}
+
 /* Store */
 .store-grid {
   display: grid;
