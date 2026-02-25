@@ -88,7 +88,15 @@ function migrateLockedToStorage() {
 }
 
 function weightedRandom(multiplier = 1) {
-  const weights = ITEMS.map((i) => Math.pow(i.weight, 1 / multiplier));
+  // Compress luck logarithmically so high values don't make all items equally likely.
+  // effectiveMult = 1 + log10(luck):
+  //   luck=1  → 1.0  (no change — original weights)
+  //   luck=10 → 2.0  (1T mythic still ~1 million× rarer than common)
+  //   luck=100→ 3.0  (1T mythic ~8,000× rarer than common)
+  //   luck=1k → 4.0  (1T mythic ~840× rarer than common)
+  //   luck=15k→ 5.2  (1T mythic ~180× rarer — hard but rollable)
+  const effectiveMult = 1 + Math.log10(Math.max(multiplier, 1));
+  const weights = ITEMS.map((i) => Math.pow(i.weight, 1 / effectiveMult));
   const total = weights.reduce((s, w) => s + w, 0);
   let r = Math.random() * total;
   for (let i = 0; i < ITEMS.length; i++) {
