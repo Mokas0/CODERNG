@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel&family=Comfortaa&family=Cormorant+Garamond:ital,wght@0,400;1,700&family=Creepster&family=DM+Serif+Display&family=Fredoka:wght@400;600&family=Great+Vibes&family=Inter:wght@400;700;900&family=JetBrains+Mono&family=Lobster&family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poiret+One&family=Press+Start+2P&family=Quicksand:wght@400;700&family=Raleway:wght@400;700;900&family=Righteous&family=Rubik:wght@400;700;900&family=Space+Mono&family=Syne:wght@400;800&family=Unbounded:wght@400;700&display=swap" rel="stylesheet" />
+    <!-- PayPal SDK — client-id is replaced at runtime by main.js after env vars load -->
+    <script id="paypal-sdk-script" defer></script>
     </head>
   <body>
     <div id="app">
@@ -41,6 +43,7 @@
             <button type="button" class="tab-btn" data-tab="casino" aria-selected="false">Casino</button>
             <button type="button" class="tab-btn" data-tab="bazaar" aria-selected="false">Bazaar</button>
             <button type="button" class="tab-btn" data-tab="tycoon" aria-selected="false">Tycoon</button>
+            <button type="button" class="tab-btn" data-tab="store" aria-selected="false">Store</button>
           </div>
           <div id="tab-past" class="tab-panel" role="tabpanel">
             <p class="tab-desc">Salvage for coins or lock to move to storage.</p>
@@ -223,6 +226,20 @@
                 <p class="tycoon-upgrades-hint">Each upgrade costs more than the last. Way more.</p>
                 <div id="tycoon-upgrade-list" class="tycoon-upgrade-list"></div>
               </div>
+            </div>
+          </div>
+          <!-- Store tab -->
+          <div id="tab-store" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
+            <p class="tab-desc">Support the game and get an instant boost. Purchases deliver a claim code — enter it below to redeem.</p>
+            <div id="store-product-grid" class="store-grid"></div>
+            <div class="store-redeem-box">
+              <h3 class="store-redeem-title">Redeem a code</h3>
+              <p class="store-redeem-hint">After paying, your claim code is shown on screen. Enter it here to receive your reward.</p>
+              <div class="store-redeem-row">
+                <input type="text" id="store-claim-input" class="admin-input store-claim-input" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" autocomplete="off" />
+                <button type="button" id="store-claim-btn" class="admin-btn store-claim-btn">Redeem</button>
+              </div>
+              <p id="store-claim-msg" class="store-claim-msg"></p>
             </div>
           </div>
         </section>

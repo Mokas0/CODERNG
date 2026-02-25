@@ -5,6 +5,10 @@
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "VITE_ADMIN_CODE"
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -1530,7 +1530,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'memory', 'hub', 'casino', 'bazaar', 'tycoon'].forEach((id) => {
+  ['past', 'locked', 'shop', 'memory', 'hub', 'casino', 'bazaar', 'tycoon', 'store'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -1543,6 +1543,7 @@ function switchTab(tabName) {
   if (tabName === 'casino') renderCasino();
   if (tabName === 'bazaar') renderBazaar();
   if (tabName === 'tycoon') renderTycoon();
+  if (tabName === 'store')  renderStore();
 }
 
 const RARE_ROLL_THRESHOLD  = 100_000_000_000;   // Jerry broadcast threshold
@@ -1860,6 +1861,156 @@ function renderTycoon() {
   document.getElementById('tycoon-buy-btn')?.addEventListener('click', buyTycoonUpgrade);
 }
 
+// ——— Store (PayPal in-app purchases) ———
+const STORE_PRODUCTS = [
+  { id: 'coin_s', name: 'Coin Pack S',   price: '$0.99', emoji: '🪙', reward: '5,000 coins',    type: 'coins',  amount: 5_000 },
+  { id: 'coin_m', name: 'Coin Pack M',   price: '$4.99', emoji: '💰', reward: '30,000 coins',   type: 'coins',  amount: 30_000 },
+  { id: 'coin_l', name: 'Coin Pack L',   price: '$9.99', emoji: '💎', reward: '75,000 coins',   type: 'coins',  amount: 75_000 },
+  { id: 'luck_s', name: 'Luck Boost S',  price: '$1.99', emoji: '🍀', reward: 'x100 luck',      type: 'luck',   amount: 100 },
+  { id: 'luck_l', name: 'Luck Boost L',  price: '$4.99', emoji: '⚡', reward: 'x1,000 luck',    type: 'luck',   amount: 1_000 },
+];
+
+let _paypalReady = false;
+
+function loadPayPalSDK() {
+  const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+  if (!clientId || _paypalReady) return;
+  const script = document.getElementById('paypal-sdk-script');
+  if (!script) return;
+  script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD`;
+  script.onload = () => {
+    _paypalReady = true;
+    mountPayPalButtons();
+  };
+}
+
+function mountPayPalButtons() {
+  if (!window.paypal) return;
+  STORE_PRODUCTS.forEach((product) => {
+    const container = document.getElementById(`paypal-btn-${product.id}`);
+    if (!container || container.children.length > 0) return;
+
+    window.paypal.Buttons({
+      style: { layout: 'horizontal', color: 'gold', shape: 'rect', label: 'pay', height: 35 },
+
+      createOrder: async () => {
+        const res = await fetch('/.netlify/functions/create-paypal-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId: product.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Order creation failed');
+        return data.orderID;
+      },
+
+      onApprove: async (data) => {
+        const res = await fetch('/.netlify/functions/capture-paypal-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderID: data.orderID, productId: product.id }),
+        });
+        const result = await res.json();
+        if (!res.ok) {
+          alert('Payment failed: ' + (result.error || 'Unknown error'));
+          return;
+        }
+        showStoreClaimCode(result.claimCode, product);
+      },
+
+      onError: (err) => {
+        console.error('[store] PayPal error:', err);
+        alert('Something went wrong with PayPal. Please try again.');
+      },
+    }).render(`#paypal-btn-${product.id}`);
+  });
+}
+
+function showStoreClaimCode(code, product) {
+  const msg = document.getElementById('store-claim-msg');
+  const input = document.getElementById('store-claim-input');
+  // Pre-fill the redeem box for convenience
+  if (input) input.value = code;
+  if (msg) {
+    msg.textContent = '';
+  }
+  // Show a prominent modal-style alert with the code
+  alert(
+    `Payment successful!\n\nYour claim code for ${product.name}:\n\n${code}\n\nThis code has been pre-filled in the Redeem box. Click Redeem to receive your ${product.reward}.`
+  );
+}
+
+async function redeemClaimCode() {
+  const input = document.getElementById('store-claim-input');
+  const msg   = document.getElementById('store-claim-msg');
+  const code  = (input?.value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+
+  if (!code) {
+    if (msg) { msg.textContent = 'Enter a claim code first.'; msg.className = 'store-claim-msg store-claim-msg--error'; }
+    return;
+  }
+  if (!supabase) {
+    if (msg) { msg.textContent = 'Cannot connect to server. Try again later.'; msg.className = 'store-claim-msg store-claim-msg--error'; }
+    return;
+  }
+
+  const btn = document.getElementById('store-claim-btn');
+  if (btn) btn.disabled = true;
+  if (msg) { msg.textContent = 'Verifying…'; msg.className = 'store-claim-msg'; }
+
+  const { data, error } = await supabase.rpc('redeem_purchase_code', { p_code: code });
+
+  if (btn) btn.disabled = false;
+
+  if (error || !data?.success) {
+    if (msg) { msg.textContent = data?.error || 'Invalid or already claimed code.'; msg.className = 'store-claim-msg store-claim-msg--error'; }
+    return;
+  }
+
+  // Apply the reward
+  const product = STORE_PRODUCTS.find((p) => p.id === data.product_id);
+  if (!product) {
+    if (msg) { msg.textContent = 'Code redeemed but product not recognised. Contact support.'; msg.className = 'store-claim-msg store-claim-msg--error'; }
+    return;
+  }
+
+  if (product.type === 'coins') {
+    setCoins(getCoins() + product.amount);
+    renderCoins();
+  } else if (product.type === 'luck') {
+    setLuckMultiplier(getLuckMultiplier() + product.amount);
+    renderLuck();
+  }
+
+  if (input) input.value = '';
+  if (msg) {
+    msg.textContent = `Redeemed! You received ${product.reward}.`;
+    msg.className = 'store-claim-msg store-claim-msg--success';
+  }
+}
+
+function renderStore() {
+  const grid = document.getElementById('store-product-grid');
+  if (!grid) return;
+
+  grid.innerHTML = STORE_PRODUCTS.map((p) => `
+    <div class="store-card">
+      <div class="store-card-emoji">${p.emoji}</div>
+      <div class="store-card-name">${p.name}</div>
+      <div class="store-card-reward">${p.reward}</div>
+      <div class="store-card-price">${p.price}</div>
+      <div id="paypal-btn-${p.id}" class="store-paypal-btn-container"></div>
+    </div>
+  `).join('');
+
+  // Load SDK on first open, or mount buttons if already loaded
+  if (!_paypalReady) {
+    loadPayPalSDK();
+  } else {
+    mountPayPalButtons();
+  }
+}
+
 function init() {
   migrateLockedToStorage();
   const rollBtn = document.getElementById('roll-btn');
@@ -1901,6 +2052,12 @@ function init() {
 
   // Tycoon click button (persistent listener, not inside renderTycoon)
   document.getElementById('tycoon-click-btn')?.addEventListener('click', tycoonClick);
+
+  // Store redeem
+  document.getElementById('store-claim-btn')?.addEventListener('click', redeemClaimCode);
+  document.getElementById('store-claim-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') redeemClaimCode();
+  });
 
   initBennySchedule();
   setInterval(() => {

@@ -613,6 +613,89 @@ body {
   border: 1px solid #0a0;
 }
 
+/* Store */
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.store-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1.1rem 0.75rem;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--card, #1a1a2e);
+  text-align: center;
+  transition: border-color 0.15s;
+}
+.store-card:hover {
+  border-color: var(--accent, #c8a84b);
+}
+.store-card-emoji {
+  font-size: 2.2rem;
+}
+.store-card-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.store-card-reward {
+  font-size: 0.8rem;
+  color: var(--accent, #c8a84b);
+  font-weight: 600;
+}
+.store-card-price {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+.store-paypal-btn-container {
+  width: 100%;
+  min-height: 38px;
+}
+.store-redeem-box {
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 1.2rem;
+  max-width: 480px;
+}
+.store-redeem-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+.store-redeem-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+.store-redeem-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.store-claim-input {
+  flex: 1;
+  min-width: 180px;
+  font-family: monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.store-claim-btn {
+  white-space: nowrap;
+}
+.store-claim-msg {
+  font-size: 0.82rem;
+  margin: 0.5rem 0 0;
+  min-height: 1.2em;
+}
+.store-claim-msg--error   { color: var(--danger, #e74c3c); }
+.store-claim-msg--success { color: #2ecc71; }
+
 /* Tycoon */
 .tycoon-layout {
   display: flex;
