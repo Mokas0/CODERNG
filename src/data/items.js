@@ -768,6 +768,43 @@ export const BIOME_AURAS = [
     font: 'Space Mono', color: '#ffff00', fontWeight: '700', fontStyle: 'normal',
     textShadow: '0 0 10px #ffff00, 0 0 35px #ffaa00, 0 0 70px #884400',
     rarity: 8e18, biome: 'storm' },
+
+  // ── Rare Biomes (1/10,000 chance per minute) ─────────────────────────────
+  // Divine Collapse
+  { id: 9920, text: 'APOTHEOSIS',
+    font: 'Cinzel', color: '#ffd700', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 20px #ffd700, 0 0 60px #ff8800, 0 0 120px #cc4400',
+    rarity: 9.1e18, biome: 'divine_collapse' },
+  { id: 9921, text: 'THE FALLEN GOD',
+    font: 'Cormorant Garamond', color: '#cc8800', fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 18px #cc8800, 0 0 55px #883300, 0 0 100px #440000',
+    rarity: 9.2e18, biome: 'divine_collapse' },
+
+  // Astral Fracture
+  { id: 9922, text: 'STELLAR BREACH',
+    font: 'Syne', color: '#aaddff', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 16px #aaddff, 0 0 50px #0055aa, 0 0 100px #002266',
+    rarity: 9.3e18, biome: 'astral_fracture' },
+  { id: 9923, text: 'THE LAST STAR',
+    font: 'DM Serif Display', color: '#ffffff', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 12px #ffffff, 0 0 40px #8888ff, 0 0 90px #0000aa',
+    rarity: 9.4e18, biome: 'astral_fracture' },
+
+  // Primordial Storm
+  { id: 9924, text: 'CHAOS SOVEREIGN',
+    font: 'Unbounded', color: '#ff8800', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 16px #ff8800, 0 0 55px #cc3300, 0 0 110px #660000',
+    rarity: 9.5e18, biome: 'primordial_storm' },
+  { id: 9925, text: 'FIRST TEMPEST',
+    font: 'Space Mono', color: '#ffffff', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '2px 0 0 #ff8800, -2px 0 0 #0088ff, 0 0 30px #ffffff',
+    rarity: 9.6e18, biome: 'primordial_storm' },
+
+  // NULL Biome — one aura, in a category of itself
+  { id: 9930, text: 'NOTHING',
+    font: 'Space Mono', color: '#888888', fontWeight: '100', fontStyle: 'normal',
+    textShadow: 'none',
+    rarity: 9_000_000_000_000_000, biome: 'null', isNull: true },
 ];
 
 // ─── SECRET AURAS ──────────────────────────────────────────────────────────

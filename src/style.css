@@ -2319,6 +2319,27 @@ body {
   text-shadow: 0 0 8px gold;
 }
 
+/* History badge for NULL auras */
+.history-item--null {
+  border-left: 2px solid #444444;
+  background: linear-gradient(90deg, rgba(40, 40, 40, 0.18) 0%, transparent 60%);
+}
+.history-item--null .history-text {
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+
+/* Rare biome banner variant */
+.biome-banner[data-rare="true"] {
+  border-color: color-mix(in srgb, var(--biome-color, #fff) 60%, transparent);
+  box-shadow: 0 0 30px var(--biome-glow, #ffffff33), inset 0 0 15px rgba(255,255,255,0.05);
+  animation: biome-banner-glow 2s ease-in-out infinite alternate, biome-banner-rare-pulse 3s ease-in-out infinite;
+}
+@keyframes biome-banner-rare-pulse {
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.012); }
+}
+
 /* History badge for ascendant auras */
 .history-item--ascendant {
   border-left: 3px solid #00ddaa;

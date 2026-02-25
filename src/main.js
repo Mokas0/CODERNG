@@ -1626,10 +1626,12 @@ function renderHistory() {
       const isBiome     = h.isBiome     || false;
       const isElder     = h.isElder     || false;
       const isAscendant = h.isAscendant || false;
+      const isNull      = h.isNull      || false;
       const specialClass = isSecret ? ' history-item--secret'
         : isBiome     ? ' history-item--biome'
         : isElder     ? ' history-item--elder'
         : isAscendant ? ' history-item--ascendant'
+        : isNull      ? ' history-item--null'
         : '';
       const badge = isSecret
         ? '<span class="secret-badge">⚠ SECRET</span>'
@@ -1639,8 +1641,10 @@ function renderHistory() {
             ? `<span class="elder-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
             : isAscendant
               ? `<span class="ascendant-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
-              : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
-      const canSalvage = !isSecret && !isBiome && !isElder && !isAscendant;
+              : isNull
+                ? `<span class="null-badge" style="position:absolute;top:4px;right:6px;font-size:0.55rem;font-weight:900;letter-spacing:.2em;color:#666;opacity:.9;">NULL</span>`
+                : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
+      const canSalvage = !isSecret && !isBiome && !isElder && !isAscendant && !isNull;
       return `<li class="history-item${specialClass}" data-index="${idx}" data-history-id="${id}">
           ${badge}
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
@@ -1856,6 +1860,16 @@ const MYTHIC_CUTSCENES = {
   9953: { bg: '#040008', accentA: '#9900dd', accentB: '#440066' },
   9954: { bg: '#080808', accentA: '#ffffff', accentB: '#aaaaaa' },
 
+  // ─── Rare Biome Auras (divine_collapse / astral_fracture / primordial_storm) ─
+  9920: { quote: 'The divine did not die. It became something else.',        bg: '#1a1000', accentA: '#ffd700', accentB: '#ff8800' },
+  9921: { quote: 'Even gods fall. Especially the ones who made you.',        bg: '#1a0800', accentA: '#cc8800', accentB: '#661100' },
+  9922: { quote: 'The fabric between stars never fully heals.',              bg: '#000a1a', accentA: '#aaddff', accentB: '#0055aa' },
+  9923: { quote: 'After the last star goes out — this is what remains.',     bg: '#000005', accentA: '#ffffff',  accentB: '#8888ff' },
+  9924: { quote: 'Before structure, before order: only this.',              bg: '#1a0a00', accentA: '#ff8800', accentB: '#cc3300' },
+  9925: { quote: "The storm that started everything. Still hasn't stopped.", bg: '#080814', accentA: '#ffffff',  accentB: '#0088ff' },
+  // ─── NULL Biome Aura ─────────────────────────────────────────────────────
+  9930: { quote: '', bg: '#000000', accentA: '#333333', accentB: '#111111' },
+
   // ─── Ascendant Auras (dual-prerequisite unlocks, unskippable cutscene) ────
   9960: { bg: '#001a12', accentA: '#00ddaa', accentB: '#004433' },
   9961: { bg: '#1a0008', accentA: '#ff0044', accentB: '#880022' },
@@ -1895,6 +1909,14 @@ const ELDER_STAGES = {
     'Gone.',
     'Every. Single. One.',
     'Some devotions are rewarded.',
+  ],
+
+  // NULL aura — unskippable void cutscene
+  9930: [
+    'You found it.',
+    'Or it found nothing.',
+    'The same thing.',
+    '.',
   ],
 
   // Ascendant stage texts (dual-prerequisite)
@@ -2223,11 +2245,18 @@ function showRarityAnimation(item, tier) {
 
 // ─── Global Biome System ───────────────────────────────────────────────────
 const BIOME_CONFIG = {
-  volcanic:  { name: 'Volcanic Surge',       emoji: '🌋', color: '#ff4400', glow: '#ff220066', desc: 'Magma mythics rise from the deep.' },
-  celestial: { name: 'Celestial Alignment',  emoji: '✨', color: '#ffd700', glow: '#ffd70055', desc: 'The cosmos aligns. Star auras manifest.' },
-  void:      { name: 'Void Convergence',     emoji: '🌑', color: '#8800ff', glow: '#8800ff55', desc: 'Ancient darkness stirs. Void auras awaken.' },
-  crystal:   { name: 'Crystal Resonance',    emoji: '💎', color: '#00ffff', glow: '#00ffff44', desc: 'Reality crystallizes. Prismatic auras take form.' },
-  storm:     { name: 'Tempest Protocol',     emoji: '⚡', color: '#ffffff', glow: '#ffffff33', desc: 'The sky tears open. Storm auras overcharge.' },
+  // ─ Common biomes (1/5 per minute) ────────────────────────────────────────
+  volcanic:        { name: 'Volcanic Surge',      emoji: '🌋', color: '#ff4400', glow: '#ff220066', desc: 'Magma mythics rise from the deep.' },
+  celestial:       { name: 'Celestial Alignment', emoji: '✨', color: '#ffd700', glow: '#ffd70055', desc: 'The cosmos aligns. Star auras manifest.' },
+  void:            { name: 'Void Convergence',    emoji: '🌑', color: '#8800ff', glow: '#8800ff55', desc: 'Ancient darkness stirs. Void auras awaken.' },
+  crystal:         { name: 'Crystal Resonance',   emoji: '💎', color: '#00ffff', glow: '#00ffff44', desc: 'Reality crystallizes. Prismatic auras take form.' },
+  storm:           { name: 'Tempest Protocol',    emoji: '⚡', color: '#ffffff', glow: '#ffffff33', desc: 'The sky tears open. Storm auras overcharge.' },
+  // ─ Rare biomes (1/10,000 per minute) ─────────────────────────────────────
+  divine_collapse: { name: 'Divine Collapse',     emoji: '⚱️', color: '#ffd700', glow: '#ffd70044', desc: 'The heavens fracture. What was divine spills down.', isRare: true },
+  astral_fracture: { name: 'Astral Fracture',     emoji: '🌌', color: '#aaddff', glow: '#aaddff33', desc: 'The stellar membrane tears. Something older bleeds through.', isRare: true },
+  primordial_storm:{ name: 'Primordial Storm',    emoji: '🌪️', color: '#ff8800', glow: '#ff880044', desc: 'Chaos before creation. The first storm never stopped.', isRare: true },
+  // ─ NULL biome (1/10,000 per minute) ─────────────────────────────────────
+  null:            { name: 'NULL',                emoji: '⬛', color: '#444444', glow: '#22222244', desc: 'Everything is unavailable. Including this message.', isRare: true, isNull: true },
 };
 const BIOME_ROLL_CHANCE = 1 / 500_000; // chance per roll during active biome
 
@@ -2239,10 +2268,11 @@ function showBiomeBanner(biome) {
   const banner = document.getElementById('biome-banner');
   if (!banner) return;
   document.getElementById('biome-emoji').textContent = cfg.emoji;
-  document.getElementById('biome-name').textContent = cfg.name;
+  document.getElementById('biome-name').textContent = (cfg.isRare ? '⚠ ' : '') + cfg.name;
   document.getElementById('biome-desc').textContent = cfg.desc;
   banner.style.setProperty('--biome-color', cfg.color);
   banner.style.setProperty('--biome-glow', cfg.glow);
+  banner.dataset.rare = cfg.isRare ? 'true' : 'false';
   banner.classList.remove('hidden');
 
   clearInterval(biomeTimerInterval);
@@ -2296,8 +2326,11 @@ function subscribeActiveBiome() {
   loadActiveBiome();
 }
 
+const NULL_BIOME_ROLL_CHANCE = 1 / 10_000; // rarer biome itself, so higher per-roll access
+
 function tryBiomeRoll(biomeType) {
-  if (Math.random() >= BIOME_ROLL_CHANCE) return null;
+  const chance = biomeType === 'null' ? NULL_BIOME_ROLL_CHANCE : BIOME_ROLL_CHANCE;
+  if (Math.random() >= chance) return null;
   const eligible = BIOME_AURAS.filter(a => a.biome === biomeType);
   if (!eligible.length) return null;
   return { ...eligible[Math.floor(Math.random() * eligible.length)] };
@@ -2407,14 +2440,20 @@ async function roll() {
         fontStyle: biomeAura.fontStyle,
         textShadow: biomeAura.textShadow,
         rarity: biomeAura.rarity,
-        isBiome: true,
+        isBiome: !biomeAura.isNull,
+        isNull: biomeAura.isNull || false,
       });
       setHistory(history2);
       renderHistory();
       reportRareRoll(biomeAura);
-      isAnimating = true;
-      await showRarityAnimation(biomeAura, 'biome');
-      isAnimating = false;
+      if (biomeAura.isNull) {
+        // NOTHING gets the full unskippable staged cutscene
+        await showElderCutscene(biomeAura);
+      } else {
+        isAnimating = true;
+        await showRarityAnimation(biomeAura, 'biome');
+        isAnimating = false;
+      }
     }
   }
 

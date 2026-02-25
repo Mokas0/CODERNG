@@ -8,14 +8,23 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 // ── Global Biome Config ────────────────────────────────────────────────────
-const BIOME_CHANCE          = 1 / 5; // 20% per minute → avg 1 biome every 5 min
+const BIOME_CHANCE           = 1 / 5;      // 20% per minute → avg 1 biome every 5 min
+const RARE_BIOME_CHANCE      = 1 / 10_000; // 0.01% per minute → ~1 per week
 const BIOME_DURATION_MINUTES = 5;
+
 const BIOMES = [
   { type: 'volcanic',  name: 'Volcanic Surge',      emoji: '🌋', color: 0xFF4400, desc: 'The earth cracks open. Magma mythics rise from the deep.' },
   { type: 'celestial', name: 'Celestial Alignment',  emoji: '✨', color: 0xFFD700, desc: 'The cosmos aligns. Starbound auras manifest across the sky.' },
   { type: 'void',      name: 'Void Convergence',     emoji: '🌑', color: 0x8800FF, desc: 'Ancient darkness stirs. Void auras breach the surface.' },
   { type: 'crystal',   name: 'Crystal Resonance',    emoji: '💎', color: 0x00FFFF, desc: 'Reality crystallizes. Prismatic auras take form from thin air.' },
   { type: 'storm',     name: 'Tempest Protocol',     emoji: '⚡', color: 0xFFFFFF, desc: 'The sky tears apart. Storm auras overcharge with raw power.' },
+];
+
+const RARE_BIOMES = [
+  { type: 'divine_collapse',  name: 'Divine Collapse',  emoji: '⚱️', color: 0xFFD700, desc: 'The heavens fracture. What was divine spills down in ruin. Mythical power beyond reckoning.' },
+  { type: 'astral_fracture',  name: 'Astral Fracture',  emoji: '🌌', color: 0xAADDFF, desc: 'The stellar membrane tears. Something older than stars bleeds through the rift.' },
+  { type: 'primordial_storm', name: 'Primordial Storm', emoji: '🌪️', color: 0xFF8800, desc: 'Chaos before creation. The first storm that ever existed — and it never stopped.' },
+  { type: 'null',             name: 'NULL',             emoji: '⬛', color: 0x444444, desc: 'Everything is unavailable. Including this message.' },
 ];
 
 if (!DISCORD_BOT_TOKEN || !DISCORD_CHANNEL_ID || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -151,51 +160,63 @@ discord.once('ready', async () => {
   subscribeRealtime();
 
   // ── Biome trigger — checked every 60 seconds ─────────────────────────────
-  setInterval(async () => {
-    if (Math.random() >= BIOME_CHANCE) return;
-
+  async function triggerBiome(biome, isRare = false) {
     // Don't stack biomes — skip if one is already active
     const { data: existing } = await supabase
       .from('active_biome')
       .select('id')
       .gt('ends_at', new Date().toISOString())
       .limit(1);
-    if (existing && existing.length > 0) return;
+    if (existing && existing.length > 0) return false;
 
-    const biome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
     const endsAt = new Date(Date.now() + BIOME_DURATION_MINUTES * 60_000).toISOString();
-
     const { error } = await supabase.from('active_biome').insert({
       biome_type: biome.type,
       biome_name: biome.name,
       ends_at: endsAt,
     });
+    if (error) { console.error('[biome] Failed to insert biome:', error.message); return false; }
 
-    if (error) {
-      console.error('[biome] Failed to insert biome:', error.message);
-      return;
-    }
-
-    console.log(`[biome] Triggered: ${biome.name} (${biome.type}) for ${BIOME_DURATION_MINUTES} min`);
+    console.log(`[biome${isRare ? ':RARE' : ''}] Triggered: ${biome.name} (${biome.type}) for ${BIOME_DURATION_MINUTES} min`);
 
     const channel = await fetchChannel();
-    if (!channel) return;
+    if (!channel) return true;
 
+    const isNull = biome.type === 'null';
     const embed = new EmbedBuilder()
-      .setTitle(`${biome.emoji} GLOBAL BIOME — ${biome.name.toUpperCase()}`)
+      .setTitle(isRare
+        ? `${biome.emoji} ⚠ RARE BIOME — ${biome.name.toUpperCase()}`
+        : `${biome.emoji} GLOBAL BIOME — ${biome.name.toUpperCase()}`)
       .setDescription(
-        `${biome.desc}\n\n` +
-        `**Biome-exclusive quintillion-rare auras** can now be discovered for the next **${BIOME_DURATION_MINUTES} minutes**.\n\n` +
-        `Roll now on [Nico's RNG](https://nicos-rng.netlify.app) before it ends!`
+        isNull
+          ? `${biome.desc}\n\n` +
+            `**THE NOTHING** can be discovered for the next **${BIOME_DURATION_MINUTES} minutes**.\n\n` +
+            `Roll now on [Nico's RNG](https://nicos-rng.netlify.app) — if anything is even there.`
+          : `${biome.desc}\n\n` +
+            `**${isRare ? 'Mythical' : 'Biome-exclusive quintillion-rare'} auras** can now be discovered for the next **${BIOME_DURATION_MINUTES} minutes**.\n\n` +
+            `Roll now on [Nico's RNG](https://nicos-rng.netlify.app) before it ends!`
       )
       .setColor(biome.color)
-      .setFooter({ text: `Nico's RNG • Active for the next ${BIOME_DURATION_MINUTES} minutes` });
+      .setFooter({ text: `Nico's RNG • Active for the next ${BIOME_DURATION_MINUTES} minutes${isRare ? ' • RARE EVENT' : ''}` });
 
-    try {
-      await channel.send({ embeds: [embed] });
-    } catch (err) {
+    try { await channel.send({ embeds: [embed] }); } catch (err) {
       console.error('[biome] Failed to announce:', err.message);
     }
+    return true;
+  }
+
+  setInterval(async () => {
+    // Rare biome check (1/10,000) — runs first; if triggered, skips common check
+    if (Math.random() < RARE_BIOME_CHANCE) {
+      const rareBiome = RARE_BIOMES[Math.floor(Math.random() * RARE_BIOMES.length)];
+      const triggered = await triggerBiome(rareBiome, true);
+      if (triggered) return;
+    }
+
+    // Common biome check (1/5)
+    if (Math.random() >= BIOME_CHANCE) return;
+    const biome = BIOMES[Math.floor(Math.random() * BIOMES.length)];
+    await triggerBiome(biome, false);
   }, 60_000);
 });
 
