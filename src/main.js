@@ -1593,6 +1593,81 @@ const MYTHIC_CUTSCENES = {
   9035: { quote: 'The universe did not contain it. It IS it.',bg: '#010101', accentA: '#ff00ff', accentB: '#00ffff' },
   9036: { quote: 'Not darkness. The absence of everything.',  bg: '#000000', accentA: '#aaaaff', accentB: '#ffffff' },
   9037: { quote: 'One hundred trillion. You have no words.',  bg: '#000000', accentA: '#ffd700', accentB: '#ff00ff' },
+
+  // Beyond Mythic: 110T – 400T
+  9038: { quote: 'This was not meant to be rolled.',                             bg: '#1a0000', accentA: '#ff3311', accentB: '#880000' },
+  9039: { quote: 'The gods exhaled. You caught their last breath.',              bg: '#1a0e00', accentA: '#ffcc88', accentB: '#ff8800' },
+  9040: { quote: 'Some things were never supposed to be written.',               bg: '#00111a', accentA: '#aaddff', accentB: '#3399cc' },
+  9041: { quote: 'Even stars do not last this long.',                            bg: '#1a0015', accentA: '#ff88ee', accentB: '#cc0099' },
+  9042: { quote: 'When everything collapses, this remains.',                     bg: '#001a0d', accentA: '#00ff99', accentB: '#00aa55' },
+  9043: { quote: 'The key that was never supposed to be found.',                 bg: '#0d0022', accentA: '#ddbbff', accentB: '#8800ff' },
+  9044: { quote: 'There are no borders left. You crossed them all.',             bg: '#1a0800', accentA: '#ff6600', accentB: '#cc3300' },
+  9045: { quote: 'Where no light travels. You went anyway.',                     bg: '#000d1a', accentA: '#5577aa', accentB: '#aabbcc' },
+  9046: { quote: 'An age passed in silence. You were still here.',               bg: '#00001a', accentA: '#c8c8ff', accentB: '#6666ff' },
+  9047: { quote: 'To know everything is to shatter.',                            bg: '#000000', accentA: '#ffffff', accentB: '#ff00ff' },
+
+  // Stellar: 430T – 950T
+  9048: { quote: 'A pulse so strong it unmade reality.',                         bg: '#1a1a00', accentA: '#ffff00', accentB: '#aaaa00' },
+  9049: { quote: 'They forgot about this. You found it anyway.',                 bg: '#1a0d00', accentA: '#ffaa66', accentB: '#ff6600' },
+  9050: { quote: 'Ground zero. The beginning of the end.',                       bg: '#001122', accentA: '#00ffff', accentB: '#0088cc' },
+  9051: { quote: 'The last photon in the dying universe.',                       bg: '#111100', accentA: '#ffffee', accentB: '#ffff88' },
+  9052: { quote: 'Buried under infinite layers. Until now.',                     bg: '#110022', accentA: '#cc88ff', accentB: '#883399' },
+  9053: { quote: 'A dominion without a throne. Yours now.',                      bg: '#001a0d', accentA: '#99ffcc', accentB: '#00cc77' },
+  9054: { quote: 'The cosmos unchained itself. So did you.',                     bg: '#1a0011', accentA: '#ff4477', accentB: '#cc0033' },
+  9055: { quote: 'Inside the hollow: everything and nothing.',                   bg: '#0a0a14', accentA: '#8888cc', accentB: '#ccccff' },
+
+  // Quadrillion Gate: 1Q – 4.5Q
+  9056: { quote: 'A crown forged in the ash of dead suns.',                      bg: '#1a0d00', accentA: '#ffddbb', accentB: '#cc8800' },
+  9057: { quote: 'Rising through decay. The only way up.',                       bg: '#001a14', accentA: '#00ffcc', accentB: '#009966' },
+  9058: { quote: 'A wound that never healed. A clock that never stopped.',       bg: '#1a0011', accentA: '#ff6688', accentB: '#cc0033' },
+  9059: { quote: 'Not the absence of things — the absence of absence itself.',   bg: '#1a001a', accentA: '#ff00ff', accentB: '#8800aa' },
+  9060: { quote: 'You bent gravity to your will.',                               bg: '#000d1a', accentA: '#88bbff', accentB: '#0044cc' },
+  9061: { quote: 'The universe winds down. But not yet.',                        bg: '#1a1100', accentA: '#ffee00', accentB: '#ff8800' },
+  9062: { quote: 'After this, there is no sequel.',                              bg: '#0d001a', accentA: '#ffffff', accentB: '#ff00ff' },
+  9063: { quote: 'Not yet shaped. Not yet named. Not yet yours. Until now.',     bg: '#111a00', accentA: '#eeffaa', accentB: '#aacc00' },
+  9064: { quote: 'It was always going to happen. Always.',                       bg: '#111111', accentA: '#cccccc', accentB: '#ffffff' },
+  9065: { quote: 'A whisper from before time began.',                            bg: '#001a1a', accentA: '#aaffff', accentB: '#00aaaa' },
+  9066: { quote: 'What was whole is now split forever.',                         bg: '#1a0800', accentA: '#ff8800', accentB: '#ff0033' },
+  9067: { quote: 'You have gone beyond. There is no way back.',                  bg: '#00001a', accentA: '#eeeeff', accentB: '#aaaaff' },
+
+  // Apex: 5Q – 18Q
+  9068: { quote: 'Tyrant of space, time, and every axis between.',               bg: '#1a0000', accentA: '#ff1111', accentB: '#880000' },
+  9069: { quote: 'The purest form of nothing becoming something terrible.',      bg: '#1a0000', accentA: '#ff3300', accentB: '#aa0000' },
+  9070: { quote: 'The hand that shaped creation. Unseen until now.',             bg: '#111110', accentA: '#ccccbb', accentB: '#888877' },
+  9071: { quote: 'A frequency no device can measure.',                           bg: '#001100', accentA: '#00ff00', accentB: '#00aa00' },
+  9072: { quote: 'The very last aura ever to be catalogued.',                    bg: '#1a1100', accentA: '#ffcc00', accentB: '#cc9900' },
+  9073: { quote: 'Oblivion reached its apex. You were there.',                   bg: '#000000', accentA: '#ff8800', accentB: '#ff0000' },
+  9074: { quote: 'The spiral that never completed. Until this moment.',          bg: '#1a001a', accentA: '#ff77ff', accentB: '#aa00aa' },
+  9075: { quote: 'The scripture that predates all scripture.',                   bg: '#0d0022', accentA: '#9966ff', accentB: '#5500cc' },
+  9076: { quote: 'Ruin that ascends. Destruction that transcends.',              bg: '#1a0000', accentA: '#ff5522', accentB: '#cc2200' },
+  9077: { quote: 'Absolute. Pale. Inevitable.',                                  bg: '#0a0a14', accentA: '#f0f0ff', accentB: '#aaaacc' },
+
+  // Pinnacle: 20Q – 64Q
+  9078: { quote: 'All timelines converge. All roads end here.',                  bg: '#001122', accentA: '#00aaff', accentB: '#0055cc' },
+  9079: { quote: 'The epoch that never began and never ended.',                  bg: '#111111', accentA: '#888888', accentB: '#cccccc' },
+  9080: { quote: 'Darkness without border, cause, or cure.',                     bg: '#080011', accentA: '#8855ff', accentB: '#4400aa' },
+  9081: { quote: 'Where matter ends, something else begins.',                    bg: '#000011', accentA: '#00ffff', accentB: '#ff00ff' },
+  9082: { quote: 'A saint born in the heart of a singularity.',                  bg: '#1a1008', accentA: '#ffeedd', accentB: '#ffaa77' },
+  9083: { quote: 'The originating nothing. Before everything.',                  bg: '#050505', accentA: '#cccccc', accentB: '#ffffff' },
+  9084: { quote: 'The silence after the last sound in existence.',               bg: '#080814', accentA: '#e8e8ff', accentB: '#9999cc' },
+  9085: { quote: 'This law was not written. It simply is.',                      bg: '#0d0800', accentA: '#ffd700', accentB: '#ff8800' },
+  9086: { quote: 'Even the unknowable has its peak. This is it.',                bg: '#1a0011', accentA: '#ff00aa', accentB: '#880055' },
+  9087: { quote: 'A mandate issued from beyond the edge of all things.',         bg: '#080022', accentA: '#8833ff', accentB: '#4400cc' },
+
+  // Transcendent Finale: 72Q – 100Q
+  9088: { quote: 'It does not conquer realms. It consumes them.',                bg: '#110000', accentA: '#cc0000', accentB: '#880000' },
+  9089: { quote: 'The final movement. No instrument can play it.',               bg: '#08001a', accentA: '#ccbbff', accentB: '#7755cc' },
+  9090: { quote: 'The last star winks out. You hold its light.',                 bg: '#110d00', accentA: '#fffaee', accentB: '#ffcc66' },
+  9091: { quote: 'Godhood is a ceiling. You broke through it.',                  bg: '#110011', accentA: '#ffffff', accentB: '#ff00ff' },
+  9092: { quote: 'It was there before the universe. It will be there after.',    bg: '#001a14', accentA: '#00ffee', accentB: '#00aaaa' },
+  9093: { quote: 'Almost everything. Almost the end. Almost.',                   bg: '#1a0800', accentA: '#ff8800', accentB: '#ff0000' },
+  9094: { quote: 'One step from the edge. You can see it clearly now.',          bg: '#001a08', accentA: '#aaffaa', accentB: '#00ff44' },
+  9095: { quote: 'The threshold. Cross it and nothing is the same.',             bg: '#00001a', accentA: '#ddddff', accentB: '#8888ff' },
+  9096: { quote: 'Past the beyond. There are no maps here.',                     bg: '#000000', accentA: '#ffffff', accentB: '#ff8800' },
+  9097: { quote: 'In the beginning, there was this.',                            bg: '#0d0a00', accentA: '#ffd700', accentB: '#ffffff' },
+  9098: { quote: 'The apex of everything that exists or ever could.',            bg: '#110011', accentA: '#ff00ff', accentB: '#00ffff' },
+  9099: { quote: 'This is where all things end. All stories close. All light stops.', bg: '#080808', accentA: '#ffff00', accentB: '#ffffff' },
+  9100: { quote: 'One hundred quadrillion. Even the universe cannot comprehend this.', bg: '#000000', accentA: '#ffd700', accentB: '#00ffff' },
 };
 
 function showRarityAnimation(item, tier) {
