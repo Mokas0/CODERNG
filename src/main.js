@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS } from './data/items.js';
+import { ITEMS, SECRET_AURAS } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -107,6 +107,7 @@ function weightedRandom(multiplier = 1) {
 }
 
 function formatRarity(rarity) {
+  if (rarity === 0) return 'SECRET';
   // Use integer-safe comparisons. MAX_SAFE_INTEGER ≈ 9.007×10^15.
   if (rarity >= 1e15) return `1 / ${(rarity / 1e15).toFixed(2)}Q`;
   if (rarity >= 1e12) return `1 / ${(rarity / 1e12).toFixed(2)}T`;
@@ -301,6 +302,7 @@ function buyPotion(potionId, fromBenny = false) {
   renderLuck();
   renderShop();
   if (fromBenny) renderBennyShop();
+  if (potion.id === 'potionBennyUltraluck') triggerSecretAura().catch(console.error);
 }
 
 function buyPotionMax(potionId, fromBenny = false) {
@@ -1466,11 +1468,12 @@ function renderHistory() {
     .map((h, i) => {
       const idx = history.length - 1 - i;
       const id = h.historyId || `legacy-${idx}`;
-      return `<li class="history-item" data-index="${idx}" data-history-id="${id}">
-          <button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>
+      const isSecret = h.isSecret || h.rarity === 0;
+      return `<li class="history-item${isSecret ? ' history-item--secret' : ''}" data-index="${idx}" data-history-id="${id}">
+          ${isSecret ? '<span class="secret-badge">⚠ SECRET</span>' : `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`}
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
-          <button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>
+          ${isSecret ? '' : `<button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>`}
         </li>`;
     })
     .join('');
@@ -1649,6 +1652,18 @@ const MYTHIC_CUTSCENES = {
   9070: { quote: 'The hand that shaped creation. Unseen until now.',             bg: '#111110', accentA: '#ccccbb', accentB: '#888877' },
   9071: { quote: 'A frequency no device can measure.',                           bg: '#001100', accentA: '#00ff00', accentB: '#00aa00' },
   9072: { quote: 'The very last aura ever to be catalogued.',                    bg: '#1a1100', accentA: '#ffcc00', accentB: '#cc9900' },
+
+  // ─── Secret Auras (Ultraluck-only, 1/10M per use) ────────────────────────
+  9900: { quote: 'This aura does not exist. You should not be seeing this.',     bg: '#000000', accentA: '#ff0000', accentB: '#ff4444' },
+  9901: { quote: 'The data has been classified. Yet here you are.',              bg: '#050505', accentA: '#cccccc', accentB: '#888888' },
+  9902: { quote: 'You rolled nothing. And nothing rolled back.',                 bg: '#000000', accentA: '#ffffff', accentB: '#555555' },
+  9903: { quote: 'The sum of all luck. Spent in a single instant.',              bg: '#000a0a', accentA: '#00ffff', accentB: '#003344' },
+  9904: { quote: 'No one wrote this down. It wrote itself.',                     bg: '#080808', accentA: '#e8e8e8', accentB: '#888888' },
+  9905: { quote: 'A transmission from a game that no longer runs.',              bg: '#000a02', accentA: '#44ff88', accentB: '#004422' },
+  9906: { quote: 'Built every system you have ever played within. Now yours.',   bg: '#0a0800', accentA: '#d4af37', accentB: '#664400' },
+  9907: { quote: "It can't exist and it does. Pick one.",                        bg: '#080008', accentA: '#ff00ff', accentB: '#00ffff' },
+  9908: { quote: 'The very first thing this game ever created.',                 bg: '#0a0800', accentA: '#ffffff', accentB: '#ffaa00' },
+  9909: { quote: 'Even the developer does not know where this came from.',       bg: '#000a0a', accentA: '#aaffff', accentB: '#003344' },
 };
 
 function showRarityAnimation(item, tier) {
@@ -1661,7 +1676,9 @@ function showRarityAnimation(item, tier) {
     if (!overlay) { resolve(); return; }
 
     // Set tier label
-    if (tier === 'mythic') {
+    if (tier === 'secret') {
+      tierEl.textContent = '⚠ Secret Aura ⚠';
+    } else if (tier === 'mythic') {
       tierEl.textContent = '✦ Mythic Aura ✦';
     } else if (tier === 'universal') {
       tierEl.textContent = '✦ Universal Aura ✦';
@@ -1676,15 +1693,15 @@ function showRarityAnimation(item, tier) {
 
     rarityEl.textContent = formatRarity(item.rarity);
 
-    // Set quote (mythic only)
+    // Set quote (mythic + secret)
     if (quoteEl) {
-      const mythicConfig = MYTHIC_CUTSCENES[item.id];
-      quoteEl.textContent = mythicConfig ? mythicConfig.quote : '';
-      quoteEl.style.display = mythicConfig ? '' : 'none';
+      const cfg = MYTHIC_CUTSCENES[item.id];
+      quoteEl.textContent = cfg ? cfg.quote : '';
+      quoteEl.style.display = cfg ? '' : 'none';
     }
 
-    // Apply CSS custom properties for mythic theming
-    if (tier === 'mythic') {
+    // Apply CSS custom properties for mythic/secret theming
+    if (tier === 'mythic' || tier === 'secret') {
       const cfg = MYTHIC_CUTSCENES[item.id] || { bg: '#000', accentA: '#fff', accentB: '#888' };
       overlay.style.setProperty('--mythic-bg', cfg.bg);
       overlay.style.setProperty('--mythic-a', cfg.accentA);
@@ -1697,7 +1714,7 @@ function showRarityAnimation(item, tier) {
     }
 
     // Apply tier class
-    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic');
+    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret');
     overlay.classList.add(`rarity-overlay--${tier}`);
     overlay.setAttribute('aria-hidden', 'false');
 
@@ -1706,16 +1723,47 @@ function showRarityAnimation(item, tier) {
       overlay.removeEventListener('click', dismiss);
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
-      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic');
+      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret');
       resolve();
     };
 
-    const duration  = tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
-    const minView   = tier === 'mythic' ? 6000 : tier === 'universal' ? 4000 : 2500;
+    const duration  = tier === 'secret' ? 10000 : tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
+    const minView   = tier === 'secret' ? 8000  : tier === 'mythic' ? 6000 : tier === 'universal' ? 4000 : 2500;
     const timer = setTimeout(dismiss, duration);
     // Only allow click-to-dismiss after the minimum mandatory view time
     setTimeout(() => overlay.addEventListener('click', dismiss, { once: true }), minView);
   });
+}
+
+// ─── Secret Aura Trigger ───────────────────────────────────────────────────
+// 1 in 10,000,000 chance per Ultraluck Potion use to spawn a secret aura.
+// Effective per-aura chance: 1 in 100,000,000 (10M trigger / 10 auras).
+const SECRET_SPAWN_CHANCE = 1 / 10_000_000;
+
+async function triggerSecretAura() {
+  if (Math.random() >= SECRET_SPAWN_CHANCE) return;
+  // Wait for any existing animation (e.g. a roll cutscene) to finish first
+  while (isAnimating) await new Promise(r => setTimeout(r, 200));
+  const aura = SECRET_AURAS[Math.floor(Math.random() * SECRET_AURAS.length)];
+  const history = getHistory();
+  history.push({
+    historyId: `${Date.now()}-secret-${Math.random().toString(36).slice(2)}`,
+    id: aura.id,
+    text: aura.text,
+    font: aura.font,
+    color: aura.color,
+    fontWeight: aura.fontWeight,
+    fontStyle: aura.fontStyle,
+    textShadow: aura.textShadow,
+    rarity: aura.rarity,
+    isSecret: true,
+  });
+  setHistory(history);
+  renderPastRolls();
+  await reportRareRoll({ ...aura, aura_rarity_label: 'SECRET' });
+  isAnimating = true;
+  await showRarityAnimation(aura, 'secret');
+  isAnimating = false;
 }
 
 async function reportRareRoll(item) {

@@ -333,6 +333,24 @@ body {
   color: var(--text-muted);
 }
 
+.history-item--secret {
+  border: 1px solid rgba(255, 0, 0, 0.5);
+  background: rgba(60, 0, 0, 0.35);
+  animation: secret-flicker 4s step-end infinite;
+}
+.secret-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #ff0000;
+  background: rgba(80, 0, 0, 0.6);
+  border: 1px solid #660000;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
 .salvage-btn {
   padding: 0.35rem 0.6rem;
   font-size: 0.75rem;
@@ -1765,4 +1783,174 @@ body {
 @keyframes mythic-label-pulse {
   from { filter: brightness(0.8) drop-shadow(0 0 15px var(--mythic-a, #fff)); }
   to   { filter: brightness(1.2) drop-shadow(0 0 40px var(--mythic-a, #fff)); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECRET AURA OVERLAY
+   ══════════════════════════════════════════════════════════════ */
+.rarity-overlay--secret {
+  background: var(--mythic-bg, #000000);
+  animation: overlay-fadein 0.2s ease forwards, secret-flicker 0.12s step-end infinite;
+}
+
+/* Scanline overlay */
+.rarity-overlay--secret::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.35) 3px,
+    rgba(0, 0, 0, 0.35) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Corrupted beam layer */
+.rarity-overlay--secret .rarity-overlay__beams {
+  animation: beams-spin 1.2s linear infinite, secret-glitch-shift 0.4s step-end infinite;
+}
+.rarity-overlay--secret .rarity-overlay__beams::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 0, 0, 0.18) 10deg,
+    transparent 20deg,
+    rgba(255, 0, 0, 0.08) 30deg,
+    transparent 40deg,
+    rgba(200, 0, 0, 0.15) 60deg,
+    transparent 80deg,
+    rgba(255, 0, 0, 0.2) 110deg,
+    transparent 140deg,
+    rgba(150, 0, 0, 0.12) 180deg,
+    transparent 210deg,
+    rgba(255, 0, 0, 0.18) 250deg,
+    transparent 290deg,
+    rgba(200, 0, 0, 0.1) 330deg,
+    transparent 360deg
+  );
+  animation: beams-spin 0.8s linear infinite reverse;
+}
+.rarity-overlay--secret .rarity-overlay__beams::after {
+  background: radial-gradient(ellipse 60% 60% at 50% 50%,
+    rgba(255, 0, 0, 0.12) 0%,
+    rgba(100, 0, 0, 0.08) 40%,
+    transparent 70%
+  );
+  animation: none;
+}
+
+/* Particle layer — floating red static */
+.rarity-overlay--secret .rarity-overlay__particles::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,0,0,0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 60%, rgba(255,0,0,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 40% 30%, rgba(255,80,80,0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55% 75%, rgba(255,0,0,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 20%, rgba(255,0,0,0.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 50%, rgba(200,0,0,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15% 85%, rgba(255,50,50,0.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 10%, rgba(255,0,0,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 90%, rgba(255,0,0,0.9) 0%, transparent 100%),
+    radial-gradient(2px 2px at 45% 50%, rgba(255,0,0,0.4) 0%, transparent 100%);
+  animation: secret-static 0.07s step-end infinite;
+}
+.rarity-overlay--secret .rarity-overlay__particles::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1px 1px at 30% 40%, rgba(0,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 65%, rgba(0,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 10%, rgba(0,255,255,0.5) 0%, transparent 100%);
+  animation: secret-static 0.11s step-end infinite;
+}
+
+/* Content text styling */
+.rarity-overlay--secret .rarity-overlay__content {
+  z-index: 2;
+}
+.rarity-overlay--secret .rarity-overlay__tier {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+  letter-spacing: 0.3em;
+  color: #ff0000;
+  animation: secret-tier-glitch 0.8s step-end infinite;
+}
+.rarity-overlay--secret .rarity-overlay__label {
+  font-size: clamp(2rem, 6vw, 4rem);
+  animation: secret-label-glitch 1.1s step-end infinite,
+             mythic-label-pulse 1.5s ease-in-out infinite alternate;
+}
+.rarity-overlay--secret .rarity-overlay__rarity {
+  font-family: 'Space Mono', monospace;
+  color: #ff4444;
+  letter-spacing: 0.2em;
+  animation: sub-blink 0.6s ease-in-out infinite;
+}
+.rarity-overlay--secret .rarity-overlay__quote {
+  color: #cc0000;
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(0.7rem, 1.3vw, 0.85rem);
+  animation: secret-quote-flicker 2s step-end infinite;
+}
+.rarity-overlay--secret .rarity-overlay__sub {
+  color: rgba(255, 50, 50, 0.5);
+  font-family: 'Space Mono', monospace;
+}
+
+/* ── Secret keyframes ─────────────────────────────────────── */
+@keyframes secret-flicker {
+  0%, 95%  { opacity: 1; }
+  96%      { opacity: 0.85; }
+  97%      { opacity: 1; }
+  98%      { opacity: 0.7; }
+  99%      { opacity: 1; }
+  100%     { opacity: 0.9; }
+}
+@keyframes secret-static {
+  0%   { transform: translate(0, 0); }
+  14%  { transform: translate(-3px, 1px); }
+  28%  { transform: translate(2px, -2px); }
+  42%  { transform: translate(-1px, 3px); }
+  57%  { transform: translate(3px, -1px); }
+  71%  { transform: translate(-2px, 2px); }
+  85%  { transform: translate(1px, -3px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes secret-glitch-shift {
+  0%, 90% { transform: none; }
+  91%     { transform: translateX(-4px) skewX(-2deg); }
+  93%     { transform: translateX(3px) skewX(1deg); }
+  95%     { transform: translateX(-2px); }
+  100%    { transform: none; }
+}
+@keyframes secret-tier-glitch {
+  0%, 88%  { color: #ff0000; text-shadow: none; }
+  89%      { color: #ff0000; text-shadow: 3px 0 0 #00ffff, -3px 0 0 #ff00ff; }
+  91%      { color: #ff4444; text-shadow: none; }
+  93%      { color: #ff0000; text-shadow: -2px 0 0 #00ffff; }
+  100%     { color: #ff0000; text-shadow: none; }
+}
+@keyframes secret-label-glitch {
+  0%, 85%  { transform: none; clip-path: none; }
+  86%      { transform: translateX(-5px); clip-path: inset(10% 0 60% 0); }
+  88%      { transform: translateX(4px);  clip-path: inset(60% 0 10% 0); }
+  90%      { transform: none;             clip-path: none; }
+  91%      { transform: translateX(-2px) skewX(-3deg); clip-path: inset(30% 0 40% 0); }
+  93%      { transform: none;             clip-path: none; }
+}
+@keyframes secret-quote-flicker {
+  0%, 80%  { opacity: 0.75; }
+  81%      { opacity: 0.2; }
+  83%      { opacity: 0.75; }
+  84%      { opacity: 0.1; }
+  86%      { opacity: 0.75; }
+  100%     { opacity: 0.75; }
 }

@@ -713,6 +713,52 @@ const MYTHIC_ITEMS = [
 // Highest mythic (ID 9072, LAST KNOWN AURA) has rarity 9×10^15, which is safe.
 // All items with rarity > MAX_SAFE_INTEGER were removed to preserve weight accuracy.
 
+// ─── SECRET AURAS ──────────────────────────────────────────────────────────
+// Not rollable. Triggered only by the Ultraluck Potion (1/10M chance per use).
+// rarity: 0 is the sentinel for "SECRET" display.
+export const SECRET_AURAS = [
+  { id: 9900, text: 'ERROR',
+    font: 'Space Mono', color: '#ff0000', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '2px 0 0 #00ffff, -2px 0 0 #ff00ff, 0 0 30px #ff0000',
+    rarity: 0 },
+  { id: 9901, text: '[ REDACTED ]',
+    font: 'Courier New', color: '#cccccc', fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 5px #ffffff, 0 0 20px #888888',
+    rarity: 0 },
+  { id: 9902, text: 'NULL',
+    font: 'Press Start 2P', color: '#ffffff', fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 10px #ffffff, 0 0 40px #888888',
+    rarity: 0 },
+  { id: 9903, text: 'ΣIGMA',
+    font: 'Cinzel', color: '#00ffff', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 20px #00ffff, 0 0 60px #006688',
+    rarity: 0 },
+  { id: 9904, text: 'THE UNWRITTEN',
+    font: 'DM Serif Display', color: '#e8e8e8', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 15px #ffffff, 0 0 40px #aaaaaa',
+    rarity: 0 },
+  { id: 9905, text: 'GHOST SIGNAL',
+    font: 'Space Mono', color: '#44ff88', fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 10px #44ff88, 0 0 30px #00aa44, 2px 2px 0 #004422',
+    rarity: 0 },
+  { id: 9906, text: 'THE ARCHITECT',
+    font: 'Unbounded', color: '#d4af37', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 20px #d4af37, 0 0 60px #996600',
+    rarity: 0 },
+  { id: 9907, text: 'PARADOX',
+    font: 'Raleway', color: '#ff00ff', fontWeight: '800', fontStyle: 'normal',
+    textShadow: '2px 0 0 #00ffff, -2px 0 0 #ffff00, 0 0 30px #ff00ff',
+    rarity: 0 },
+  { id: 9908, text: 'ORIGIN',
+    font: 'Cormorant Garamond', color: '#ffffff', fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 10px #ffffff, 0 0 40px #ffddaa, 0 0 80px #ffaa00',
+    rarity: 0 },
+  { id: 9909, text: 'ΞNIGMA',
+    font: 'Syne', color: '#aaffff', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 15px #aaffff, 0 0 45px #005577',
+    rarity: 0 },
+];
+
 function buildItems() {
   const base = buildBaseItems();
   const auras = buildAuraItems(base.length);
