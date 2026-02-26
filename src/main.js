@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -183,6 +183,7 @@ function renderResult(item) {
       : item.isSecret || item.rarity === 0 ? '⚠ Secret Aura'
       : item.isBiome ? '🌍 Biome Aura'
       : item.isNull ? 'NULL'
+      : item.isMutation ? `⟁ Mutation: ${item.subtitle || 'Unknown'}`
       : '';
     catEl.textContent = cat;
     catEl.style.color = item.isEmperor ? '#ffd700'
@@ -191,6 +192,7 @@ function renderResult(item) {
       : item.isSecret || item.rarity === 0 ? '#ff4444'
       : item.isBiome ? '#88cc44'
       : item.isNull ? '#666'
+      : item.isMutation ? '#ff88ff'
       : '';
     catEl.style.display = cat ? '' : 'none';
   }
@@ -947,70 +949,6 @@ function buyGear(gearId) {
   addGearBonus(gear.luckBonus);
   renderTheo();
   renderLuck();
-}
-
-// Memory match: 4×4 grid, 8 pairs. Reward: +0.5 luck on win.
-const MEMORY_SYMBOLS = ['🎲', '🎰', '⭐', '🌟', '🔥', '💎', '🔮', '✨'];
-let memoryCards = [];
-let memoryFlipped = [];
-let memoryMatched = new Set();
-let memoryBusy = false;
-
-function startMemoryGame() {
-  const pairs = [...MEMORY_SYMBOLS, ...MEMORY_SYMBOLS];
-  for (let i = pairs.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
-  }
-  memoryCards = pairs.map((symbol, i) => ({ id: i, symbol }));
-  memoryFlipped = [];
-  memoryMatched = new Set();
-  memoryBusy = false;
-  renderMemoryMatch();
-}
-
-function onMemoryCardClick(index) {
-  if (memoryBusy || memoryFlipped.includes(index) || memoryMatched.has(memoryCards[index].symbol)) return;
-  memoryFlipped.push(index);
-  renderMemoryMatch();
-  if (memoryFlipped.length === 2) {
-    const [a, b] = memoryFlipped;
-    const match = memoryCards[a].symbol === memoryCards[b].symbol;
-    memoryBusy = true;
-    setTimeout(() => {
-      if (match) {
-        memoryMatched.add(memoryCards[a].symbol);
-        if (memoryMatched.size === MEMORY_SYMBOLS.length) {
-          setLuckMultiplier(getLuckMultiplier() + 10);
-          renderLuck();
-        }
-      }
-      memoryFlipped = [];
-      memoryBusy = false;
-      renderMemoryMatch();
-    }, 600);
-  }
-}
-
-function renderMemoryMatch() {
-  const grid = document.getElementById('memory-grid');
-  const status = document.getElementById('memory-status');
-  if (!grid) return;
-  if (memoryCards.length === 0) {
-    startMemoryGame();
-    return;
-  }
-  const won = memoryMatched.size === MEMORY_SYMBOLS.length;
-  if (status) status.textContent = won ? 'You won! +10× luck. Play again?' : `Matches: ${memoryMatched.size} / ${MEMORY_SYMBOLS.length}`;
-  grid.innerHTML = memoryCards
-    .map((card, i) => {
-      const isFlipped = memoryFlipped.includes(i) || memoryMatched.has(card.symbol);
-      return `<button type="button" class="memory-card ${isFlipped ? 'flipped' : ''}" data-index="${i}" ${won ? 'disabled' : ''}>${isFlipped ? card.symbol : '?'}</button>`;
-    })
-    .join('');
-  grid.querySelectorAll('.memory-card').forEach((btn) => {
-    btn.addEventListener('click', () => onMemoryCardClick(parseInt(btn.dataset.index, 10)));
-  });
 }
 
 // ——— Hub (global chat + trading) ———
@@ -1970,12 +1908,14 @@ function renderHistory() {
       const isElder     = h.isElder     || false;
       const isAscendant = h.isAscendant || false;
       const isEmperor   = h.isEmperor   || false;
+      const isMutation  = h.isMutation  || false;
       const isNull      = h.isNull      || false;
       const specialClass = isSecret ? ' history-item--secret'
         : isBiome     ? ' history-item--biome'
         : isEmperor   ? ' history-item--emperor'
         : isElder     ? ' history-item--elder'
         : isAscendant ? ' history-item--ascendant'
+        : isMutation  ? ' history-item--mutation'
         : isNull      ? ' history-item--null'
         : '';
       const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isNull;
@@ -1989,9 +1929,11 @@ function renderHistory() {
               ? `<span class="elder-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
               : isAscendant
                 ? `<span class="ascendant-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
-                : isNull
-                  ? `<span class="null-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.2em;color:#666;opacity:.9;">NULL</span>`
-                  : '';
+                : isMutation
+                  ? `<span class="mutation-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.12em;color:#ff88ff;opacity:.9;text-shadow:0 0 8px #ff88ff;">⟁ ${h.subtitle || 'MUTATED'}</span>`
+                  : isNull
+                    ? `<span class="null-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.2em;color:#666;opacity:.9;">NULL</span>`
+                    : '';
       const lockBtn = `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
       const canSalvage = !isSpecial;
       return `<li class="history-item${specialClass}" data-index="${idx}" data-history-id="${id}">
@@ -2084,7 +2026,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'memory', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests'].forEach((id) => {
+  ['past', 'locked', 'shop', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -2092,7 +2034,6 @@ function switchTab(tabName) {
     }
   });
   if (tabName === 'shop') { renderShop(); renderSneho(); }
-  if (tabName === 'memory') renderMemoryMatch();
   if (tabName === 'hub') renderHub();
   if (tabName === 'casino') renderCasino();
   if (tabName === 'bazaar') renderBazaar();
@@ -2214,6 +2155,23 @@ const MYTHIC_CUTSCENES = {
   9907: { quote: "It can't exist and it does. Pick one.",                        bg: '#080008', accentA: '#ff00ff', accentB: '#00ffff' },
   9908: { quote: 'The very first thing this game ever created.',                 bg: '#0a0800', accentA: '#ffffff', accentB: '#ffaa00' },
   9909: { quote: 'Even the developer does not know where this came from.',       bg: '#000a0a', accentA: '#aaffff', accentB: '#003344' },
+
+  // ─── Mutation Auras (twisted variants with flavor text) ─────────────────
+  9100: { quote: 'The void looked inward. It did not like what it saw.',               bg: '#001a12', accentA: '#44ffcc', accentB: '#004433' },
+  9101: { quote: 'Not the end of eternity. The end that eternity became.',             bg: '#0a0a14', accentA: '#6688aa', accentB: '#334455' },
+  9102: { quote: 'The first fire, extinguished. What remains is colder than nothing.', bg: '#000a14', accentA: '#88ccff', accentB: '#002244' },
+  9103: { quote: 'All power. No purpose. The worst kind of strength.',                 bg: '#0a0400', accentA: '#ff6644', accentB: '#441100' },
+  9104: { quote: 'Reality broke. Then it healed wrong.',                               bg: '#000a00', accentA: '#88ff88', accentB: '#114411' },
+  9105: { quote: 'A god that learned to die. It did not forget how.',                  bg: '#080808', accentA: '#888888', accentB: '#222222' },
+  9106: { quote: 'It stopped destroying. That is worse.',                              bg: '#060a10', accentA: '#446688', accentB: '#223344' },
+  9107: { quote: 'The crown broke. The pieces still rule.',                            bg: '#0a0400', accentA: '#ff8844', accentB: '#441100' },
+  9108: { quote: 'It ruled the heavens. Then it fell through them.',                   bg: '#060818', accentA: '#334499', accentB: '#ff3300' },
+  9109: { quote: 'It found its limit. The limit was you.',                             bg: '#0a0000', accentA: '#ff4444', accentB: '#880000' },
+  9110: { quote: 'No more worlds left. It started eating itself.',                     bg: '#000a00', accentA: '#aaffaa', accentB: '#113311' },
+  9111: { quote: 'Cast out of the void. Even emptiness has standards.',                bg: '#0a0600', accentA: '#ffaa00', accentB: '#442200' },
+  9112: { quote: 'There was only one. Then it disagreed with itself.',                 bg: '#0a000a', accentA: '#ff00ff', accentB: '#440044' },
+  9113: { quote: 'It collapsed. Then it un-collapsed. Nobody was prepared.',            bg: '#0a0800', accentA: '#ffcc00', accentB: '#442200' },
+  9114: { quote: 'The same number. But wrong. Profoundly, irreversibly wrong.',        bg: '#000000', accentA: '#ffffff', accentB: '#ff0000' },
 
   // ─── Elder Auras (hidden condition unlocks, unskippable cutscene) ─────────
   9950: { bg: '#0a0000', accentA: '#cc2200', accentB: '#660000' },
@@ -2363,6 +2321,68 @@ const ELDER_STAGES = {
     'There is nothing left at all.',
     '✦♛✦ Except this. ✦♛✦',
   ],
+
+  // Secret aura stage texts (Ultraluck-triggered, unskippable)
+  9900: [
+    'A red line appeared in the code.',
+    'Not a bug. Not a feature.',
+    'Something that was never supposed to compile.',
+    'ERROR.',
+  ],
+  9901: [
+    'The file was there.',
+    'Then it wasn\'t.',
+    'Someone removed it. Or something.',
+    'All that remains is [ REDACTED ].',
+  ],
+  9902: [
+    'You searched for something.',
+    'You found nothing.',
+    'And then nothing looked back.',
+    'It has a name now.',
+  ],
+  9903: [
+    'Every probability curve.',
+    'Every weighted table.',
+    'All of them, collapsed into one point.',
+    'ΣIGMA.',
+  ],
+  9904: [
+    'There is no documentation for this.',
+    'There never was.',
+    'It wrote itself into existence.',
+    'And now it refuses to be erased.',
+  ],
+  9905: [
+    'A signal from nowhere.',
+    'Frequency unknown. Source unknown.',
+    'The game it came from shut down years ago.',
+    'But the signal never stopped.',
+  ],
+  9906: [
+    'Someone built this.',
+    'Not a player. Not a developer.',
+    'Something underneath both.',
+    'THE ARCHITECT was here before the game was.',
+  ],
+  9907: [
+    'It exists.',
+    'It doesn\'t exist.',
+    'Both are true at the same time.',
+    'PARADOX.',
+  ],
+  9908: [
+    'Before the first item.',
+    'Before the first roll.',
+    'Before the first line of code.',
+    'There was ORIGIN.',
+  ],
+  9909: [
+    'The answer changes every time you look.',
+    'The question was never asked.',
+    'It solved itself before you arrived.',
+    'ΞNIGMA.',
+  ],
 };
 
 // ─── Elder Aura helpers ──────────────────────────────────────────────────────
@@ -2431,6 +2451,7 @@ async function showElderCutscene(aura) {
   // --- Final aura reveal ---
   const tierLabel = aura.isEmperor ? '♛ Emperor Aura ♛'
     : aura.isAscendant ? '⬡ Ascendant Aura ⬡'
+    : aura.isSecret ? '⚠ Secret Aura ⚠'
     : '⬡ Elder Aura ⬡';
   if (tierEl) tierEl.textContent = tierLabel;
   if (labelEl) {
@@ -2772,15 +2793,14 @@ function tryBiomeRoll(biomeType) {
 }
 
 // ─── Secret Aura Trigger ───────────────────────────────────────────────────
-// 1 in 10,000,000 chance per Ultraluck Potion use to spawn a secret aura.
-// Effective per-aura chance: 1 in 100,000,000 (10M trigger / 10 auras).
-const SECRET_SPAWN_CHANCE = 1 / 10_000_000;
+// 1 in 5,000,000 flat chance per Ultraluck Potion use. Luck is NOT factored in.
+const SECRET_SPAWN_CHANCE = 1 / 5_000_000;
 
 async function triggerSecretAura() {
   if (Math.random() >= SECRET_SPAWN_CHANCE) return;
-  // Wait for any existing animation (e.g. a roll cutscene) to finish first
   while (isAnimating) await new Promise(r => setTimeout(r, 200));
   const aura = SECRET_AURAS[Math.floor(Math.random() * SECRET_AURAS.length)];
+  const secretAura = { ...aura, isSecret: true };
   const history = getHistory();
   history.push({
     historyId: `${Date.now()}-secret-${Math.random().toString(36).slice(2)}`,
@@ -2795,11 +2815,10 @@ async function triggerSecretAura() {
     isSecret: true,
   });
   setHistory(history);
-  renderPastRolls();
+  renderHistory();
+  renderResult(secretAura);
   await reportRareRoll({ ...aura, aura_rarity_label: 'SECRET' });
-  isAnimating = true;
-  await showRarityAnimation(aura, 'secret');
-  isAnimating = false;
+  await showElderCutscene(secretAura);
 }
 
 async function reportRareRoll(item) {
@@ -2867,7 +2886,7 @@ async function roll() {
   }
   // ── Normal roll ───────────────────────────────────────────────────────────
   const history = getHistory();
-  history.push({
+  const histEntry = {
     historyId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     id: item.id,
     text: item.text,
@@ -2877,7 +2896,13 @@ async function roll() {
     fontStyle: item.fontStyle,
     textShadow: item.textShadow,
     rarity: item.rarity,
-  });
+  };
+  if (item.isMutation) {
+    histEntry.isMutation = true;
+    histEntry.subtitle = item.subtitle || '';
+    histEntry.flavor = item.flavor || '';
+  }
+  history.push(histEntry);
   setHistory(history);
 
   const cutsceneSetting = getCutsceneThreshold();
@@ -3308,8 +3333,7 @@ function init() {
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
-  const memoryNewBtn = document.getElementById('memory-new-btn');
-  if (memoryNewBtn) memoryNewBtn.addEventListener('click', startMemoryGame);
+
 
   let titleClicks = 0;
   let titleTimer = 0;
