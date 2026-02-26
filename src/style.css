@@ -513,6 +513,24 @@ body {
   border-radius: 10px;
 }
 
+.shop-item--supreme {
+  border: 2px solid #ffd700;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 68, 0, 0.06) 50%, var(--surface) 100%);
+  box-shadow: 0 0 18px rgba(255, 215, 0, 0.15), inset 0 0 12px rgba(255, 215, 0, 0.05);
+  animation: supreme-shop-glow 3s ease-in-out infinite alternate;
+}
+.shop-item--supreme .shop-item-name {
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+.shop-item--supreme .shop-item-effect {
+  color: #ffaa44;
+}
+@keyframes supreme-shop-glow {
+  0%  { box-shadow: 0 0 18px rgba(255, 215, 0, 0.15), inset 0 0 12px rgba(255, 215, 0, 0.05); }
+  100% { box-shadow: 0 0 28px rgba(255, 215, 0, 0.25), inset 0 0 20px rgba(255, 68, 0, 0.08); }
+}
+
 .shop-item-emoji {
   font-size: 1.75rem;
   line-height: 1;
@@ -2649,4 +2667,28 @@ body {
   color: #ff88ff;
   opacity: 0.9;
   text-shadow: 0 0 8px #ff88ff;
+}
+
+/* Supreme King — UNOBTAINABLE aura from Supreme Luck Potion */
+.history-item--supreme-king {
+  border-left: 3px solid #ffd700;
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 68, 0, 0.12) 35%, rgba(255, 0, 0, 0.05) 65%, transparent 100%);
+  box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.08);
+  animation: supreme-pulse 2s ease-in-out infinite alternate;
+}
+@keyframes supreme-pulse {
+  0%  { box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.08); }
+  100% { box-shadow: inset 0 0 40px rgba(255, 68, 0, 0.12); }
+}
+.history-item--supreme-king::after {
+  content: '♔ UNOBTAINABLE';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #ffd700;
+  opacity: 1;
+  text-shadow: 0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;
 }

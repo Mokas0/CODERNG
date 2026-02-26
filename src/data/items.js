@@ -902,6 +902,14 @@ export const EMPEROR_AURAS = [
     rarity: 9_000_000_000_000_000 },
 ];
 
+// Supreme King — triggered exclusively by the Supreme Luck Potion (1/10,000 chance). Not rollable.
+export const SUPREME_KING_AURA = {
+  id: 9999, text: '♔ THE SUPREME KING ♔',
+  font: 'Cinzel', color: '#ffd700', fontWeight: '900', fontStyle: 'normal',
+  textShadow: '0 0 30px #ffd700, 0 0 80px #ffaa00, 0 0 140px #ff6600, 0 0 200px #ff2200',
+  rarity: -1, isSupremeKing: true,
+};
+
 // Elder Auras – not in the normal roll pool; granted when secret conditions are met.
 // Rarity is 9Q (9_000_000_000_000_000) for display only.
 export const ELDER_AURAS = [

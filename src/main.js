@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, SUPREME_KING_AURA } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -148,6 +148,7 @@ function weightedRandom(multiplier = 1, extraItems = []) {
 }
 
 function formatRarity(rarity) {
+  if (rarity === -1) return 'UNOBTAINABLE';
   if (rarity === 0) return 'SECRET';
   if (rarity >= 1e18) return `1 / ${(rarity / 1e18).toFixed(2)}Qi`; // quintillion
   if (rarity >= 1e15) return `1 / ${(rarity / 1e15).toFixed(2)}Q`;
@@ -177,7 +178,8 @@ function renderResult(item) {
   label.textContent = formatRarity(item.rarity);
   label.className = 'rarity-label';
   if (catEl) {
-    const cat = item.isEmperor ? '♛ Emperor Aura ♛'
+    const cat = item.isSupremeKing ? '♔ UNOBTAINABLE ♔'
+      : item.isEmperor ? '♛ Emperor Aura ♛'
       : item.isAscendant ? '⬡ Ascendant Aura'
       : item.isElder ? '⬡ Elder Aura'
       : item.isSecret || item.rarity === 0 ? '⚠ Secret Aura'
@@ -186,7 +188,8 @@ function renderResult(item) {
       : item.isMutation ? `⟁ Mutation: ${item.subtitle || 'Unknown'}`
       : '';
     catEl.textContent = cat;
-    catEl.style.color = item.isEmperor ? '#ffd700'
+    catEl.style.color = item.isSupremeKing ? '#ffd700'
+      : item.isEmperor ? '#ffd700'
       : item.isAscendant ? '#00ddaa'
       : item.isElder ? 'gold'
       : item.isSecret || item.rarity === 0 ? '#ff4444'
@@ -277,8 +280,16 @@ const BENNY_EXCLUSIVE_POTIONS = [
   { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 50000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable." },
 ];
 
+// Supreme Luck Potion — 1/100 chance to appear in Benny's shop per visit
+const SUPREME_LUCK_POTION = {
+  id: 'potionSupremeLuck', name: 'Supreme Luck Potion', cost: 150000,
+  luckBonus: 30_000_000, emoji: '👑✨', desc: 'The rarest potion in existence. Benny found it once. He may never find another.',
+};
+const SUPREME_POTION_APPEAR_CHANCE = 1 / 100;
+const SUPREME_KING_SPAWN_CHANCE = 1 / 10_000;
+
 const ALL_POTIONS_BY_ID = {};
-[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS].forEach(p => {
+[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION].forEach(p => {
   ALL_POTIONS_BY_ID[p.id] = p;
 });
 
@@ -567,7 +578,7 @@ function updateShopCountdown() {
 
 function buyPotion(potionId, fromBenny = false) {
   const pool = fromBenny
-    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS]
+    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS, ...(bennyHasSupremeThisVisit ? [SUPREME_LUCK_POTION] : [])]
     : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
   if (!potion || getCoins() < potion.cost) return;
@@ -585,7 +596,7 @@ function buyPotion(potionId, fromBenny = false) {
 
 function buyPotionMax(potionId, fromBenny = false) {
   const pool = fromBenny
-    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS]
+    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS, ...(bennyHasSupremeThisVisit ? [SUPREME_LUCK_POTION] : [])]
     : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
   if (!potion || potion.cost < 1) return;
@@ -615,6 +626,7 @@ function usePotion(potionId) {
   setLuckMultiplier(getLuckMultiplier() + potion.luckBonus);
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (potion.id === 'potionBennyUltraluck') triggerSecretAura().catch(console.error);
+  if (potion.id === 'potionSupremeLuck') triggerSupremeKing().catch(console.error);
   renderLuck();
   renderPotionInventory();
 }
@@ -623,17 +635,20 @@ function useAllPotions() {
   const inv = getPotionInventory();
   let totalLuck = 0;
   let hasUltraluck = false;
+  let hasSupreme = false;
   for (const [id, count] of Object.entries(inv)) {
     const potion = ALL_POTIONS_BY_ID[id];
     if (!potion || count < 1) continue;
     totalLuck += potion.luckBonus * count;
     if (id === 'potionBennyUltraluck') hasUltraluck = true;
+    if (id === 'potionSupremeLuck') hasSupreme = true;
   }
   if (totalLuck === 0) return;
   setPotionInventory({});
   setLuckMultiplier(getLuckMultiplier() + totalLuck);
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (hasUltraluck) triggerSecretAura().catch(console.error);
+  if (hasSupreme) triggerSupremeKing().catch(console.error);
   renderLuck();
   renderPotionInventory();
 }
@@ -744,8 +759,10 @@ function hideBennyButton() {
   }
 }
 
+let bennyHasSupremeThisVisit = false;
 function openBenny() {
   hideBennyButton();
+  bennyHasSupremeThisVisit = Math.random() < SUPREME_POTION_APPEAR_CHANCE;
   const overlay = document.getElementById('benny-overlay');
   if (overlay) {
     overlay.classList.remove('hidden');
@@ -770,17 +787,19 @@ function renderBennyShop() {
   const bennyPrices = [
     ...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })),
     ...BENNY_EXCLUSIVE_POTIONS,
+    ...(bennyHasSupremeThisVisit ? [SUPREME_LUCK_POTION] : []),
   ];
   list.innerHTML = bennyPrices.map(
     (p) => {
       const canBuy = coins >= p.cost;
       const maxCount = Math.floor(coins / p.cost);
       const canBuyMax = maxCount >= 1;
-      return `<div class="shop-item">
+      const isSupreme = p.id === 'potionSupremeLuck';
+      return `<div class="shop-item${isSupreme ? ' shop-item--supreme' : ''}">
         <span class="shop-item-emoji">${p.emoji}</span>
         <div class="shop-item-info">
           <span class="shop-item-name">${p.name}</span>
-          <span class="shop-item-effect">+${p.luckBonus.toLocaleString()}× luck (Benny's price)</span>
+          <span class="shop-item-effect">+${p.luckBonus.toLocaleString()}× luck${isSupreme ? ' — 1/10,000 chance to summon THE SUPREME KING' : ' (Benny\'s price)'}</span>
         </div>
         <div class="shop-item-actions">
           <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="true" ${!canBuy ? 'disabled' : ''}>
@@ -1908,9 +1927,11 @@ function renderHistory() {
       const isElder     = h.isElder     || false;
       const isAscendant = h.isAscendant || false;
       const isEmperor   = h.isEmperor   || false;
+      const isSupremeKing = h.isSupremeKing || false;
       const isMutation  = h.isMutation  || false;
       const isNull      = h.isNull      || false;
-      const specialClass = isSecret ? ' history-item--secret'
+      const specialClass = isSupremeKing ? ' history-item--supreme-king'
+        : isSecret ? ' history-item--secret'
         : isBiome     ? ' history-item--biome'
         : isEmperor   ? ' history-item--emperor'
         : isElder     ? ' history-item--elder'
@@ -1918,8 +1939,10 @@ function renderHistory() {
         : isMutation  ? ' history-item--mutation'
         : isNull      ? ' history-item--null'
         : '';
-      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isNull;
-      const categoryBadge = isSecret
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isNull || isSupremeKing;
+      const categoryBadge = isSupremeKing
+        ? `<span class="supreme-king-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>`
+        : isSecret
         ? '<span class="secret-badge">⚠ SECRET</span>'
         : isBiome
           ? `<span class="biome-badge">🌍 BIOME</span>`
@@ -1994,11 +2017,13 @@ function renderLockedStorage() {
     .reverse()
     .map((h, i) => {
       const idx = locked.length - 1 - i;
-      const lineage = h.isEmperor ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>'
+      const lineage = h.isSupremeKing ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>'
+        : h.isEmperor ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>'
         : h.isElder ? '<span class="lineage-badge" style="color:gold;text-shadow:0 0 8px gold;">ELDER</span>'
         : h.isAscendant ? '<span class="lineage-badge" style="color:#00ddaa;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>'
         : '';
-      const tierClass = h.isEmperor ? ' history-item--emperor'
+      const tierClass = h.isSupremeKing ? ' history-item--supreme-king'
+        : h.isEmperor ? ' history-item--emperor'
         : h.isElder ? ' history-item--elder'
         : h.isAscendant ? ' history-item--ascendant'
         : '';
@@ -2203,6 +2228,9 @@ const MYTHIC_CUTSCENES = {
   9972: { bg: '#120012', accentA: '#ff44ff', accentB: '#aa00aa' },
   9973: { bg: '#0f0000', accentA: '#ff2222', accentB: '#aa0000' },
   9974: { bg: '#0a0a0a', accentA: '#ffffff', accentB: '#ffd700' },
+
+  // ─── Supreme King (potion-triggered, unobtainable, 15s cutscene) ────────────
+  9999: { bg: '#000000', accentA: '#ffd700', accentB: '#ff4400' },
 };
 
 // ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
@@ -2383,6 +2411,16 @@ const ELDER_STAGES = {
     'It solved itself before you arrived.',
     'ΞNIGMA.',
   ],
+
+  // ─── Supreme King (15-second cutscene, triggered by Supreme Luck Potion) ────
+  9999: [
+    'You drank something that should not exist.',
+    'The potion burns through every vein. Every thought.',
+    'Reality bends. The sky inverts.',
+    'A throne materializes from pure light.',
+    'And upon it sits something older than luck itself.',
+    '♔ THE SUPREME KING has arrived. ♔',
+  ],
 };
 
 // ─── Elder Aura helpers ──────────────────────────────────────────────────────
@@ -2449,7 +2487,8 @@ async function showElderCutscene(aura) {
   }
 
   // --- Final aura reveal ---
-  const tierLabel = aura.isEmperor ? '♛ Emperor Aura ♛'
+  const tierLabel = aura.isSupremeKing ? '♔ UNOBTAINABLE ♔'
+    : aura.isEmperor ? '♛ Emperor Aura ♛'
     : aura.isAscendant ? '⬡ Ascendant Aura ⬡'
     : aura.isSecret ? '⚠ Secret Aura ⚠'
     : '⬡ Elder Aura ⬡';
@@ -2819,6 +2858,30 @@ async function triggerSecretAura() {
   renderResult(secretAura);
   await reportRareRoll({ ...aura, aura_rarity_label: 'SECRET' });
   await showElderCutscene(secretAura);
+}
+
+async function triggerSupremeKing() {
+  if (Math.random() >= SUPREME_KING_SPAWN_CHANCE) return;
+  while (isAnimating) await new Promise(r => setTimeout(r, 200));
+  const aura = { ...SUPREME_KING_AURA, isSupremeKing: true };
+  const history = getHistory();
+  history.push({
+    historyId: `${Date.now()}-supreme-${Math.random().toString(36).slice(2)}`,
+    id: aura.id,
+    text: aura.text,
+    font: aura.font,
+    color: aura.color,
+    fontWeight: aura.fontWeight,
+    fontStyle: aura.fontStyle,
+    textShadow: aura.textShadow,
+    rarity: aura.rarity,
+    isSupremeKing: true,
+  });
+  setHistory(history);
+  renderHistory();
+  renderResult(aura);
+  await reportRareRoll({ ...aura, aura_rarity_label: 'UNOBTAINABLE' });
+  await showElderCutscene(aura);
 }
 
 async function reportRareRoll(item) {
@@ -3499,10 +3562,10 @@ init();
 window.__rng = {
   /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) */
   cutscene(id) {
-    const all = [...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
+    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
-    showElderCutscene(aura);
+    showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });
   },
   /** Add an elder/ascendant/emperor to the rollable pool by ID.  e.g. __rng.unlock(9970) */
   unlock(id) {
