@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, SUPREME_KING_AURA } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, SUPREME_KING_AURA, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -147,6 +147,12 @@ function weightedRandom(multiplier = 1, extraItems = []) {
   return { ...pool[pool.length - 1], index: pool.length - 1 };
 }
 
+const AURA_TYPE_INFO = {
+  yoso:     { label: '요소 Yoso',     tag: 'Elemental', color: '#00ccff' },
+  myeongsa: { label: '명사 Myeongsa', tag: 'Object',    color: '#ffaa33' },
+  dongsa:   { label: '동사 Dongsa',   tag: 'Verb',      color: '#ff55aa' },
+};
+
 function formatRarity(rarity) {
   if (rarity === -1) return 'UNOBTAINABLE';
   if (rarity === 0) return 'SECRET';
@@ -168,8 +174,20 @@ function renderResult(item) {
   const el = document.getElementById('result');
   const label = document.getElementById('result-label');
   const catEl = document.getElementById('result-category');
+  const typeEl = document.getElementById('result-aura-type');
   if (!el || !label) return;
   el.textContent = item.text;
+  if (typeEl) {
+    const at = item.auraType || classifyAuraType(item.text);
+    const info = AURA_TYPE_INFO[at];
+    if (info) {
+      typeEl.textContent = `${info.label} · ${info.tag}`;
+      typeEl.style.color = info.color;
+      typeEl.style.display = '';
+    } else {
+      typeEl.style.display = 'none';
+    }
+  }
   el.style.fontFamily = `"${item.font}", sans-serif`;
   el.style.color = item.color;
   el.style.fontWeight = item.fontWeight || '400';
@@ -2149,10 +2167,14 @@ function renderHistory() {
                     : '';
       const lockBtn = `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
       const canSalvage = !isSpecial;
+      const at = h.auraType || classifyAuraType(h.text);
+      const atInfo = AURA_TYPE_INFO[at];
+      const typeBadge = atInfo ? `<span class="aura-type-badge" style="color:${atInfo.color}">${atInfo.tag}</span>` : '';
       return `<li class="history-item${specialClass}" data-index="${idx}" data-history-id="${id}">
           ${categoryBadge}
           ${lockBtn}
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
+          ${typeBadge}
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
           ${canSalvage ? `<button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>` : ''}
         </li>`;
@@ -3167,6 +3189,7 @@ async function roll() {
     fontStyle: item.fontStyle,
     textShadow: item.textShadow,
     rarity: item.rarity,
+    auraType: item.auraType || classifyAuraType(item.text),
   };
   if (item.isMutation) {
     histEntry.isMutation = true;

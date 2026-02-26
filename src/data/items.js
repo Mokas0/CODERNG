@@ -1016,6 +1016,54 @@ export const MUTATION_AURAS = [
     flavor: 'The same number. But wrong. Profoundly, irreversibly wrong.' },
 ];
 
+// ──── Aura Types ────────────────────────────────────────────────────────────
+// Yoso (요소) — Elemental    Myeongsa (명사) — Object    Dongsa (동사) — Verb
+const YOSO_WORDS = new Set([
+  'fire','ice','void','flame','ember','spark','blaze','inferno','bonfire','torch',
+  'frost','snow','hail','sleet','rain','drizzle','mist','fog','dew','steam',
+  'wind','breeze','gale','gust','whirl','twister','cyclone','hurricane','typhoon','monsoon',
+  'storm','lightning','thunder','river','ocean','lake','stream','spring','rapids','cascade',
+  'delta','mountain','valley','cliff','cave','sky','cloud','star','moon','sun',
+  'comet','meteor','aurora','rainbow','nova','cosmic','celestial','primordial','void',
+  'flame','flare','light','dark','shadow','glow','shine','flash','pulse','flux',
+  'crystal','diamond','ruby','emerald','sapphire','amethyst','topaz','opal','jade','pearl',
+  'onyx','obsidian','volcanic','magma','lava','quake','tremor','avalanche','tsunami',
+  'eternal','infinite','astral','divine','holy','sacred','cosmic','null','chaos','order',
+  'blood','crimson','scarlet','azure','golden','silver','iron','copper','bronze','steel',
+  'frost','frozen','burning','blazing','radiant','dark','midnight','twilight','dawn','dusk',
+  'violet','amber','ivory','ebony','pale','cold','hot','warm','wet','dry',
+]);
+
+const DONGSA_WORDS = new Set([
+  'strike','slash','crush','pierce','guard','evade','rush','chase','hunt','track',
+  'run','race','walk','march','leap','jump','stride','fly','ride','swim',
+  'bind','release','hold','take','give','keep','lose','gain','earn','spend',
+  'save','waste','use','cherish','hate','love','fear','hope','dream','wish',
+  'draw','deal','shuffle','mix','blend','fuse','split','merge','join','part',
+  'roll','spin','drop','pull','push','break','mend','forge','rise','fall',
+  'shatter','crack','tear','rip','burn','freeze','drown','crush','devour','consume',
+  'awaken','sleep','wander','seek','find','lose','create','destroy','build','ruin',
+  'collapse','converge','transcend','ascend','descend','breach','surge','fracture','decay',
+  'whisper','scream','echo','silence','chant','sing','roar','cry','weep','laugh',
+  'born','risen','fallen','lost','found','sold','chosen','cursed','blessed','forged',
+  'sealed','locked','unlocked','broken','mended','tainted','living','dying','bleeding',
+  'breaker','slayer','seeker','walker','runner','rider','flyer','hunter','watcher',
+]);
+
+function classifyAuraType(text) {
+  const lower = text.toLowerCase().replace(/[^a-z\s]/g, '');
+  const words = lower.split(/\s+/);
+  let yosoScore = 0, dongScore = 0;
+  for (const w of words) {
+    if (YOSO_WORDS.has(w)) yosoScore++;
+    if (DONGSA_WORDS.has(w)) dongScore++;
+  }
+  if (yosoScore > dongScore) return 'yoso';
+  if (dongScore > yosoScore) return 'dongsa';
+  if (yosoScore > 0) return 'yoso';
+  return 'myeongsa';
+}
+
 function buildItems() {
   const base = buildBaseItems();
   const auras = buildAuraItems(base.length);
@@ -1024,8 +1072,11 @@ function buildItems() {
   const totalWeight = items.reduce((s, x) => s + x.weight, 0);
   items.forEach((x) => {
     x.probability = x.weight / totalWeight;
+    if (!x.auraType) x.auraType = classifyAuraType(x.text);
   });
   return items;
 }
+
+export { classifyAuraType };
 
 export const ITEMS = buildItems();
