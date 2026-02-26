@@ -18,6 +18,15 @@ const STORAGE_KEYS = {
   elderCoinsSpent: 'rng_elder_coins_spent',
   elderReceived:   'rng_elder_received',
   elderUnlocked:   'rng_elder_unlocked',
+  // Quest board
+  questDailyEnd:      'rng_quest_daily_end',
+  questDailySeed:     'rng_quest_daily_seed',
+  questWeeklyEnd:     'rng_quest_weekly_end',
+  questWeeklySeed:    'rng_quest_weekly_seed',
+  questDailyProg:     'rng_quest_daily_prog',
+  questDailyClaimed:  'rng_quest_daily_claimed',
+  questWeeklyProg:    'rng_quest_weekly_prog',
+  questWeeklyClaimed: 'rng_quest_weekly_claimed',
 };
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
@@ -273,6 +282,209 @@ function seededRandom(seed) {
   return x - Math.floor(x);
 }
 
+// ─── Quest Board ──────────────────────────────────────────────────────────────
+const QUEST_DAILY_MS  = 24 * 60 * 60 * 1000;
+const QUEST_WEEKLY_MS = 7  * 24 * 60 * 60 * 1000;
+
+const DAILY_QUESTS_POOL = [
+  { id: 'D01', label: 'The Grinder',      desc: 'Roll 50 times',                  type: 'roll',        target: 50,       reward: 1_000_000 },
+  { id: 'D02', label: 'Roll Fiend',       desc: 'Roll 100 times',                 type: 'roll',        target: 100,      reward: 2_000_000 },
+  { id: 'D03', label: 'Junk Dealer',      desc: 'Salvage 5 items',                type: 'salvage',     target: 5,        reward: 1_200_000 },
+  { id: 'D04', label: "Hoarder's Due",    desc: 'Salvage 15 items',               type: 'salvage',     target: 15,       reward: 2_500_000 },
+  { id: 'D05', label: "Sneho's Regular",  desc: 'Buy 3 items from Sneho',         type: 'sneho_buy',   target: 3,        reward: 1_500_000 },
+  { id: 'D06', label: 'Lucky Break',      desc: 'Reach 25× luck',                type: 'luck_reach',  target: 25,       reward: 1_000_000 },
+  { id: 'D07', label: 'Rare Find',        desc: 'Roll a 10,000+ rarity item',     type: 'rarity_hit',  target: 10_000,   reward: 1_500_000 },
+  { id: 'D08', label: 'Coin Spender',     desc: 'Spend 300 coins in the shop',    type: 'shop_spend',  target: 300,      reward: 1_000_000 },
+  { id: 'D09', label: 'Scrap Hunter',     desc: 'Earn 10 scraps from salvaging',  type: 'earn_scraps', target: 10,       reward: 2_000_000 },
+  { id: 'D10', label: 'High Stakes',      desc: 'Roll a 100,000+ rarity item',    type: 'rarity_hit',  target: 100_000,  reward: 3_000_000 },
+  { id: 'D11', label: 'Potion Addict',    desc: 'Buy 5 potions from the shop',    type: 'potion_buy',  target: 5,        reward: 1_500_000 },
+  { id: 'D12', label: 'Cursed Run',       desc: 'Get cursed by Sneho 2 times',    type: 'sneho_curse', target: 2,        reward: 2_000_000 },
+];
+
+const WEEKLY_QUESTS_POOL = [
+  { id: 'W01', label: 'The Machine',        desc: 'Roll 500 times',                      type: 'roll',        target: 500,           reward: 10_000_000 },
+  { id: 'W02', label: "Fortune's Witness",  desc: 'Roll a 1,000,000+ rarity item',       type: 'rarity_hit',  target: 1_000_000,     reward: 15_000_000 },
+  { id: 'W03', label: "Sneho's Champion",   desc: 'Buy 20 items from Sneho',             type: 'sneho_buy',   target: 20,            reward: 12_000_000 },
+  { id: 'W04', label: 'The Collector',      desc: 'Salvage 50 items',                    type: 'salvage',     target: 50,            reward: 20_000_000 },
+  { id: 'W05', label: 'Coin King',          desc: 'Spend 5,000 coins in the shop',       type: 'shop_spend',  target: 5_000,         reward: 10_000_000 },
+  { id: 'W06', label: 'Scrap Baron',        desc: 'Earn 100 scraps from salvaging',      type: 'earn_scraps', target: 100,           reward: 25_000_000 },
+  { id: 'W07', label: 'High Roller',        desc: 'Reach 100× luck',                    type: 'luck_reach',  target: 100,           reward: 15_000_000 },
+  { id: 'W08', label: 'Mythic Witness',     desc: 'Roll a 1,000,000,000+ rarity item',  type: 'rarity_hit',  target: 1_000_000_000, reward: 50_000_000 },
+];
+
+// Types where progress = max value seen (not cumulative sum)
+const QUEST_MAX_TYPES = new Set(['rarity_hit', 'luck_reach']);
+
+function getQuestDailyEnd()   { return Number(localStorage.getItem(STORAGE_KEYS.questDailyEnd)   || 0); }
+function getQuestDailySeed()  { return Number(localStorage.getItem(STORAGE_KEYS.questDailySeed)  || 0); }
+function getQuestWeeklyEnd()  { return Number(localStorage.getItem(STORAGE_KEYS.questWeeklyEnd)  || 0); }
+function getQuestWeeklySeed() { return Number(localStorage.getItem(STORAGE_KEYS.questWeeklySeed) || 0); }
+function getQuestDailyProg()  { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.questDailyProg)  || '{}'); } catch { return {}; } }
+function getQuestDailyCl()    { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.questDailyClaimed) || '[]'); } catch { return []; } }
+function getQuestWeeklyProg() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.questWeeklyProg) || '{}'); } catch { return {}; } }
+function getQuestWeeklyCl()   { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.questWeeklyClaimed) || '[]'); } catch { return []; } }
+
+function advanceQuestRotationsIfNeeded() {
+  const now = Date.now();
+  if (getQuestDailyEnd() === 0 || now >= getQuestDailyEnd()) {
+    localStorage.setItem(STORAGE_KEYS.questDailyEnd,  String(now + QUEST_DAILY_MS));
+    localStorage.setItem(STORAGE_KEYS.questDailySeed, String(Math.floor(Math.random() * 1e9)));
+    localStorage.setItem(STORAGE_KEYS.questDailyProg,    '{}');
+    localStorage.setItem(STORAGE_KEYS.questDailyClaimed, '[]');
+  }
+  if (getQuestWeeklyEnd() === 0 || now >= getQuestWeeklyEnd()) {
+    localStorage.setItem(STORAGE_KEYS.questWeeklyEnd,  String(now + QUEST_WEEKLY_MS));
+    localStorage.setItem(STORAGE_KEYS.questWeeklySeed, String(Math.floor(Math.random() * 1e9)));
+    localStorage.setItem(STORAGE_KEYS.questWeeklyProg,    '{}');
+    localStorage.setItem(STORAGE_KEYS.questWeeklyClaimed, '[]');
+  }
+}
+
+function seededShuffle(length, seed) {
+  const arr = Array.from({ length }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(seededRandom(seed + i) * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function getActiveDailyQuests() {
+  advanceQuestRotationsIfNeeded();
+  return seededShuffle(DAILY_QUESTS_POOL.length, getQuestDailySeed())
+    .slice(0, 3)
+    .map(i => ({ ...DAILY_QUESTS_POOL[i], period: 'daily' }));
+}
+
+function getActiveWeeklyQuests() {
+  advanceQuestRotationsIfNeeded();
+  return seededShuffle(WEEKLY_QUESTS_POOL.length, getQuestWeeklySeed())
+    .slice(0, 2)
+    .map(i => ({ ...WEEKLY_QUESTS_POOL[i], period: 'weekly' }));
+}
+
+function addQuestProgress(type, value = 1) {
+  advanceQuestRotationsIfNeeded();
+  const dailyQ  = getActiveDailyQuests();
+  const weeklyQ = getActiveWeeklyQuests();
+  const dp = getQuestDailyProg();   const dc = getQuestDailyCl();
+  const wp = getQuestWeeklyProg();  const wc = getQuestWeeklyCl();
+  let dChanged = false, wChanged = false;
+  for (const q of dailyQ) {
+    if (q.type !== type || dc.includes(q.id)) continue;
+    const prev = dp[q.id] || 0;
+    dp[q.id] = QUEST_MAX_TYPES.has(type) ? Math.max(prev, value) : prev + value;
+    dChanged = true;
+  }
+  for (const q of weeklyQ) {
+    if (q.type !== type || wc.includes(q.id)) continue;
+    const prev = wp[q.id] || 0;
+    wp[q.id] = QUEST_MAX_TYPES.has(type) ? Math.max(prev, value) : prev + value;
+    wChanged = true;
+  }
+  if (dChanged) localStorage.setItem(STORAGE_KEYS.questDailyProg,  JSON.stringify(dp));
+  if (wChanged) localStorage.setItem(STORAGE_KEYS.questWeeklyProg, JSON.stringify(wp));
+}
+
+function claimQuest(questId, period) {
+  advanceQuestRotationsIfNeeded();
+  const isDaily = period === 'daily';
+  const quest = (isDaily ? getActiveDailyQuests() : getActiveWeeklyQuests()).find(q => q.id === questId);
+  if (!quest) return;
+  const prog    = isDaily ? getQuestDailyProg()  : getQuestWeeklyProg();
+  const claimed = isDaily ? getQuestDailyCl()    : getQuestWeeklyCl();
+  if (claimed.includes(questId) || (prog[questId] || 0) < quest.target) return;
+  claimed.push(questId);
+  localStorage.setItem(isDaily ? STORAGE_KEYS.questDailyClaimed : STORAGE_KEYS.questWeeklyClaimed, JSON.stringify(claimed));
+  setCoins(getCoins() + quest.reward);
+  renderCoins();
+  renderQuestBoard();
+}
+
+function questTimeLeft(end) {
+  const ms = end - Date.now();
+  if (ms <= 0) return 'Resetting…';
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
+  return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+function renderQuestBoard() {
+  const panel = document.getElementById('tab-quests');
+  if (!panel) return;
+  advanceQuestRotationsIfNeeded();
+
+  const dq = getActiveDailyQuests();
+  const wq = getActiveWeeklyQuests();
+  const dp = getQuestDailyProg();
+  const wp = getQuestWeeklyProg();
+  const dc = getQuestDailyCl();
+  const wc = getQuestWeeklyCl();
+
+  function card(q, prog, claimed) {
+    const cur = Math.min(prog[q.id] || 0, QUEST_MAX_TYPES.has(q.type) ? Infinity : q.target);
+    const pct = Math.min(100, Math.round(((QUEST_MAX_TYPES.has(q.type) ? Math.min(cur, q.target) : cur) / q.target) * 100));
+    const done    = cur >= q.target;
+    const isCl    = claimed.includes(q.id);
+    const stCls   = isCl ? 'quest-card--claimed' : done ? 'quest-card--complete' : '';
+    const isWeekly = q.period === 'weekly';
+    const dispCur = QUEST_MAX_TYPES.has(q.type)
+      ? (done ? '✓ Met' : cur.toLocaleString())
+      : cur.toLocaleString();
+    const dispTgt = q.target.toLocaleString();
+    return `<div class="quest-card ${stCls}${isWeekly ? ' quest-card--weekly' : ''}">
+      <div class="quest-card-top">
+        <span class="quest-badge ${isWeekly ? 'quest-badge--weekly' : 'quest-badge--daily'}">${isWeekly ? 'WEEKLY' : 'DAILY'}</span>
+        <span class="quest-label">${q.label}</span>
+        ${isCl ? '<span class="quest-claimed-stamp">✓ CLAIMED</span>' : ''}
+      </div>
+      <p class="quest-desc-text">${q.desc}</p>
+      <div class="quest-progress-wrap">
+        <div class="quest-bar"><div class="quest-bar-fill${done && !isCl ? ' quest-bar-fill--ready' : ''}" style="width:${pct}%"></div></div>
+        <span class="quest-prog-label">${dispCur} / ${dispTgt}</span>
+      </div>
+      <div class="quest-card-footer">
+        <span class="quest-reward">🏆 ${q.reward.toLocaleString()} coins</span>
+        ${isCl
+          ? '<span class="quest-done-label">Done!</span>'
+          : `<button type="button" class="quest-claim-btn${done ? ' quest-claim-btn--ready' : ''}"
+              data-qid="${q.id}" data-qperiod="${q.period}" ${done ? '' : 'disabled'}>
+              ${done ? 'CLAIM' : 'In Progress'}
+            </button>`}
+      </div>
+    </div>`;
+  }
+
+  panel.innerHTML = `<div class="quest-board">
+    <div class="quest-section">
+      <div class="quest-section-hdr">
+        <h3 class="quest-section-title">📋 Daily Quests</h3>
+        <span class="quest-timer">Resets in ${questTimeLeft(getQuestDailyEnd())}</span>
+      </div>
+      <div class="quest-list">${dq.map(q => card(q, dp, dc)).join('')}</div>
+    </div>
+    <div class="quest-section">
+      <div class="quest-section-hdr">
+        <h3 class="quest-section-title">📜 Weekly Quests</h3>
+        <span class="quest-timer">Resets in ${questTimeLeft(getQuestWeeklyEnd())}</span>
+      </div>
+      <div class="quest-list">${wq.map(q => card(q, wp, wc)).join('')}</div>
+    </div>
+  </div>`;
+
+  panel.querySelectorAll('.quest-claim-btn--ready').forEach(btn => {
+    btn.addEventListener('click', () => claimQuest(btn.dataset.qid, btn.dataset.qperiod));
+  });
+
+  // Live countdown tick
+  clearTimeout(panel._questTimer);
+  panel._questTimer = setTimeout(() => renderQuestBoard(), 1000);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getCurrentShopOffers() {
   advanceShopRotationIfNeeded();
   const seed = getShopSeed();
@@ -319,6 +531,9 @@ function buyPotion(potionId, fromBenny = false) {
   if (!potion || getCoins() < potion.cost) return;
   setCoins(getCoins() - potion.cost);
   setLuckMultiplier(getLuckMultiplier() + potion.luckBonus);
+  addQuestProgress('potion_buy', 1);
+  addQuestProgress('shop_spend', potion.cost);
+  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   renderCoins();
   renderLuck();
   renderShop();
@@ -337,6 +552,9 @@ function buyPotionMax(potionId, fromBenny = false) {
   if (count < 1) return;
   setCoins(coins - potion.cost * count);
   setLuckMultiplier(getLuckMultiplier() + potion.luckBonus * count);
+  addQuestProgress('potion_buy', count);
+  addQuestProgress('shop_spend', potion.cost * count);
+  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   renderCoins();
   renderLuck();
   renderShop();
@@ -524,6 +742,11 @@ function buySnehoItem(itemId) {
     const newCurse = getElderCurseTotal() + 1;
     localStorage.setItem(STORAGE_KEYS.elderCurseTotal, String(newCurse));
   }
+
+  // Quest tracking
+  addQuestProgress('sneho_buy', 1);
+  if (cursed) addQuestProgress('sneho_curse', 1);
+  addQuestProgress('luck_reach', newLuck + getGearBonus());
 
   renderCoins();
   renderLuck();
@@ -1689,6 +1912,8 @@ function renderHistory() {
         btn.parentElement.appendChild(notif);
         setTimeout(() => notif.remove(), 1800);
       }
+      addQuestProgress('salvage', 1);
+      if (scrapsGained > 0) addQuestProgress('earn_scraps', scrapsGained);
       renderHistory();
       renderCoins();
       renderLuck();
@@ -1732,7 +1957,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'memory', 'hub', 'casino', 'bazaar', 'tycoon', 'store'].forEach((id) => {
+  ['past', 'locked', 'shop', 'memory', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -1746,6 +1971,7 @@ function switchTab(tabName) {
   if (tabName === 'bazaar') renderBazaar();
   if (tabName === 'tycoon') renderTycoon();
   if (tabName === 'store')  renderStore();
+  if (tabName === 'quests') renderQuestBoard();
 }
 
 const RARE_ROLL_THRESHOLD  = 100_000_000;   // Jerry broadcast threshold
@@ -2386,6 +2612,11 @@ async function roll() {
   const mult = getLuckMultiplier() + getGearBonus();
   const item = weightedRandom(mult, getUnlockedElderPool());
 
+  // Quest: track peak luck before it resets, and count the roll
+  addQuestProgress('roll', 1);
+  addQuestProgress('luck_reach', mult);
+  addQuestProgress('rarity_hit', item.rarity);
+
   if (mult > 1) setLuckMultiplier(1);
 
   // ── Elder / Ascendant rolled ───────────────────────────────────────────────
@@ -2487,6 +2718,8 @@ function buyLuck() {
   if (getCoins() < cost) return;
   setCoins(getCoins() - cost);
   setLuckMultiplier(getLuckMultiplier() + 5);
+  addQuestProgress('shop_spend', cost);
+  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   renderCoins();
   renderLuck();
 }
@@ -2882,6 +3115,7 @@ function init() {
 
   renderTheo();
   renderSneho();
+  renderQuestBoard();
 
   // Tycoon click button (persistent listener, not inside renderTycoon)
   document.getElementById('tycoon-click-btn')?.addEventListener('click', tycoonClick);

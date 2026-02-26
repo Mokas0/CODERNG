@@ -56,6 +56,7 @@
             <button type="button" class="tab-btn" data-tab="bazaar" aria-selected="false">Bazaar</button>
             <button type="button" class="tab-btn" data-tab="tycoon" aria-selected="false">Tycoon</button>
             <button type="button" class="tab-btn" data-tab="store" aria-selected="false">Store</button>
+            <button type="button" class="tab-btn" data-tab="quests" aria-selected="false">Quests</button>
           </div>
           <div id="tab-past" class="tab-panel" role="tabpanel">
             <p class="tab-desc">Salvage for coins or lock to move to storage.</p>
@@ -241,6 +242,9 @@
             </div>
           </div>
           <!-- Store tab -->
+          <div id="tab-quests" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
+            <!-- Populated by renderQuestBoard() -->
+          </div>
           <div id="tab-store" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
             <p class="tab-desc">Support the game and get an instant boost. Purchases deliver a claim code — enter it below to redeem.</p>
             <div id="store-product-grid" class="store-grid"></div>
