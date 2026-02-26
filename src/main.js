@@ -3061,14 +3061,21 @@ function submitAdminCode() {
   const msg = document.getElementById('admin-message');
   const code = (input?.value || '').trim().toLowerCase();
 
+  // "supreme" — play the Supreme King cutscene
+  if (code === 'supreme') {
+    closeAdminPanel();
+    showElderCutscene({ ...SUPREME_KING_AURA, isSupremeKing: true });
+    return;
+  }
+
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
+    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
-      showElderCutscene(aura);
+      showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });
     } else {
       if (msg) msg.textContent = `No aura with ID ${id}.`;
       if (msg) msg.style.color = 'var(--danger)';
