@@ -117,16 +117,16 @@ function migrateLockedToStorage() {
 const ELDER_ROLL_WEIGHT = 1 / 9_000_000_000_000_000;
 
 function weightedRandom(multiplier = 1, extraItems = []) {
-  // Compress luck logarithmically so high values don't make all items equally likely.
-  // effectiveMult = 1 + 2·log10(luck):
-  //   luck=1    → 1.0   (no change — original weights)
-  //   luck=51   → 4.4   (Minor potion — mid-range items noticeably boosted)
-  //   luck=151  → 5.4   (Luck Potion — 1T mythic ~120× rarer)
-  //   luck=401  → 6.2   (Greater potion — 1T mythic ~40× rarer)
-  //   luck=1.2k → 7.2   (Supreme — 1T mythic ~20× rarer)
-  //   luck=3.5k → 8.1   (Mythic Brew — 1T mythic ~12× rarer)
-  //   luck=50k  → 10.4  (Ultraluck — nearly flat)
-  const effectiveMult = 1 + 2 * Math.log10(Math.max(multiplier, 1));
+  // Compress luck via power curve so potions feel impactful but can't fully
+  // flatten the rarity spectrum.  effectiveMult = luck^0.4:
+  //   luck=1    → 1     (no change — original weights)
+  //   luck=51   → 5.4   (Minor potion — 1M items only ~12× rarer than common)
+  //   luck=151  → 8.4   (Luck Potion — 1B items ~8× rarer)
+  //   luck=401  → 12    (Greater — 1T mythic ~16× rarer)
+  //   luck=1.2k → 19    (Supreme — 1T mythic ~5× rarer)
+  //   luck=3.5k → 30    (Mythic Brew — 1T mythic ~2.5× rarer)
+  //   luck=50k  → 96    (Ultraluck — nearly flat)
+  const effectiveMult = Math.pow(Math.max(multiplier, 1), 0.4);
   const pool = [...ITEMS, ...extraItems];
   const weights = pool.map((i) => Math.pow(i.weight, 1 / effectiveMult));
   const total = weights.reduce((s, w) => s + w, 0);
