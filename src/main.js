@@ -1104,6 +1104,112 @@ async function claimUsername(newName) {
 
 const CHAT_KEEP = 50; // max messages kept in DB at once
 
+// ——— Spam protection ———
+const SPAM_MAX_MSGS      = 3;       // max messages in window
+const SPAM_WINDOW_MS     = 10_000;  // 10-second window
+const SPAM_COOLDOWN_BASE = 5_000;   // 5s base cooldown after spam
+const SPAM_COOLDOWN_MAX  = 60_000;  // 60s max cooldown
+let chatTimestamps  = [];
+let spamCooldownEnd = 0;
+let spamStrikes     = 0;
+
+function isChatRateLimited() {
+  const now = Date.now();
+  if (now < spamCooldownEnd) {
+    const secsLeft = Math.ceil((spamCooldownEnd - now) / 1000);
+    return `Slow down! Wait ${secsLeft}s before sending another message.`;
+  }
+  chatTimestamps = chatTimestamps.filter(t => now - t < SPAM_WINDOW_MS);
+  if (chatTimestamps.length >= SPAM_MAX_MSGS) {
+    spamStrikes++;
+    const cooldown = Math.min(SPAM_COOLDOWN_BASE * Math.pow(2, spamStrikes - 1), SPAM_COOLDOWN_MAX);
+    spamCooldownEnd = now + cooldown;
+    const secsLeft = Math.ceil(cooldown / 1000);
+    return `Too many messages! You're muted for ${secsLeft}s.`;
+  }
+  return null;
+}
+
+function recordChatTimestamp() {
+  chatTimestamps.push(Date.now());
+}
+
+// ——— Profanity / slur filter ———
+const BLOCKED_PATTERNS = (() => {
+  const raw = [
+    'fuck','shit','bitch','ass','damn','dick','cock','pussy','cunt',
+    'bastard','whore','slut','piss','crap','stfu','gtfo','wtf','lmao',
+    'nigger','nigga','n1gger','n1gga','faggot','fag','retard','retarded',
+    'tranny','kike','chink','spic','gook','wetback','beaner','cracker',
+    'dyke','homo','queer','twat','wanker','bollocks',
+    'kys','kill yourself','neck yourself',
+  ];
+  return raw.map(w => {
+    const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const flexible = escaped.replace(/[a-z]/gi, ch => {
+      const leets = { a:'[a@4]', e:'[e3]', i:'[i1!|]', o:'[o0]', s:'[s$5]', t:'[t7]', l:'[l1|]', g:'[g9]' };
+      return leets[ch.toLowerCase()] || `[${ch.toLowerCase()}${ch.toUpperCase()}]`;
+    });
+    return new RegExp(flexible, 'i');
+  });
+})();
+
+function containsProfanity(text) {
+  const cleaned = text.replace(/[\s._\-*#@!]+/g, '');
+  for (const pat of BLOCKED_PATTERNS) {
+    if (pat.test(text) || pat.test(cleaned)) return true;
+  }
+  return false;
+}
+
+// ——— Chat bans (Supabase-backed, graceful fallback) ———
+let chatBanCache = new Set();
+let chatBanCacheTime = 0;
+const BAN_CACHE_TTL = 30_000;
+
+async function refreshBanCache() {
+  if (!supabase) return;
+  if (Date.now() - chatBanCacheTime < BAN_CACHE_TTL) return;
+  try {
+    const { data } = await supabase.from('chat_bans').select('username');
+    if (data) chatBanCache = new Set(data.map(r => r.username.toLowerCase()));
+    chatBanCacheTime = Date.now();
+  } catch (_) { /* table may not exist yet */ }
+}
+
+function isUserBanned(username) {
+  return chatBanCache.has((username || '').toLowerCase());
+}
+
+async function banUser(username) {
+  if (!supabase) return false;
+  const lower = username.toLowerCase();
+  const { error } = await supabase.from('chat_bans').upsert(
+    { username: lower, banned_by: getHubUsername() || 'admin', banned_at: new Date().toISOString() },
+    { onConflict: 'username' }
+  );
+  if (error) return false;
+  chatBanCache.add(lower);
+  return true;
+}
+
+async function unbanUser(username) {
+  if (!supabase) return false;
+  const lower = username.toLowerCase();
+  const { error } = await supabase.from('chat_bans').delete().eq('username', lower);
+  if (error) return false;
+  chatBanCache.delete(lower);
+  return true;
+}
+
+async function listBannedUsers() {
+  if (!supabase) return [];
+  try {
+    const { data } = await supabase.from('chat_bans').select('username, banned_by, banned_at').order('banned_at', { ascending: false });
+    return data || [];
+  } catch (_) { return []; }
+}
+
 function updateHubBadge() {
   const btn = document.querySelector('.tab-btn[data-tab="hub"]');
   if (!btn) return;
@@ -1158,17 +1264,76 @@ async function trimOldMessages() {
   await supabase.from('messages').delete().in('id', toDelete);
 }
 
+function showChatWarning(msg) {
+  const warn = document.getElementById('hub-chat-warning');
+  if (!warn) return;
+  warn.textContent = msg;
+  warn.classList.remove('hidden');
+  clearTimeout(warn._hideTimer);
+  warn._hideTimer = setTimeout(() => warn.classList.add('hidden'), 4000);
+}
+
 async function sendHubMessage() {
   const input = document.getElementById('hub-chat-input');
   const body = (input?.value || '').trim().slice(0, 500);
   const username = getHubUsername();
   if (!body || !username || !supabase) return;
   const sendBtn = document.getElementById('hub-chat-send');
+
+  // Admin commands: /ban, /unban, /banned
+  if (isAdminUser() && body.startsWith('/')) {
+    const parts = body.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const target = parts.slice(1).join(' ').trim();
+
+    if (cmd === '/ban' && target) {
+      const ok = await banUser(target);
+      showChatWarning(ok ? `Banned "${target}" from chat.` : `Failed to ban "${target}". Make sure the chat_bans table exists.`);
+      input.value = '';
+      return;
+    }
+    if (cmd === '/unban' && target) {
+      const ok = await unbanUser(target);
+      showChatWarning(ok ? `Unbanned "${target}".` : `Failed to unban "${target}".`);
+      input.value = '';
+      return;
+    }
+    if (cmd === '/banned') {
+      const bans = await listBannedUsers();
+      if (bans.length === 0) { showChatWarning('No banned users.'); }
+      else { showChatWarning(`Banned: ${bans.map(b => b.username).join(', ')}`); }
+      input.value = '';
+      return;
+    }
+  }
+
+  // Ban check
+  await refreshBanCache();
+  if (isUserBanned(username)) {
+    showChatWarning('You are banned from chat.');
+    return;
+  }
+
+  // Spam check
+  const spamMsg = isChatRateLimited();
+  if (spamMsg) {
+    showChatWarning(spamMsg);
+    return;
+  }
+
+  // Profanity check
+  if (containsProfanity(body)) {
+    showChatWarning('Your message was blocked. Keep it clean.');
+    return;
+  }
+
   if (sendBtn) sendBtn.disabled = true;
+  recordChatTimestamp();
   const { error } = await supabase.from('messages').insert({ username, body });
   if (!error) {
     input.value = '';
-    await trimOldMessages(); // keep DB clean (fallback if DB trigger not set up)
+    spamStrikes = Math.max(0, spamStrikes - 1);
+    await trimOldMessages();
   }
   if (sendBtn) sendBtn.disabled = false;
   loadHubMessages();
@@ -1895,6 +2060,7 @@ function renderHub() {
   if (usernameInput) usernameInput.value = getHubUsername();
   if (status) status.textContent = isHubAvailable() ? 'Connected. Set a display name, then chat or post trades below.' : 'Hub is offline. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to use chat and trading.';
   if (!supabase) return;
+  refreshBanCache();
   loadHubMessages();
   loadHubTrades();
   if (!hubChatSubscription) {

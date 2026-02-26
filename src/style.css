@@ -1293,6 +1293,23 @@ body {
   line-height: var(--line-normal);
 }
 
+.hub-chat-warning {
+  margin: 0.35rem 0 0;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ff6644;
+  background: rgba(255, 68, 68, 0.08);
+  border-left: 3px solid #ff4444;
+  border-radius: 4px;
+  animation: warn-in 0.25s ease;
+}
+.hub-chat-warning.hidden { display: none; }
+@keyframes warn-in {
+  0%   { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 /* Casino */
 .casino-setup {
   margin-bottom: 1rem;
