@@ -249,7 +249,7 @@
                 <span class="blobfish-avatar">🐡</span>
                 <div>
                   <h3 class="blobfish-name">Blobfish — COMPETITION OF TYPES</h3>
-                  <p class="blobfish-dialogue">*blub* Three teams battle each season: Yoso (Elemental), Myeongsa (Object), Dongsa (Verb). Lock auras of your type for score. Deposit into your team bank to boost the team — withdraw up to 1/(team size) of the bank per day. Raid other teams by sacrificing powerful auras from your locked storage. *blub*</p>
+                  <p class="blobfish-dialogue">*blub* Three teams battle each season: Yoso (Elemental), Myeongsa (Object), Dongsa (Verb). Lock auras of your type for score. Deposit coins into your team bank to boost the team — withdraw up to 1/(team size) of the bank per day. Raid other teams by sacrificing powerful auras from your locked storage. *blub*</p>
                 </div>
               </div>
               <div class="competition-info">
@@ -266,9 +266,9 @@
               <div class="competition-actions">
                 <h4 class="competition-section-title">Deposit · Withdraw · Raid</h4>
                 <div class="competition-deposit-section">
-                  <p class="competition-action-desc">Deposit locked auras (matching your type) into your team bank. Increases your score.</p>
-                  <div id="competition-deposit-list" class="competition-deposit-list"></div>
-                  <button type="button" id="competition-deposit-btn" class="hub-btn" disabled>Deposit selected</button>
+                  <p class="competition-action-desc">Deposit coins into your team bank. Increases your score.</p>
+                  <input type="number" id="competition-deposit-amount" class="hub-input" placeholder="Coins to deposit" min="1" />
+                  <button type="button" id="competition-deposit-btn" class="hub-btn">Deposit</button>
                 </div>
                 <div class="competition-withdraw-section">
                   <p class="competition-action-desc">Withdraw coins from your team bank. Max <span id="competition-withdraw-max">0</span> today.</p>

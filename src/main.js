@@ -298,35 +298,24 @@ async function ensureCompetitionEntry() {
   return true;
 }
 
-async function competitionDeposit(lockedIndices) {
-  if (!supabase || lockedIndices.length === 0) return;
+async function competitionDeposit(amount) {
+  if (!supabase || !amount || amount <= 0) return;
   const username = getHubUsername();
   if (!username) { showCompetitionFeedback('Set a display name in the Hub first.'); return; }
+  const coins = getCoins();
+  if (amount > coins) { showCompetitionFeedback('Not enough coins.'); return; }
   await ensureCompetitionEntry();
   const assignedType = getCompetitionAssignedType();
-  const locked = getLockedStorage();
-  let total = 0;
-  const toRemove = [];
-  for (const idx of [...lockedIndices].sort((a, b) => b - a)) {
-    if (idx < 0 || idx >= locked.length) continue;
-    const h = locked[idx];
-    const at = h.auraType || classifyAuraType(h.text);
-    if (at !== assignedType) continue;
-    total += rarityToScore(h.rarity);
-    toRemove.push(idx);
-  }
-  if (total === 0) { showCompetitionFeedback('No matching auras selected.'); return; }
-  for (const idx of toRemove) locked.splice(idx, 1);
-  setLockedStorage(locked);
-  const ok = await addToTeamBank(assignedType, total);
-  if (!ok) { showCompetitionFeedback('Failed to update bank.'); return; }
+  setCoins(coins - amount);
+  const ok = await addToTeamBank(assignedType, amount);
+  if (!ok) { setCoins(coins); showCompetitionFeedback('Failed to update bank.'); return; }
   const token = getDeviceToken();
   const seasonKey = getCompetitionSeasonKey();
   const { data: me } = await supabase.from('competition_entries').select('deposited').eq('season_key', seasonKey).eq('device_token', token).single();
-  const newDeposited = (Number(me?.deposited) || 0) + total;
+  const newDeposited = (Number(me?.deposited) || 0) + amount;
   await supabase.from('competition_entries').update({ deposited: newDeposited, score: computeCompetitionScore() }).eq('season_key', seasonKey).eq('device_token', token);
-  showCompetitionFeedback(`Deposited ${total.toLocaleString()} to team bank.`);
-  renderLockedStorage();
+  showCompetitionFeedback(`Deposited ${amount.toLocaleString()} coins to team bank.`);
+  renderCoins();
   renderCompetition();
 }
 
@@ -460,24 +449,6 @@ function renderCompetition() {
           </ol>
         </div>
       `).join('');
-    }
-
-    const depositList = document.getElementById('competition-deposit-list');
-    if (depositList) {
-      const matching = locked.map((h, i) => ({ h, i })).filter(({ h }) => (h.auraType || classifyAuraType(h.text)) === assignedType);
-      depositList.innerHTML = matching.length === 0 ? '<p class="competition-empty">No matching locked auras.</p>' : matching.map(({ h, i }) => `
-        <label class="competition-deposit-item">
-          <input type="checkbox" data-locked-idx="${i}" class="competition-deposit-cb" />
-          <span style="font-family:'${h.font}';color:${h.color}">${escapeHtml(h.text)}</span> — ${formatRarity(h.rarity)}
-        </label>
-      `).join('');
-      document.getElementById('competition-deposit-btn').disabled = true;
-      depositList.querySelectorAll('.competition-deposit-cb').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const any = depositList.querySelectorAll('.competition-deposit-cb:checked').length > 0;
-          document.getElementById('competition-deposit-btn').disabled = !any;
-        });
-      });
     }
 
     const raidTarget = document.getElementById('competition-raid-target');
@@ -4079,9 +4050,8 @@ function init() {
   document.getElementById('hub-chat-send')?.addEventListener('click', sendHubMessage);
   document.getElementById('competition-submit-btn')?.addEventListener('click', submitCompetitionScore);
   document.getElementById('competition-deposit-btn')?.addEventListener('click', () => {
-    const list = document.getElementById('competition-deposit-list');
-    const indices = [...(list?.querySelectorAll('.competition-deposit-cb:checked') || [])].map(cb => parseInt(cb.dataset.lockedIdx, 10));
-    competitionDeposit(indices);
+    const amt = parseInt(document.getElementById('competition-deposit-amount')?.value || '0', 10);
+    competitionDeposit(amt);
   });
   document.getElementById('competition-withdraw-btn')?.addEventListener('click', () => {
     const amt = parseInt(document.getElementById('competition-withdraw-amount')?.value || '0', 10);

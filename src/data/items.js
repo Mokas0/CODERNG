@@ -1018,20 +1018,22 @@ export const MUTATION_AURAS = [
 
 // ──── Aura Types ────────────────────────────────────────────────────────────
 // Yoso (요소) — Elemental    Myeongsa (명사) — Object    Dongsa (동사) — Verb
+// Equal strength: all three categories have explicit word lists; highest score wins
 const YOSO_WORDS = new Set([
   'fire','ice','void','flame','ember','spark','blaze','inferno','bonfire','torch',
   'frost','snow','hail','sleet','rain','drizzle','mist','fog','dew','steam',
   'wind','breeze','gale','gust','whirl','twister','cyclone','hurricane','typhoon','monsoon',
   'storm','lightning','thunder','river','ocean','lake','stream','spring','rapids','cascade',
   'delta','mountain','valley','cliff','cave','sky','cloud','star','moon','sun',
-  'comet','meteor','aurora','rainbow','nova','cosmic','celestial','primordial','void',
-  'flame','flare','light','dark','shadow','glow','shine','flash','pulse','flux',
+  'comet','meteor','aurora','rainbow','nova','cosmic','celestial','primordial',
+  'flare','light','dark','shadow','glow','shine','flash','pulse','flux',
   'crystal','diamond','ruby','emerald','sapphire','amethyst','topaz','opal','jade','pearl',
   'onyx','obsidian','volcanic','magma','lava','quake','tremor','avalanche','tsunami',
-  'eternal','infinite','astral','divine','holy','sacred','cosmic','null','chaos','order',
+  'eternal','infinite','astral','divine','holy','sacred','null','chaos','order',
   'blood','crimson','scarlet','azure','golden','silver','iron','copper','bronze','steel',
-  'frost','frozen','burning','blazing','radiant','dark','midnight','twilight','dawn','dusk',
+  'frozen','burning','blazing','radiant','midnight','twilight','dawn','dusk',
   'violet','amber','ivory','ebony','pale','cold','hot','warm','wet','dry',
+  'shard','ash','smoke',
 ]);
 
 const DONGSA_WORDS = new Set([
@@ -1041,8 +1043,8 @@ const DONGSA_WORDS = new Set([
   'save','waste','use','cherish','hate','love','fear','hope','dream','wish',
   'draw','deal','shuffle','mix','blend','fuse','split','merge','join','part',
   'roll','spin','drop','pull','push','break','mend','forge','rise','fall',
-  'shatter','crack','tear','rip','burn','freeze','drown','crush','devour','consume',
-  'awaken','sleep','wander','seek','find','lose','create','destroy','build','ruin',
+  'shatter','crack','tear','rip','burn','freeze','drown','devour','consume',
+  'awaken','sleep','wander','seek','find','create','destroy','build','ruin',
   'collapse','converge','transcend','ascend','descend','breach','surge','fracture','decay',
   'whisper','scream','echo','silence','chant','sing','roar','cry','weep','laugh',
   'born','risen','fallen','lost','found','sold','chosen','cursed','blessed','forged',
@@ -1050,17 +1052,34 @@ const DONGSA_WORDS = new Set([
   'breaker','slayer','seeker','walker','runner','rider','flyer','hunter','watcher',
 ]);
 
+const MYEONGSA_WORDS = new Set([
+  'crown','sword','shield','key','gate','portal','realm','throne','king','queen',
+  'knight','mage','rogue','warrior','sage','fool','oracle','prophet','seer','guardian',
+  'sentinel','warden','ghost','spirit','demon','angel','saint','sinner','hero','villain',
+  'heart','soul','mind','will','oath','vow','pact','deed','scroll','tome','codex',
+  'ring','bracelet','necklace','tiara','diadem','scepter','orb','staff','wand',
+  'bone','skull','spine','wing','feather','scale','shell','armor','chain','rope',
+  'word','name','title','sign','symbol','icon','mark','brand','token','charm',
+  'pride','murder','council','court','guild','league','band','crew','army','navy',
+  'fleet','legion','series','sequence','chain','path','road','way','bridge','door',
+  'ship','vessel','craft','vehicle','tower','spire','pillar','building','house','home',
+  'kingdom','empire','nation','land','world','universe','cosmos','reality','entity',
+  'creature','beast','monster','god','deity','idol','idea','thought','dream','nightmare',
+]);
+
 function classifyAuraType(text) {
   const lower = text.toLowerCase().replace(/[^a-z\s]/g, '');
   const words = lower.split(/\s+/);
-  let yosoScore = 0, dongScore = 0;
+  let yosoScore = 0, dongScore = 0, myeongScore = 0;
   for (const w of words) {
     if (YOSO_WORDS.has(w)) yosoScore++;
     if (DONGSA_WORDS.has(w)) dongScore++;
+    if (MYEONGSA_WORDS.has(w)) myeongScore++;
   }
-  if (yosoScore > dongScore) return 'yoso';
-  if (dongScore > yosoScore) return 'dongsa';
-  if (yosoScore > 0) return 'yoso';
+  const max = Math.max(yosoScore, dongScore, myeongScore);
+  if (max === 0) return 'myeongsa';
+  if (yosoScore === max) return 'yoso';
+  if (dongScore === max) return 'dongsa';
   return 'myeongsa';
 }
 

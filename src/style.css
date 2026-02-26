@@ -1056,8 +1056,9 @@ body {
   cursor: pointer;
 }
 
+.competition-deposit-section input,
 .competition-withdraw-section input {
-  width: 100px;
+  width: 140px;
   margin-right: 0.5rem;
 }
 
