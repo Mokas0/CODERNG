@@ -1739,7 +1739,7 @@ function switchTab(tabName) {
       panel.setAttribute('aria-hidden', tabName !== id);
     }
   });
-  if (tabName === 'shop') renderShop();
+  if (tabName === 'shop') { renderShop(); renderSneho(); }
   if (tabName === 'memory') renderMemoryMatch();
   if (tabName === 'hub') renderHub();
   if (tabName === 'casino') renderCasino();
