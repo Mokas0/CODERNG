@@ -894,6 +894,83 @@ body {
   color: #ff6060;
   border: 1px solid #c00;
 }
+
+/* Blobfish — Competition of Types */
+.blobfish-npc {
+  padding: 1.2rem;
+  border-radius: 12px;
+  border: 1.5px solid #2a4a6a;
+  background: linear-gradient(135deg, #0a1520 0%, #0d1a28 100%);
+  box-shadow: 0 0 18px rgba(0, 120, 180, 0.15);
+}
+.blobfish-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+.blobfish-avatar {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px #4a9fd4);
+}
+.blobfish-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #6ab8e8;
+  margin: 0 0 0.3rem;
+  letter-spacing: 0.02em;
+}
+.blobfish-dialogue {
+  font-size: 0.85rem;
+  color: #8ab8d8;
+  margin: 0;
+  line-height: 1.45;
+}
+.competition-info {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  background: rgba(0, 80, 120, 0.12);
+  border-radius: 8px;
+  border-left: 4px solid #4a9fd4;
+}
+.competition-season, .competition-your-type, .competition-your-score {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.competition-leaderboard {
+  margin-top: 1.2rem;
+}
+.competition-leaderboard-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #6ab8e8;
+  margin: 0 0 0.5rem;
+}
+.competition-leaderboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.88rem;
+}
+.competition-entry {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(74, 159, 212, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.competition-rank {
+  font-weight: 700;
+  color: #4a9fd4;
+  min-width: 2rem;
+}
+.competition-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
 .sneho-feedback--blessed {
   background: rgba(0, 100, 50, 0.3);
   color: #80ffb0;

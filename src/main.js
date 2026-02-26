@@ -28,6 +28,7 @@ const STORAGE_KEYS = {
   questWeeklyProg:    'rng_quest_weekly_prog',
   questWeeklyClaimed: 'rng_quest_weekly_claimed',
   potionInventory:    'rng_potion_inventory',
+  competitionType:    'rng_competition_type', // suffix: _${seasonKey}
 };
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
@@ -152,6 +153,124 @@ const AURA_TYPE_INFO = {
   myeongsa: { label: '명사 Myeongsa', tag: 'Object',    color: '#ffaa33' },
   dongsa:   { label: '동사 Dongsa',   tag: 'Verb',      color: '#ff55aa' },
 };
+
+// ─── Competition of Types (Blobfish NPC) ─────────────────────────────────────
+const COMPETITION_TYPES = ['yoso', 'myeongsa', 'dongsa'];
+const SEASON_MS = 30 * 24 * 60 * 60 * 1000; // ~30 days
+
+function getCompetitionSeasonKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getCompetitionSeasonEnd() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function getCompetitionAssignedType() {
+  const key = getCompetitionSeasonKey();
+  let type = localStorage.getItem(`${STORAGE_KEYS.competitionType}_${key}`);
+  if (!type || !COMPETITION_TYPES.includes(type)) {
+    type = COMPETITION_TYPES[Math.floor(Math.random() * COMPETITION_TYPES.length)];
+    localStorage.setItem(`${STORAGE_KEYS.competitionType}_${key}`, type);
+  }
+  return type;
+}
+
+function rarityToScore(r) {
+  if (r === -1) return 1e18;
+  if (r === 0) return 1e15;
+  return Math.max(1, r);
+}
+
+function computeCompetitionScore() {
+  const assigned = getCompetitionAssignedType();
+  const locked = getLockedStorage();
+  let total = 0;
+  for (const h of locked) {
+    const at = h.auraType || classifyAuraType(h.text);
+    if (at === assigned) total += rarityToScore(h.rarity);
+  }
+  return total;
+}
+
+async function submitCompetitionScore() {
+  if (!supabase) return;
+  const username = getHubUsername();
+  if (!username) {
+    const msg = document.getElementById('competition-feedback');
+    if (msg) { msg.textContent = 'Set a display name in the Hub first.'; msg.classList.remove('hidden'); }
+    return;
+  }
+  const score = computeCompetitionScore();
+  const seasonKey = getCompetitionSeasonKey();
+  const assignedType = getCompetitionAssignedType();
+  const token = getDeviceToken();
+  await supabase.from('competition_entries').delete().eq('season_key', seasonKey).eq('device_token', token);
+  const { error } = await supabase.from('competition_entries').insert(
+    { season_key: seasonKey, username, device_token: token, assigned_type: assignedType, score, updated_at: new Date().toISOString() }
+  );
+  const msg = document.getElementById('competition-feedback');
+  if (msg) {
+    msg.textContent = error ? `Failed: ${error.message}` : `Score submitted: ${score.toLocaleString()}`;
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 4000);
+  }
+  if (!error) renderCompetition();
+}
+
+async function fetchCompetitionLeaderboard() {
+  if (!supabase) return [];
+  const seasonKey = getCompetitionSeasonKey();
+  const assignedType = getCompetitionAssignedType();
+  const { data } = await supabase
+    .from('competition_entries')
+    .select('username, score')
+    .eq('season_key', seasonKey)
+    .eq('assigned_type', assignedType)
+    .order('score', { ascending: false })
+    .limit(20);
+  return data || [];
+}
+
+function renderCompetition() {
+  const seasonKey = getCompetitionSeasonKey();
+  const endMs = getCompetitionSeasonEnd();
+  const assignedType = getCompetitionAssignedType();
+  const score = computeCompetitionScore();
+  const info = AURA_TYPE_INFO[assignedType];
+
+  const seasonEl = document.getElementById('competition-season-label');
+  const endsEl = document.getElementById('competition-ends');
+  const typeEl = document.getElementById('competition-type-label');
+  const scoreEl = document.getElementById('competition-score');
+  const bracketEl = document.getElementById('competition-bracket-label');
+  const listEl = document.getElementById('competition-leaderboard-list');
+
+  if (seasonEl) seasonEl.textContent = seasonKey;
+  if (endsEl) endsEl.textContent = new Date(endMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  if (typeEl) {
+    typeEl.textContent = info ? `${info.label} (${info.tag})` : assignedType;
+    if (info) typeEl.style.color = info.color;
+  }
+  if (scoreEl) scoreEl.textContent = score.toLocaleString();
+  if (bracketEl) bracketEl.textContent = info ? info.tag : assignedType;
+
+  fetchCompetitionLeaderboard().then((entries) => {
+    if (!listEl) return;
+    if (entries.length === 0) {
+      listEl.innerHTML = '<li class="competition-empty">No entries yet. Submit your score!</li>';
+      return;
+    }
+    listEl.innerHTML = entries.map((e, i) =>
+      `<li class="competition-entry"><span class="competition-rank">${i + 1}.</span>${escapeHtml(e.username)} — ${Number(e.score).toLocaleString()}</li>`
+    ).join('');
+  });
+}
 
 function formatRarity(rarity) {
   if (rarity === -1) return 'UNOBTAINABLE';
@@ -2268,7 +2387,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests'].forEach((id) => {
+  ['past', 'locked', 'shop', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests', 'competition'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -2282,6 +2401,7 @@ function switchTab(tabName) {
   if (tabName === 'tycoon') renderTycoon();
   if (tabName === 'store')  renderStore();
   if (tabName === 'quests') renderQuestBoard();
+  if (tabName === 'competition') renderCompetition();
 }
 
 const RARE_ROLL_THRESHOLD  = 1_000_000_000_000;   // Jerry broadcast threshold (1T)
@@ -3717,6 +3837,7 @@ function init() {
     });
   }
   document.getElementById('hub-chat-send')?.addEventListener('click', sendHubMessage);
+  document.getElementById('competition-submit-btn')?.addEventListener('click', submitCompetitionScore);
   document.getElementById('hub-chat-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendHubMessage(); });
   document.getElementById('hub-trade-post')?.addEventListener('click', postHubTrade);
 

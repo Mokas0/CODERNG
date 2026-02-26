@@ -59,6 +59,7 @@
             <button type="button" class="tab-btn" data-tab="tycoon" aria-selected="false">Tycoon</button>
             <button type="button" class="tab-btn" data-tab="store" aria-selected="false">Store</button>
             <button type="button" class="tab-btn" data-tab="quests" aria-selected="false">Quests</button>
+            <button type="button" class="tab-btn" data-tab="competition" aria-selected="false">Competition</button>
           </div>
           <div id="tab-past" class="tab-panel" role="tabpanel">
             <p class="tab-desc">Salvage for coins or lock to move to storage.</p>
@@ -239,9 +240,30 @@
               </div>
             </div>
           </div>
-          <!-- Store tab -->
           <div id="tab-quests" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
             <!-- Populated by renderQuestBoard() -->
+          </div>
+          <div id="tab-competition" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
+            <div class="blobfish-npc">
+              <div class="blobfish-header">
+                <span class="blobfish-avatar">🐡</span>
+                <div>
+                  <h3 class="blobfish-name">Blobfish — COMPETITION OF TYPES</h3>
+                  <p class="blobfish-dialogue">*blub* I run the monthly COMPETITION OF TYPES. Each season, you're assigned one of three aura types: Yoso (Elemental), Myeongsa (Object), or Dongsa (Verb). Lock auras of your type to rack up points — your score is the total rarity of matching locked items. Highest score wins. *blub*</p>
+                </div>
+              </div>
+              <div class="competition-info">
+                <p class="competition-season">Season: <strong id="competition-season-label">—</strong> · Ends: <span id="competition-ends">—</span></p>
+                <p class="competition-your-type">Your type: <strong id="competition-type-label">—</strong></p>
+                <p class="competition-your-score">Your score: <strong id="competition-score">0</strong></p>
+                <button type="button" id="competition-submit-btn" class="hub-btn">Submit score</button>
+                <p id="competition-feedback" class="sneho-feedback hidden"></p>
+              </div>
+              <div class="competition-leaderboard">
+                <h4 class="competition-leaderboard-title">Leaderboard — <span id="competition-bracket-label">—</span></h4>
+                <ol id="competition-leaderboard-list" class="competition-leaderboard-list"></ol>
+              </div>
+            </div>
           </div>
           <div id="tab-store" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
             <p class="tab-desc">Support the game and get an instant boost. Purchases deliver a claim code — enter it below to redeem.</p>
