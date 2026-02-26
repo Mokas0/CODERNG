@@ -249,19 +249,42 @@
                 <span class="blobfish-avatar">🐡</span>
                 <div>
                   <h3 class="blobfish-name">Blobfish — COMPETITION OF TYPES</h3>
-                  <p class="blobfish-dialogue">*blub* I run the monthly COMPETITION OF TYPES. Each season, you're assigned one of three aura types: Yoso (Elemental), Myeongsa (Object), or Dongsa (Verb). Lock auras of your type to rack up points — your score is the total rarity of matching locked items. Highest score wins. *blub*</p>
+                  <p class="blobfish-dialogue">*blub* Three teams battle each season: Yoso (Elemental), Myeongsa (Object), Dongsa (Verb). Lock auras of your type for score. Deposit into your team bank to boost the team — withdraw up to 1/(team size) of the bank per day. Raid other teams by sacrificing powerful auras from your locked storage. *blub*</p>
                 </div>
               </div>
               <div class="competition-info">
                 <p class="competition-season">Season: <strong id="competition-season-label">—</strong> · Ends: <span id="competition-ends">—</span></p>
                 <p class="competition-your-type">Your type: <strong id="competition-type-label">—</strong></p>
-                <p class="competition-your-score">Your score: <strong id="competition-score">0</strong></p>
+                <p class="competition-your-score">Your score: <strong id="competition-score">0</strong> · Deposited: <strong id="competition-deposited">0</strong></p>
                 <button type="button" id="competition-submit-btn" class="hub-btn">Submit score</button>
                 <p id="competition-feedback" class="sneho-feedback hidden"></p>
               </div>
-              <div class="competition-leaderboard">
-                <h4 class="competition-leaderboard-title">Leaderboard — <span id="competition-bracket-label">—</span></h4>
-                <ol id="competition-leaderboard-list" class="competition-leaderboard-list"></ol>
+              <div class="competition-banks">
+                <h4 class="competition-section-title">Team Banks</h4>
+                <div id="competition-banks-grid" class="competition-banks-grid"></div>
+              </div>
+              <div class="competition-actions">
+                <h4 class="competition-section-title">Deposit · Withdraw · Raid</h4>
+                <div class="competition-deposit-section">
+                  <p class="competition-action-desc">Deposit locked auras (matching your type) into your team bank. Increases your score.</p>
+                  <div id="competition-deposit-list" class="competition-deposit-list"></div>
+                  <button type="button" id="competition-deposit-btn" class="hub-btn" disabled>Deposit selected</button>
+                </div>
+                <div class="competition-withdraw-section">
+                  <p class="competition-action-desc">Withdraw coins from your team bank. Max <span id="competition-withdraw-max">0</span> today.</p>
+                  <input type="number" id="competition-withdraw-amount" class="hub-input" placeholder="Amount" min="0" />
+                  <button type="button" id="competition-withdraw-btn" class="hub-btn">Withdraw</button>
+                </div>
+                <div class="competition-raid-section">
+                  <p class="competition-action-desc">Sacrifice locked auras to raid another team's bank. Power = total rarity of sacrificed auras.</p>
+                  <select id="competition-raid-target" class="hub-input"></select>
+                  <div id="competition-raid-list" class="competition-deposit-list"></div>
+                  <button type="button" id="competition-raid-btn" class="hub-btn hub-btn--danger" disabled>Raid</button>
+                </div>
+              </div>
+              <div class="competition-leaderboards">
+                <h4 class="competition-section-title">All Teams — Leaderboards</h4>
+                <div id="competition-all-leaderboards" class="competition-all-leaderboards"></div>
               </div>
             </div>
           </div>

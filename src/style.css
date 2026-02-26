@@ -971,6 +971,135 @@ body {
   font-style: italic;
   padding: 0.5rem 0;
 }
+
+.competition-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #6ab8e8;
+  margin: 1rem 0 0.5rem;
+}
+
+.competition-banks-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.competition-bank-card {
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  background: rgba(0, 60, 100, 0.2);
+  border: 1px solid rgba(74, 159, 212, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.competition-bank-card--yours {
+  border-color: #4a9fd4;
+  box-shadow: 0 0 12px rgba(74, 159, 212, 0.2);
+}
+
+.competition-bank-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.competition-bank-balance {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.competition-actions {
+  margin-top: 1rem;
+}
+
+.competition-deposit-section,
+.competition-withdraw-section,
+.competition-raid-section {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: rgba(0, 50, 80, 0.15);
+  border-radius: 8px;
+  border-left: 3px solid #3a8fc4;
+}
+
+.competition-action-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0 0 0.5rem;
+}
+
+.competition-deposit-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.competition-deposit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.competition-deposit-item input {
+  cursor: pointer;
+}
+
+.competition-withdraw-section input {
+  width: 100px;
+  margin-right: 0.5rem;
+}
+
+.competition-all-leaderboards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.competition-leaderboard-block {
+  padding: 0.6rem;
+  background: rgba(0, 50, 80, 0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(74, 159, 212, 0.25);
+}
+
+.competition-leaderboard-block-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0 0 0.4rem;
+}
+
+.competition-leaderboard-block .competition-leaderboard-list {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.competition-leaderboard-block .competition-entry {
+  font-size: 0.8rem;
+  padding: 0.25rem 0;
+}
+
+.hub-btn--danger {
+  background: #8b2020 !important;
+  border-color: #c03030 !important;
+  color: #ffaaaa !important;
+}
+
+.hub-btn--danger:hover:not(:disabled) {
+  background: #a03030 !important;
+}
 .sneho-feedback--blessed {
   background: rgba(0, 100, 50, 0.3);
   color: #80ffb0;
