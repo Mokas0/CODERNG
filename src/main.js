@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, SUPREME_KING_AURA, classifyAuraType } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, SUPREME_KING_AURA, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -623,6 +623,14 @@ const SNEHO_ITEMS = [
   { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 700,   cursedChance: 0.35, cursedPenalty: -400,   emoji: '💀',  desc: 'Handle with care. Or don\'t.' },
 ];
 
+// Incarnatus — 1/5000 chance to appear in Sneho (no luck modifier). Grants a Geometrical aura.
+const INCARNATUS_POTION = {
+  id: 'snehoIncarnatus', name: 'Incarnatus', cost: 25000,
+  emoji: '🔷', desc: 'Bottled geometry. Drink to manifest one of the top ten demons.',
+  grantsAura: 'geometrical',
+};
+const INCARNATUS_APPEAR_CHANCE = 1 / 5000;
+
 // ——— Rotating shop (resets every 5 min) ———
 function getShopRotationEnd() {
   return Number(localStorage.getItem(STORAGE_KEYS.shopRotationEnd) || 0);
@@ -1163,7 +1171,15 @@ function getSnehoOffers() {
     const j = Math.floor(seededRandom(seed + i) * (i + 1));
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
-  return indices.slice(0, 3).map((i) => SNEHO_ITEMS[i]);
+  let offers = indices.slice(0, 3).map((i) => SNEHO_ITEMS[i]);
+  // 1/5000 chance for Incarnatus (no luck modifier — uses seeded random only)
+  const incarnatusRoll = seededRandom(seed + 77777);
+  if (incarnatusRoll < INCARNATUS_APPEAR_CHANCE) {
+    const slot = Math.floor(seededRandom(seed + 88888) * 3);
+    offers = [...offers];
+    offers[slot] = INCARNATUS_POTION;
+  }
+  return offers;
 }
 
 function updateSnehoCountdown() {
@@ -1182,6 +1198,39 @@ function buySnehoItem(itemId) {
   const item = offers.find((i) => i.id === itemId);
   if (!item || getCoins() < item.cost) return;
   setCoins(getCoins() - item.cost);
+
+  // Incarnatus: grant a random Geometrical aura (no luck modifier)
+  if (item.grantsAura === 'geometrical') {
+    const aura = GEOMETRICAL_AURAS[Math.floor(Math.random() * GEOMETRICAL_AURAS.length)];
+    const history = getHistory();
+    history.push({
+      historyId: `${Date.now()}-geometrical-${aura.id}`,
+      id: aura.id, text: aura.text, font: aura.font,
+      color: aura.color, fontWeight: aura.fontWeight,
+      fontStyle: aura.fontStyle, textShadow: aura.textShadow,
+      rarity: aura.rarity, auraType: 'myeongsa', isGeometrical: true,
+    });
+    setHistory(history);
+    const newSneho = getElderSnehoTotal() + 1;
+    localStorage.setItem(STORAGE_KEYS.elderSnehoTotal, String(newSneho));
+    addQuestProgress('sneho_buy', 1);
+    renderCoins();
+    renderHistory();
+    renderResult(aura);
+    renderSneho();
+    const feedback = document.getElementById('sneho-feedback');
+    if (feedback) {
+      feedback.textContent = `🔷 Incarnatus! You manifested ${aura.text}.`;
+      feedback.className = 'sneho-feedback sneho-feedback--blessed';
+      feedback.classList.remove('hidden');
+      setTimeout(() => feedback.classList.add('hidden'), 4000);
+    }
+    checkElderUnlock();
+    checkAscendantUnlock();
+    checkEmperorUnlock();
+    return;
+  }
+
   const cursed = Math.random() < item.cursedChance;
   const effect = cursed ? item.cursedPenalty : item.luckBonus;
   const newLuck = Math.max(1, getLuckMultiplier() + effect);
@@ -1230,13 +1279,16 @@ function renderSneho() {
   const coins  = getCoins();
   list.innerHTML = offers.map((item) => {
     const canBuy = coins >= item.cost;
-    const pctCursed = Math.round(item.cursedChance * 100);
+    const isIncarnatus = item.grantsAura === 'geometrical';
+    const oddsHtml = isIncarnatus
+      ? '<span class="sneho-odds">Grants a random Geometrical aura (1/5000 to appear)</span>'
+      : `<span class="sneho-odds">${100 - Math.round((item.cursedChance || 0) * 100)}% blessed (+${item.luckBonus}×) &nbsp;|&nbsp; ${Math.round((item.cursedChance || 0) * 100)}% cursed (${item.cursedPenalty}×)</span>`;
     return `<div class="shop-item sneho-item">
       <span class="shop-item-emoji">${item.emoji}</span>
       <div class="shop-item-info">
         <span class="shop-item-name sneho-item-name">${item.name}</span>
         <span class="shop-item-cost">${item.cost.toLocaleString()} coins</span>
-        <span class="sneho-odds">${100 - pctCursed}% blessed (+${item.luckBonus}×) &nbsp;|&nbsp; ${pctCursed}% cursed (${item.cursedPenalty}×)</span>
+        ${oddsHtml}
         <span class="shop-item-desc">${item.desc}</span>
       </div>
       <div class="shop-item-actions">
@@ -2187,35 +2239,42 @@ let bazaarCoinBalance = 0;
 
 async function bazaarFetchBalance() {
   if (!authUser || !supabase) return 0;
-  const { data } = await supabase.from('bazaar_wallets').select('coins_balance').eq('user_id', authUser.id).single();
-  bazaarCoinBalance = data?.coins_balance ?? 0;
+  const { data } = await supabase.from('bazaar_wallets').select('coins_balance').eq('user_id', authUser.id);
+  bazaarCoinBalance = (data && data[0]) ? data[0].coins_balance : 0;
   return bazaarCoinBalance;
+}
+
+function showBazaarBalanceMsg(text, isError = false) {
+  const el = document.getElementById('bazaar-balance-msg');
+  if (el) { el.textContent = text; el.style.color = isError ? 'var(--danger)' : 'var(--roll)'; }
 }
 
 async function bazaarDepositCoins() {
   const amount = Math.floor(Number(document.getElementById('bazaar-deposit-amount')?.value || 0));
-  if (!authUser || !supabase || amount <= 0) return;
+  if (!authUser || !supabase || amount <= 0) { showBazaarBalanceMsg('Enter a valid amount.', true); return; }
   const localCoins = getCoins();
-  if (localCoins < amount) return;
+  if (localCoins < amount) { showBazaarBalanceMsg('Not enough coins in your game balance.', true); return; }
   const { data, error } = await supabase.rpc('bazaar_deposit_coins', { p_amount: amount });
   const result = Array.isArray(data) ? data[0] : data;
-  if (error || !result?.success) return;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'Deposit failed', true); return; }
   setCoins(localCoins - amount);
   bazaarCoinBalance = result.new_balance ?? 0;
   document.getElementById('bazaar-deposit-amount').value = '';
+  showBazaarBalanceMsg('Deposited.');
   renderCoins();
   renderBazaar();
 }
 
 async function bazaarWithdrawCoins() {
   const amount = Math.floor(Number(document.getElementById('bazaar-deposit-amount')?.value || 0));
-  if (!authUser || !supabase || amount <= 0) return;
+  if (!authUser || !supabase || amount <= 0) { showBazaarBalanceMsg('Enter a valid amount.', true); return; }
   const { data, error } = await supabase.rpc('bazaar_withdraw_coins', { p_amount: amount });
   const result = Array.isArray(data) ? data[0] : data;
-  if (error || !result?.success) return;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'Withdraw failed', true); return; }
   setCoins(getCoins() + amount);
   bazaarCoinBalance = result.new_balance ?? 0;
   document.getElementById('bazaar-deposit-amount').value = '';
+  showBazaarBalanceMsg('Withdrawn.');
   renderCoins();
   renderBazaar();
 }
@@ -2295,6 +2354,7 @@ function renderBazaar() {
   if (authedEl) authedEl.classList.remove('hidden');
   if (!supabase) return;
   (async () => {
+    try {
     await bazaarFetchBalance();
     if (coinsEl) coinsEl.textContent = bazaarCoinBalance.toLocaleString();
     const linkStatus = document.getElementById('bazaar-link-status');
@@ -2362,6 +2422,11 @@ function renderBazaar() {
         ? myList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span> <strong>${a.price} coins</strong><button type="button" class="hub-btn hub-btn--secondary bazaar-cancel-btn" data-id="${a.id}">Cancel</button></div>`).join('')
         : '<p class="casino-empty">No active listings.</p>';
       myEl.querySelectorAll('.bazaar-cancel-btn').forEach((btn) => btn.addEventListener('click', () => bazaarCancelListing(Number(btn.dataset.id))));
+    }
+    } catch (err) {
+      console.error('[Bazaar]', err);
+      const listEl = document.getElementById('bazaar-listings');
+      if (listEl) listEl.innerHTML = `<p class="casino-empty" style="color:var(--danger)">Failed to load Bazaar. Ensure supabase-bazaar.sql and supabase-casino.sql are deployed. Check console for details.</p>`;
     }
   })();
 }
@@ -4078,8 +4143,8 @@ function init() {
   if (supabase) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       authUser = session?.user ?? null;
-      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); refreshUsernameUI(); });
-      else { updateAuthUI(); refreshUsernameUI(); }
+      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); renderBazaar(); refreshUsernameUI(); });
+      else { updateAuthUI(); renderBazaar(); refreshUsernameUI(); }
     });
     supabase.auth.onAuthStateChange((_event, session) => {
       authUser = session?.user ?? null;

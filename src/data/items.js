@@ -1016,6 +1016,51 @@ export const MUTATION_AURAS = [
     flavor: 'The same number. But wrong. Profoundly, irreversibly wrong.' },
 ];
 
+// ─── GEOMETRICAL AURAS (Incarnatus potion only) ───────────────────────────────
+// Based on the top 10 Geometry Dash pointercrate levels. Not in normal roll pool.
+export const GEOMETRICAL_AURAS = [
+  { id: 9200, text: 'THINKING SPACE II', font: 'Space Mono', color: '#00d4ff',
+    fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 20px #00d4ff, 0 0 50px #0088aa, 0 0 90px #003344',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9201, text: 'FLAMEWALL', font: 'Bebas Neue', color: '#ff4400',
+    fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 25px #ff4400, 0 0 55px #cc2200, 0 0 100px #550000',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9202, text: 'AMETHYST', font: 'Cinzel', color: '#9966ff',
+    fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 20px #9966ff, 0 0 50px #6633aa, 0 0 90px #220044',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9203, text: 'TIDAL WAVE', font: 'Unbounded', color: '#00aaff',
+    fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 25px #00aaff, 0 0 60px #0066cc, 0 0 100px #003366',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9204, text: 'NULLSCAPES', font: 'Syne', color: '#222222',
+    fontWeight: '800', fontStyle: 'normal',
+    textShadow: '0 0 15px #666666, 0 0 40px #333333, 0 0 80px #111111',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9205, text: 'QUANTEUSE PROCESSING', font: 'JetBrains Mono', color: '#00ff88',
+    fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 20px #00ff88, 0 0 50px #00aa55, 0 0 90px #004422',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9206, text: 'BOOBAWAMBA', font: 'Press Start 2P', color: '#ff00ff',
+    fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 15px #ff00ff, 0 0 40px #aa00aa, 0 0 80px #440044',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9207, text: 'EVERY END', font: 'Cormorant Garamond', color: '#ffaa00',
+    fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 20px #ffaa00, 0 0 50px #cc6600, 0 0 90px #442200',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9208, text: 'ANDROMEDA', font: 'Raleway', color: '#aa66ff',
+    fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 25px #aa66ff, 0 0 60px #6633aa, 0 0 100px #220055',
+    rarity: 5_000, isGeometrical: true },
+  { id: 9209, text: 'SUBSUMING VORTEX', font: 'Oswald', color: '#ff3300',
+    fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 25px #ff3300, 0 0 60px #aa0000, 0 0 100px #440000',
+    rarity: 5_000, isGeometrical: true },
+];
+
 // ──── Aura Types ────────────────────────────────────────────────────────────
 // Yoso (요소) — Elemental    Myeongsa (명사) — Object    Dongsa (동사) — Verb
 // Equal strength: all three categories have explicit word lists; highest score wins
