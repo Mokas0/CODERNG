@@ -36,7 +36,9 @@ const discord = new Client({ intents: [GatewayIntentBits.Guilds] });
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function formatRarity(rarity) {
+  if (rarity === -1) return 'UNOBTAINABLE';
   if (rarity === 0) return 'SECRET';
+  if (rarity >= 1e18) return `1 / ${(rarity / 1e18).toFixed(2)}Qi`;
   if (rarity >= 1e15) return `1 / ${(rarity / 1e15).toFixed(2)}Q`;
   if (rarity >= 1e12) return `1 / ${(rarity / 1e12).toFixed(2)}T`;
   if (rarity >= 1e9)  return `1 / ${(rarity / 1e9).toFixed(1)}B`;
@@ -46,12 +48,32 @@ function formatRarity(rarity) {
 }
 
 function rarityColor(rarity) {
+  if (rarity === -1)           return 0xFFD700; // gold — unobtainable
   if (rarity === 0)            return 0xFF0000; // red — secret aura
   if (rarity >= 1_000_000_000) return 0xFFD700; // gold — 1B+
   if (rarity >= 500_000_000)   return 0xFF4500; // red-orange — 500M+
   if (rarity >= 100_000_000)   return 0x9B59B6; // purple — 100M+
   return 0x3498DB;
 }
+
+const TIER_CONFIG = {
+  UNOBTAINABLE: { title: '♔ UNOBTAINABLE AURA SUMMONED', color: 0xFFD700, emoji: '♔',
+    desc: (player, name) => `${player} has summoned **${name}** — an aura that should not exist.\n\n*It was never meant to be obtained. Yet here it is.*`,
+    rarityText: '**UNOBTAINABLE** *(1 in 10,000 per Supreme Luck Potion)*',
+    footer: "Nico's RNG • nicos-rng.netlify.app • The impossible happened." },
+  EMPEROR: { title: '♛ EMPEROR AURA UNLOCKED', color: 0xFFD700, emoji: '♛',
+    desc: (player, name) => `${player} has unlocked **${name}** — a legendary Emperor Aura.\n\n*Only those who have conquered the impossible may claim this crown.*`,
+    rarityText: null,
+    footer: "Nico's RNG • nicos-rng.netlify.app • All hail." },
+  ASCENDANT: { title: '⬡ ASCENDANT AURA UNLOCKED', color: 0x00DDAA, emoji: '⬡',
+    desc: (player, name) => `${player} has unlocked **${name}** — a rare Ascendant Aura.\n\n*Earned through perseverance beyond what most would endure.*`,
+    rarityText: null,
+    footer: "Nico's RNG • nicos-rng.netlify.app • Ascension complete." },
+  ELDER: { title: '⬡ ELDER AURA UNLOCKED', color: 0xFFD700, emoji: '⬡',
+    desc: (player, name) => `${player} has unlocked **${name}** — an Elder Aura.\n\n*Hidden behind ancient conditions. Discovered by the devoted.*`,
+    rarityText: null,
+    footer: "Nico's RNG • nicos-rng.netlify.app • The elders acknowledge you." },
+};
 
 async function fetchChannel() {
   try {
@@ -78,12 +100,26 @@ async function announceRoll(roll) {
   const channel = await fetchChannel();
   if (!channel) return;
 
-  const isSecret = roll.aura_rarity === 0;
+  const tier = roll.aura_tier || null;
+  const isSecret = tier === 'SECRET' || roll.aura_rarity === 0;
   const player = roll.username ? `**${roll.username}**` : 'An anonymous player';
   const rarityStr = formatRarity(roll.aura_rarity);
+  const timestamp = `<t:${Math.floor(new Date(roll.rolled_at).getTime() / 1000)}:R>`;
 
   let embed;
-  if (isSecret) {
+
+  const tierCfg = TIER_CONFIG[tier];
+  if (tierCfg) {
+    embed = new EmbedBuilder()
+      .setTitle(tierCfg.title)
+      .setDescription(tierCfg.desc(player, roll.aura_text))
+      .addFields(
+        { name: 'Rarity', value: tierCfg.rarityText || `**${rarityStr}** *(display only)*`, inline: true },
+        { name: 'Discovered', value: timestamp, inline: true },
+      )
+      .setColor(tierCfg.color)
+      .setFooter({ text: tierCfg.footer });
+  } else if (isSecret) {
     embed = new EmbedBuilder()
       .setTitle('⚠️ SECRET AURA DISCOVERED')
       .setDescription(
@@ -91,8 +127,8 @@ async function announceRoll(roll) {
         `*This aura cannot be rolled. It can only be awakened.*`
       )
       .addFields(
-        { name: 'Rarity', value: '**SECRET** *(1 in 10,000,000 per Ultraluck)*', inline: true },
-        { name: 'Discovered', value: `<t:${Math.floor(new Date(roll.rolled_at).getTime() / 1000)}:R>`, inline: true },
+        { name: 'Rarity', value: '**SECRET** *(1 in 5,000,000 per Ultraluck)*', inline: true },
+        { name: 'Discovered', value: timestamp, inline: true },
       )
       .setColor(0xFF0000)
       .setFooter({ text: "Nico's RNG • nicos-rng.netlify.app • This should not have happened." });
@@ -102,7 +138,7 @@ async function announceRoll(roll) {
       .setDescription(`${player} just rolled a **${roll.aura_text}** on [Nico's RNG](https://nicos-rng.netlify.app)!`)
       .addFields(
         { name: 'Rarity', value: rarityStr, inline: true },
-        { name: 'Rolled at', value: `<t:${Math.floor(new Date(roll.rolled_at).getTime() / 1000)}:R>`, inline: true },
+        { name: 'Rolled at', value: timestamp, inline: true },
       )
       .setColor(rarityColor(roll.aura_rarity))
       .setFooter({ text: "Nico's RNG • nicos-rng.netlify.app" });
@@ -110,7 +146,7 @@ async function announceRoll(roll) {
 
   try {
     await channel.send({ embeds: [embed] });
-    console.log(`[announceRoll] ✓ Announced: ${roll.aura_text} (${rarityStr}) by ${roll.username || 'anon'}`);
+    console.log(`[announceRoll] ✓ Announced: ${roll.aura_text} (${rarityStr}) [tier: ${tier || 'normal'}] by ${roll.username || 'anon'}`);
   } catch (err) {
     console.error(`[announceRoll] Failed to send message: ${err.message}`);
   }

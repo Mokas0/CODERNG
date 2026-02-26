@@ -2887,10 +2887,18 @@ async function triggerSupremeKing() {
 async function reportRareRoll(item) {
   if (!supabase) return;
   const username = getHubUsername() || null;
+  const tierLabel = item.aura_rarity_label
+    || (item.isSupremeKing ? 'UNOBTAINABLE'
+      : item.isEmperor ? 'EMPEROR'
+      : item.isAscendant ? 'ASCENDANT'
+      : item.isElder ? 'ELDER'
+      : item.isSecret || item.rarity === 0 ? 'SECRET'
+      : null);
   await supabase.from('rare_rolls').insert({
     username,
     aura_text: item.text,
     aura_rarity: item.rarity,
+    aura_tier: tierLabel,
     font: item.font || null,
     color: item.color || null,
     font_weight: item.fontWeight || null,
