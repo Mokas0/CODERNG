@@ -1088,10 +1088,18 @@ function buildItems() {
   const auras = buildAuraItems(base.length);
   const ultraAuras = buildUltraAuraItems(base.length + auras.length);
   const items = [...base, ...auras, ...ultraAuras, ...MYTHIC_ITEMS, ...MUTATION_AURAS];
+  items.forEach((x) => {
+    if (!x.auraType) x.auraType = classifyAuraType(x.text);
+  });
+  // Equal max-rarity potential: top items by rarity get types in round-robin so each type has same peak
+  const byRarity = [...items].sort((a, b) => (b.rarity ?? 0) - (a.rarity ?? 0));
+  const types = ['yoso', 'myeongsa', 'dongsa'];
+  byRarity.forEach((x, i) => {
+    x.auraType = types[i % 3];
+  });
   const totalWeight = items.reduce((s, x) => s + x.weight, 0);
   items.forEach((x) => {
     x.probability = x.weight / totalWeight;
-    if (!x.auraType) x.auraType = classifyAuraType(x.text);
   });
   return items;
 }

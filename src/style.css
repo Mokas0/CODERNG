@@ -939,6 +939,13 @@ body {
   font-size: 0.9rem;
   color: var(--text-muted);
 }
+
+.competition-your-perk {
+  margin: 0.25rem 0;
+  font-size: 0.8rem;
+  color: #6ab8e8;
+  font-style: italic;
+}
 .competition-leaderboard {
   margin-top: 1.2rem;
 }
@@ -1019,7 +1026,6 @@ body {
 }
 
 .competition-deposit-section,
-.competition-withdraw-section,
 .competition-raid-section {
   margin: 0.75rem 0;
   padding: 0.75rem;
@@ -1056,8 +1062,7 @@ body {
   cursor: pointer;
 }
 
-.competition-deposit-section input,
-.competition-withdraw-section input {
+.competition-deposit-section input {
   width: 140px;
   margin-right: 0.5rem;
 }

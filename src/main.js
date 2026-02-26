@@ -149,9 +149,9 @@ function weightedRandom(multiplier = 1, extraItems = []) {
 }
 
 const AURA_TYPE_INFO = {
-  yoso:     { label: '요소 Yoso',     tag: 'Elemental', color: '#00ccff' },
-  myeongsa: { label: '명사 Myeongsa', tag: 'Object',    color: '#ffaa33' },
-  dongsa:   { label: '동사 Dongsa',   tag: 'Verb',      color: '#ff55aa' },
+  yoso:     { label: '요소 Yoso',     tag: 'Elemental', color: '#00ccff', perk: 'Deposit +15% — coins add 1.15× to bank' },
+  myeongsa: { label: '명사 Myeongsa', tag: 'Object',    color: '#ffaa33', perk: 'Bank shield — raids deal 10% less damage to your team' },
+  dongsa:   { label: '동사 Dongsa',   tag: 'Verb',      color: '#ff55aa', perk: 'Raid +25% — sacrificed auras deal 1.25× damage' },
 };
 
 // ─── Competition of Types (Blobfish NPC) ─────────────────────────────────────
@@ -209,13 +209,11 @@ async function submitCompetitionScore() {
   const seasonKey = getCompetitionSeasonKey();
   const assignedType = getCompetitionAssignedType();
   const token = getDeviceToken();
-  const { data: existing } = await supabase.from('competition_entries').select('deposited, last_withdraw_date, withdrawn_today').eq('season_key', seasonKey).eq('device_token', token).single();
+  const { data: existing } = await supabase.from('competition_entries').select('deposited').eq('season_key', seasonKey).eq('device_token', token).single();
   const deposited = Number(existing?.deposited) || 0;
-  const lastWithdraw = existing?.last_withdraw_date || null;
-  const withdrawnToday = Number(existing?.withdrawn_today) || 0;
   await supabase.from('competition_entries').delete().eq('season_key', seasonKey).eq('device_token', token);
   const { error } = await supabase.from('competition_entries').insert(
-    { season_key: seasonKey, username, device_token: token, assigned_type: assignedType, score, deposited, last_withdraw_date: lastWithdraw, withdrawn_today: withdrawnToday, updated_at: new Date().toISOString() }
+    { season_key: seasonKey, username, device_token: token, assigned_type: assignedType, score, deposited, updated_at: new Date().toISOString() }
   );
   showCompetitionFeedback(error ? `Failed: ${error.message}` : `Score submitted: ${(score + deposited).toLocaleString()}`);
   if (!error) renderCompetition();
@@ -293,7 +291,7 @@ async function ensureCompetitionEntry() {
   if (existing) return true;
   const score = computeCompetitionScore();
   await supabase.from('competition_entries').insert(
-    { season_key: seasonKey, username, device_token: token, assigned_type: assignedType, score, deposited: 0, last_withdraw_date: null, withdrawn_today: 0, updated_at: new Date().toISOString() }
+    { season_key: seasonKey, username, device_token: token, assigned_type: assignedType, score, deposited: 0, updated_at: new Date().toISOString() }
   );
   return true;
 }
@@ -307,7 +305,8 @@ async function competitionDeposit(amount) {
   await ensureCompetitionEntry();
   const assignedType = getCompetitionAssignedType();
   setCoins(coins - amount);
-  const ok = await addToTeamBank(assignedType, amount);
+  const depositMultiplier = assignedType === 'yoso' ? 1.15 : 1;
+  const ok = await addToTeamBank(assignedType, Math.floor(amount * depositMultiplier));
   if (!ok) { setCoins(coins); showCompetitionFeedback('Failed to update bank.'); return; }
   const token = getDeviceToken();
   const seasonKey = getCompetitionSeasonKey();
@@ -315,35 +314,6 @@ async function competitionDeposit(amount) {
   const newDeposited = (Number(me?.deposited) || 0) + amount;
   await supabase.from('competition_entries').update({ deposited: newDeposited, score: computeCompetitionScore() }).eq('season_key', seasonKey).eq('device_token', token);
   showCompetitionFeedback(`Deposited ${amount.toLocaleString()} coins to team bank.`);
-  renderCoins();
-  renderCompetition();
-}
-
-async function competitionWithdraw(amount) {
-  if (!supabase || !amount || amount <= 0) return;
-  const username = getHubUsername();
-  if (!username) { showCompetitionFeedback('Set a display name in the Hub first.'); return; }
-  await ensureCompetitionEntry();
-  const assignedType = getCompetitionAssignedType();
-  const teamSize = await getCompetitionTeamSize(assignedType);
-  const banks = await fetchCompetitionTeamBanks();
-  const bank = banks[assignedType] || 0;
-  const maxPerDay = Math.floor(bank / teamSize);
-  const token = getDeviceToken();
-  const seasonKey = getCompetitionSeasonKey();
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: me } = await supabase.from('competition_entries').select('last_withdraw_date, withdrawn_today').eq('season_key', seasonKey).eq('device_token', token).single();
-  const lastDate = me?.last_withdraw_date || '';
-  const withdrawnToday = (lastDate === today ? Number(me?.withdrawn_today) || 0 : 0);
-  const canWithdraw = Math.min(maxPerDay - withdrawnToday, bank);
-  const toWithdraw = Math.min(amount, canWithdraw);
-  if (toWithdraw <= 0) { showCompetitionFeedback(`Max withdraw today: ${canWithdraw.toLocaleString()} coins.`); return; }
-  const ok = await subtractFromTeamBank(assignedType, toWithdraw);
-  if (!ok) { showCompetitionFeedback('Failed to withdraw.'); return; }
-  setCoins(getCoins() + toWithdraw);
-  const newWithdrawn = withdrawnToday + toWithdraw;
-  await supabase.from('competition_entries').update({ last_withdraw_date: today, withdrawn_today: newWithdrawn }).eq('season_key', seasonKey).eq('device_token', token);
-  showCompetitionFeedback(`Withdrew ${toWithdraw.toLocaleString()} coins.`);
   renderCoins();
   renderCompetition();
 }
@@ -362,6 +332,10 @@ async function competitionRaid(targetTeam, lockedIndices) {
     power += rarityToScore(locked[idx].rarity);
     toRemove.push(idx);
   }
+  const raidMultiplier = assignedType === 'dongsa' ? 1.25 : 1;
+  power = Math.floor(power * raidMultiplier);
+  const victimShield = targetTeam === 'myeongsa' ? 0.9 : 1;
+  power = Math.floor(power * victimShield);
   if (power <= 0) { showCompetitionFeedback('Select auras to sacrifice.'); return; }
   for (const idx of toRemove) locked.splice(idx, 1);
   setLockedStorage(locked);
@@ -392,28 +366,24 @@ function renderCompetition() {
     typeEl.textContent = info ? `${info.label} (${info.tag})` : assignedType;
     if (info) typeEl.style.color = info.color;
   }
+  const perkEl = document.getElementById('competition-perk-label');
+  if (perkEl && info?.perk) {
+    perkEl.textContent = `Perk: ${info.perk}`;
+    perkEl.style.display = '';
+  } else if (perkEl) perkEl.style.display = 'none';
 
   Promise.all([
     fetchCompetitionLeaderboard('yoso'),
     fetchCompetitionLeaderboard('myeongsa'),
     fetchCompetitionLeaderboard('dongsa'),
     fetchCompetitionTeamBanks(),
-    getCompetitionTeamSize(assignedType),
-  ]).then(async ([yosoEntries, myeongEntries, dongEntries, banks, teamSize]) => {
-    const token = getDeviceToken();
+  ]).then(async ([yosoEntries, myeongEntries, dongEntries, banks]) => {
+      const token = getDeviceToken();
     const seasonKey = getCompetitionSeasonKey();
     let myDeposited = 0;
     if (supabase) {
-      const { data: me } = await supabase.from('competition_entries').select('deposited, last_withdraw_date, withdrawn_today').eq('season_key', seasonKey).eq('device_token', token).single();
+      const { data: me } = await supabase.from('competition_entries').select('deposited').eq('season_key', seasonKey).eq('device_token', token).single();
       myDeposited = Number(me?.deposited) || 0;
-      const today = new Date().toISOString().slice(0, 10);
-      const lastDate = me?.last_withdraw_date || '';
-      const withdrawnToday = (lastDate === today ? Number(me?.withdrawn_today) || 0 : 0);
-      const bank = banks[assignedType] || 0;
-      const maxPerDay = Math.floor(bank / teamSize);
-      const canWithdraw = Math.max(0, maxPerDay - withdrawnToday);
-      const withdrawMaxEl = document.getElementById('competition-withdraw-max');
-      if (withdrawMaxEl) withdrawMaxEl.textContent = canWithdraw.toLocaleString();
     }
 
     if (scoreEl) scoreEl.textContent = score.toLocaleString();
@@ -4052,10 +4022,6 @@ function init() {
   document.getElementById('competition-deposit-btn')?.addEventListener('click', () => {
     const amt = parseInt(document.getElementById('competition-deposit-amount')?.value || '0', 10);
     competitionDeposit(amt);
-  });
-  document.getElementById('competition-withdraw-btn')?.addEventListener('click', () => {
-    const amt = parseInt(document.getElementById('competition-withdraw-amount')?.value || '0', 10);
-    competitionWithdraw(amt);
   });
   document.getElementById('competition-raid-btn')?.addEventListener('click', () => {
     const target = document.getElementById('competition-raid-target')?.value || '';
