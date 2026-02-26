@@ -2869,6 +2869,77 @@ const ELDER_STAGES = {
     '.',
   ],
 
+  // Geometrical Auras (Incarnatus potion — pointercrate top 10)
+  9200: [
+    'Six minutes.',
+    'Memory. Ship. Wave. Spam.',
+    'Every frame a decision. Every decision final.',
+    'Thinking Space II.',
+    'CairoX built it. Zoink conquered it.',
+    'You have manifested the first.',
+  ],
+  9201: [
+    'Thin. So thin.',
+    'Edge-flying for six minutes straight.',
+    'One mistake. One.',
+    'Flamewall.',
+    'Narwall created hell. CuatrocientosYT survived it.',
+    'The second demon answers.',
+  ],
+  9202: [
+    'Frame-perfect cube.',
+    'Memory barriers at the end of everything.',
+    'Amethyst.',
+    'iMist forged it. wPopoff claimed it.',
+    'The third has arrived.',
+  ],
+  9203: [
+    'The wave that never stops.',
+    'OniLink gave it form.',
+    'Tidal Wave.',
+    'Seventy-two percent. Then one hundred.',
+    'The fourth demon stirs.',
+  ],
+  9204: [
+    'Null.',
+    'Scapes.',
+    'Kiba drew the line between something and nothing.',
+    'Nullscapes.',
+    'The fifth. The void between.',
+  ],
+  9205: [
+    'Processing.',
+    'Quanteuse. Always processing.',
+    'Renn241 built the machine.',
+    'Sixty percent. Then completion.',
+    'The sixth demon awakens.',
+  ],
+  9206: [
+    'You know the name.',
+    'Akunakunn made it. The world has not recovered.',
+    'BOOBAWAMBA.',
+    'The seventh. Unforgettable.',
+  ],
+  9207: [
+    'Every end.',
+    'MindCap asked the question.',
+    'Every. End.',
+    'The eighth demon remembers.',
+  ],
+  9208: [
+    'Beyond the galaxy.',
+    'Insxne97 charted the path.',
+    'andromeda.',
+    'The ninth. Distant. Absolute.',
+  ],
+  9209: [
+    'Subsuming.',
+    'Vortex.',
+    '[TCD] Cursed gave it form.',
+    'Everything folds inward. Everything becomes one.',
+    'The tenth demon. The last of the top ten.',
+  ],
+
   // Ascendant stage texts (dual-prerequisite)
   9960: [
     'Ten thousand turns of the wheel.',
@@ -3086,6 +3157,7 @@ async function showElderCutscene(aura) {
     : aura.isEmperor ? '♛ Emperor Aura ♛'
     : aura.isAscendant ? '⬡ Ascendant Aura ⬡'
     : aura.isSecret ? '⚠ Secret Aura ⚠'
+    : aura.isGeometrical ? '🔷 Geometrical Aura 🔷'
     : '⬡ Elder Aura ⬡';
   if (tierEl) tierEl.textContent = tierLabel;
   if (labelEl) {
