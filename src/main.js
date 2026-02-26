@@ -166,6 +166,7 @@ function coinsForSalvage(rarity) {
 function renderResult(item) {
   const el = document.getElementById('result');
   const label = document.getElementById('result-label');
+  const catEl = document.getElementById('result-category');
   if (!el || !label) return;
   el.textContent = item.text;
   el.style.fontFamily = `"${item.font}", sans-serif`;
@@ -175,6 +176,24 @@ function renderResult(item) {
   el.style.textShadow = item.textShadow || 'none';
   label.textContent = formatRarity(item.rarity);
   label.className = 'rarity-label';
+  if (catEl) {
+    const cat = item.isEmperor ? '♛ Emperor Aura ♛'
+      : item.isAscendant ? '⬡ Ascendant Aura'
+      : item.isElder ? '⬡ Elder Aura'
+      : item.isSecret || item.rarity === 0 ? '⚠ Secret Aura'
+      : item.isBiome ? '🌍 Biome Aura'
+      : item.isNull ? 'NULL'
+      : '';
+    catEl.textContent = cat;
+    catEl.style.color = item.isEmperor ? '#ffd700'
+      : item.isAscendant ? '#00ddaa'
+      : item.isElder ? 'gold'
+      : item.isSecret || item.rarity === 0 ? '#ff4444'
+      : item.isBiome ? '#88cc44'
+      : item.isNull ? '#666'
+      : '';
+    catEl.style.display = cat ? '' : 'none';
+  }
 }
 
 function renderCoins() {
@@ -2033,7 +2052,16 @@ function renderLockedStorage() {
     .reverse()
     .map((h, i) => {
       const idx = locked.length - 1 - i;
-      return `<li class="history-item history-item--storage" data-locked-index="${idx}">
+      const lineage = h.isEmperor ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>'
+        : h.isElder ? '<span class="lineage-badge" style="color:gold;text-shadow:0 0 8px gold;">ELDER</span>'
+        : h.isAscendant ? '<span class="lineage-badge" style="color:#00ddaa;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>'
+        : '';
+      const tierClass = h.isEmperor ? ' history-item--emperor'
+        : h.isElder ? ' history-item--elder'
+        : h.isAscendant ? ' history-item--ascendant'
+        : '';
+      return `<li class="history-item history-item--storage${tierClass}" data-locked-index="${idx}">
+          ${lineage}
           <button type="button" class="unlock-btn" data-locked-index="${idx}" title="Unlock — send back to Past rolls">🔓 Unlock</button>
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
