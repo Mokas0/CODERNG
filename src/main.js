@@ -1184,9 +1184,9 @@ function isUserBanned(username) {
 async function banUser(username) {
   if (!supabase) return 'Supabase not connected.';
   const lower = username.toLowerCase();
-  const { error } = await supabase.from('chat_bans').upsert(
-    { username: lower, banned_by: getHubUsername() || 'admin', banned_at: new Date().toISOString() },
-    { onConflict: 'username' }
+  await supabase.from('chat_bans').delete().eq('username', lower);
+  const { error } = await supabase.from('chat_bans').insert(
+    { username: lower, banned_by: getHubUsername() || 'admin', banned_at: new Date().toISOString() }
   );
   if (error) return error.message || 'Unknown error';
   chatBanCache.add(lower);
