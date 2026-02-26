@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Items &amp; Rarity — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html" class="active">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>Items &amp; Rarity</h1>
+    <p class="subtitle">All 929 items across tiers from common to 9 quadrillion.</p>
+
+    <h2>Overview</h2>
+    <p>CODERNG has <strong>929 total items</strong>, with <strong>893 in the rollable pool</strong>. Items span rarities from 1/2 to 1/9 quadrillion.</p>
+
+    <h2>Tier Breakdown</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th>
+            <th class="num">Count</th>
+            <th>Rarity Range</th>
+            <th>In Roll Pool?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Base Items</td>
+            <td class="num">500</td>
+            <td>1/2 to 1/10B</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>Auras</td>
+            <td class="num">300</td>
+            <td>1/100M to 1/100B</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>Ultra Auras</td>
+            <td class="num">30</td>
+            <td>1/100B to 1/999B</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>Mythic Items</td>
+            <td class="num">63</td>
+            <td>1/1T to 1/9Q</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>Biome Auras</td>
+            <td class="num">16</td>
+            <td>1/1Qi to 1/9.6Qi</td>
+            <td>No (biome events only)</td>
+          </tr>
+          <tr>
+            <td>Secret Auras</td>
+            <td class="num">10</td>
+            <td>SECRET</td>
+            <td>No (Ultraluck only)</td>
+          </tr>
+          <tr>
+            <td>Elder Auras</td>
+            <td class="num">5</td>
+            <td>9Q (display)</td>
+            <td>No (unlock + roll)</td>
+          </tr>
+          <tr>
+            <td>Ascendant Auras</td>
+            <td class="num">5</td>
+            <td>9Q (display)</td>
+            <td>No (unlock + roll)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>How Rarity Works</h2>
+    <p>Items are <strong>log-spaced</strong>. Each item's weight = 1 ÷ rarity. The probability of rolling an item = its weight ÷ total weight of all items in the pool. <strong>Lower rarity number = more common</strong> (e.g., 1/2 is far more common than 1/1000).</p>
+
+    <h2>Mythic Sub-tiers</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sub-tier</th>
+            <th>IDs</th>
+            <th>Rarity Range</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Standard Mythics</td>
+            <td>9000–9037</td>
+            <td>1T – 100T</td>
+          </tr>
+          <tr>
+            <td>Beyond Mythic</td>
+            <td>9038–9047</td>
+            <td>110T – 400T</td>
+          </tr>
+          <tr>
+            <td>Stellar</td>
+            <td>9048–9055</td>
+            <td>430T – 950T</td>
+          </tr>
+          <tr>
+            <td>Quadrillion Gate</td>
+            <td>9056–9067</td>
+            <td>1Q – 4.5Q</td>
+          </tr>
+          <tr>
+            <td>Apex</td>
+            <td>9068–9072</td>
+            <td>5Q – 9Q</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-box roll">
+      <div class="label">Precision Note</div>
+      <p>JavaScript's <code>Number.MAX_SAFE_INTEGER</code> is 9,007,199,254,740,991 (about 9.007×10<sup>15</sup>). All mythic weights must stay below this ceiling for accurate math. The highest rollable mythic — <strong>LAST KNOWN AURA</strong> (ID 9072) — has rarity 9×10<sup>15</sup>, just under the limit.</p>
+    </div>
+
+    <h2>Cutscene Thresholds</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rarity</th>
+            <th>Tier</th>
+            <th>Duration</th>
+            <th>Min View</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>100M+</td>
+            <td>Global</td>
+            <td>3s</td>
+            <td>2.5s</td>
+          </tr>
+          <tr>
+            <td>100B+</td>
+            <td>Universal</td>
+            <td>5s</td>
+            <td>4s</td>
+          </tr>
+          <tr>
+            <td>1T+</td>
+            <td>Mythic</td>
+            <td>7s</td>
+            <td>6s</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

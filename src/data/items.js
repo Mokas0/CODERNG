@@ -877,6 +877,31 @@ export const ASCENDANT_AURAS = [
     rarity: 9_000_000_000_000_000 },
 ];
 
+// Emperor Auras – the hardest tier. Each demands extreme, multi-layered prerequisites.
+// Rarity is 9Q for display only.
+export const EMPEROR_AURAS = [
+  { id: 9970, text: '♛ THE SOVEREIGN ♛',
+    font: 'Cinzel', color: '#ffd700', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 20px #ffd700, 0 0 60px #aa8800, 0 0 100px #664400',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9971, text: '⚜ THE IMMORTAL ⚜',
+    font: 'Cormorant Garamond', color: '#e0e0ff', fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 18px #e0e0ff, 0 0 55px #8888ff, 0 0 90px #4444aa',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9972, text: '✧ THE CONVERGENCE ✧',
+    font: 'DM Serif Display', color: '#ff44ff', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 18px #ff44ff, 0 0 55px #aa00aa, 0 0 90px #550055',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9973, text: '☠ THE RUINBORN ☠',
+    font: 'Unbounded', color: '#ff2222', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 20px #ff2222, 0 0 60px #aa0000, 0 0 100px #550000',
+    rarity: 9_000_000_000_000_000 },
+  { id: 9974, text: '✦♛✦ THE INFINITE ✦♛✦',
+    font: 'Syne', color: '#ffffff', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 25px #ffffff, 0 0 70px #ffd700, 0 0 120px #ff6600',
+    rarity: 9_000_000_000_000_000 },
+];
+
 // Elder Auras – not in the normal roll pool; granted when secret conditions are met.
 // Rarity is 9Q (9_000_000_000_000_000) for display only.
 export const ELDER_AURAS = [

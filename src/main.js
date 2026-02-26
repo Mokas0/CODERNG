@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -52,7 +52,7 @@ function getScraps() {
 function setScraps(n) {
   localStorage.setItem(STORAGE_KEYS.scraps, String(Math.max(0, Math.floor(n))));
   // THE HOARDER check happens after scraps settle; defer so getters are current
-  setTimeout(() => { checkElderUnlock(); checkAscendantUnlock(); }, 0);
+  setTimeout(() => { checkElderUnlock(); checkAscendantUnlock(); checkEmperorUnlock(); }, 0);
 }
 function getGearBonus() {
   return Number(localStorage.getItem(STORAGE_KEYS.gearBonus) || 0);
@@ -855,6 +855,7 @@ function buySnehoItem(itemId) {
   }
   checkElderUnlock();
   checkAscendantUnlock();
+  checkEmperorUnlock();
 }
 
 function renderSneho() {
@@ -1944,25 +1945,29 @@ function renderHistory() {
       const isBiome     = h.isBiome     || false;
       const isElder     = h.isElder     || false;
       const isAscendant = h.isAscendant || false;
+      const isEmperor   = h.isEmperor   || false;
       const isNull      = h.isNull      || false;
       const specialClass = isSecret ? ' history-item--secret'
         : isBiome     ? ' history-item--biome'
+        : isEmperor   ? ' history-item--emperor'
         : isElder     ? ' history-item--elder'
         : isAscendant ? ' history-item--ascendant'
         : isNull      ? ' history-item--null'
         : '';
-      const isSpecial = isSecret || isBiome || isElder || isAscendant || isNull;
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isNull;
       const categoryBadge = isSecret
         ? '<span class="secret-badge">⚠ SECRET</span>'
         : isBiome
           ? `<span class="biome-badge">🌍 BIOME</span>`
-          : isElder
-            ? `<span class="elder-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
-            : isAscendant
-              ? `<span class="ascendant-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
-              : isNull
-                ? `<span class="null-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.2em;color:#666;opacity:.9;">NULL</span>`
-                : '';
+          : isEmperor
+            ? `<span class="emperor-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>`
+            : isElder
+              ? `<span class="elder-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
+              : isAscendant
+                ? `<span class="ascendant-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
+                : isNull
+                  ? `<span class="null-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.2em;color:#666;opacity:.9;">NULL</span>`
+                  : '';
       const lockBtn = `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
       const canSalvage = !isSpecial;
       return `<li class="history-item${specialClass}" data-index="${idx}" data-history-id="${id}">
@@ -2200,6 +2205,13 @@ const MYTHIC_CUTSCENES = {
   9962: { bg: '#0f0f00', accentA: '#ffeeaa', accentB: '#cc9900' },
   9963: { bg: '#1a0800', accentA: '#ff6600', accentB: '#881100' },
   9964: { bg: '#0d0020', accentA: '#cc66ff', accentB: '#550099' },
+
+  // ─── Emperor Auras (extreme-prerequisite unlocks, unskippable cutscene) ────
+  9970: { bg: '#0f0a00', accentA: '#ffd700', accentB: '#aa8800' },
+  9971: { bg: '#060618', accentA: '#e0e0ff', accentB: '#8888ff' },
+  9972: { bg: '#120012', accentA: '#ff44ff', accentB: '#aa00aa' },
+  9973: { bg: '#0f0000', accentA: '#ff2222', accentB: '#aa0000' },
+  9974: { bg: '#0a0a0a', accentA: '#ffffff', accentB: '#ffd700' },
 };
 
 // ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
@@ -2274,6 +2286,50 @@ const ELDER_STAGES = {
     'The cursed and the collected.',
     'Two refusals to let go. One consequence.',
   ],
+
+  // Emperor stage texts (extreme-prerequisite, symbols woven in)
+  9970: [
+    '♛',
+    'Fifty million coins.',
+    'Not spent. Not traded. Held.',
+    'Every single one, a testament to restraint.',
+    'Wealth this absolute bends reality around it.',
+    '♛ The throne was always yours. ♛',
+  ],
+  9971: [
+    '⚜',
+    'One hundred thousand rolls.',
+    'Five thousand fragments preserved.',
+    'Time lost meaning somewhere around the ten-thousandth turn.',
+    'You did not stop. You could not stop.',
+    '⚜ Death forgot about you. ⚜',
+  ],
+  9972: [
+    '✧',
+    'Every Elder. Every Ascendant.',
+    'Ten hidden trials, each meant to be the last.',
+    'You completed them all.',
+    'They were never separate. They were pieces.',
+    '✧ The pieces remember being whole. ✧',
+  ],
+  9973: [
+    '☠',
+    'Five hundred curses endured.',
+    'Ten thousand deals with Sneho.',
+    'Fifty million coins fed to the machine.',
+    'Ruin did not find you. You built it yourself.',
+    '☠ And from the wreckage — something crowned. ☠',
+  ],
+  9974: [
+    '✦',
+    '♛',
+    '✦',
+    'Four Emperors claimed.',
+    'Sovereign. Immortal. Convergence. Ruinborn.',
+    'There is nothing left to prove.',
+    'There is nothing left at all.',
+    '✦♛✦ Except this. ✦♛✦',
+  ],
 };
 
 // ─── Elder Aura helpers ──────────────────────────────────────────────────────
@@ -2340,7 +2396,10 @@ async function showElderCutscene(aura) {
   }
 
   // --- Final aura reveal ---
-  if (tierEl)   tierEl.textContent   = '\u2B21 Elder Aura \u2B21';
+  const tierLabel = aura.isEmperor ? '♛ Emperor Aura ♛'
+    : aura.isAscendant ? '⬡ Ascendant Aura ⬡'
+    : '⬡ Elder Aura ⬡';
+  if (tierEl) tierEl.textContent = tierLabel;
   if (labelEl) {
     labelEl.textContent  = aura.text;
     labelEl.style.fontFamily = `"${aura.font}", serif`;
@@ -2427,7 +2486,10 @@ function getUnlockedElderPool() {
   const ascendantItems = ASCENDANT_AURAS
     .filter(a => unlocked.includes(a.id) && !received.includes(a.id))
     .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isAscendant: true }));
-  return [...elderItems, ...ascendantItems];
+  const emperorItems = EMPEROR_AURAS
+    .filter(a => unlocked.includes(a.id) && !received.includes(a.id))
+    .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isEmperor: true }));
+  return [...elderItems, ...ascendantItems, ...emperorItems];
 }
 
 // Check elder conditions — adds to unlocked pool (does NOT auto-grant)
@@ -2474,6 +2536,39 @@ function checkAscendantUnlock() {
     if (aura.id === 9962 && spent >= 1000000 && rolls >= 10000)  meets = true; // THE ABSOLUTE
     if (aura.id === 9963 && sneho >= 1000  && spent >= 1000000)  meets = true; // THE RELENTLESS
     if (aura.id === 9964 && curses >= 100  && scraps >= 500)     meets = true; // THE OMNISCIENT
+    if (meets) markElderUnlocked(aura.id);
+  }
+}
+
+// Check emperor conditions — adds to unlocked pool (does NOT auto-grant)
+function checkEmperorUnlock() {
+  const received = getElderReceived();
+  const unlocked = getElderUnlocked();
+  const pending  = EMPEROR_AURAS.filter(a => !received.includes(a.id) && !unlocked.includes(a.id));
+  if (!pending.length) return;
+
+  const sneho  = getElderSnehoTotal();
+  const rolls  = getElderRollTotal();
+  const curses = getElderCurseTotal();
+  const spent  = getElderCoinsSpent();
+  const scraps = getScraps();
+  const coins  = getCoins();
+
+  const allElderIds     = ELDER_AURAS.map(a => a.id);
+  const allAscendantIds = ASCENDANT_AURAS.map(a => a.id);
+  const hasAllElders     = allElderIds.every(id => received.includes(id));
+  const hasAllAscendants = allAscendantIds.every(id => received.includes(id));
+
+  const otherEmperorIds = [9970, 9971, 9972, 9973];
+  const hasAllOtherEmperors = otherEmperorIds.every(id => received.includes(id));
+
+  for (const aura of pending) {
+    let meets = false;
+    if (aura.id === 9970 && coins >= 50_000_000)                                  meets = true; // ♛ THE SOVEREIGN ♛
+    if (aura.id === 9971 && rolls >= 100_000 && scraps >= 5_000)                   meets = true; // ⚜ THE IMMORTAL ⚜
+    if (aura.id === 9972 && hasAllElders && hasAllAscendants)                       meets = true; // ✧ THE CONVERGENCE ✧
+    if (aura.id === 9973 && curses >= 500 && sneho >= 10_000 && spent >= 50_000_000) meets = true; // ☠ THE RUINBORN ☠
+    if (aura.id === 9974 && hasAllOtherEmperors)                                    meets = true; // ✦♛✦ THE INFINITE ✦♛✦
     if (meets) markElderUnlocked(aura.id);
   }
 }
@@ -2708,18 +2803,20 @@ async function roll() {
 
   if (mult > 1) setLuckMultiplier(1);
 
-  // ── Elder / Ascendant rolled ───────────────────────────────────────────────
-  if (item.isElder || item.isAscendant) {
+  // ── Elder / Ascendant / Emperor rolled ──────────────────────────────────────
+  if (item.isElder || item.isAscendant || item.isEmperor) {
     markElderReceived(item.id);
+    const tierTag = item.isEmperor ? 'emperor' : item.isAscendant ? 'ascendant' : 'elder';
     const histE = getHistory();
     histE.push({
-      historyId: `${Date.now()}-${item.isElder ? 'elder' : 'ascendant'}-${item.id}`,
+      historyId: `${Date.now()}-${tierTag}-${item.id}`,
       id: item.id, text: item.text, font: item.font,
       color: item.color, fontWeight: item.fontWeight,
       fontStyle: item.fontStyle, textShadow: item.textShadow,
       rarity: item.rarity,
       isElder: item.isElder || false,
       isAscendant: item.isAscendant || false,
+      isEmperor: item.isEmperor || false,
     });
     setHistory(histE);
     renderResult(item);
@@ -2730,7 +2827,8 @@ async function roll() {
     if (rollBtn) rollBtn.disabled = false;
     checkElderUnlock();
     checkAscendantUnlock();
-    await showElderCutscene(item); // manages isAnimating internally
+    checkEmperorUnlock();
+    await showElderCutscene(item);
     return;
   }
   // ── Normal roll ───────────────────────────────────────────────────────────
@@ -2800,6 +2898,7 @@ async function roll() {
   if (rollBtn) rollBtn.disabled = false;
   checkElderUnlock();
   checkAscendantUnlock();
+  checkEmperorUnlock();
 }
 
 function buyLuck() {
@@ -2843,7 +2942,7 @@ function submitAdminCode() {
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
+    const all = [...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
@@ -2855,7 +2954,7 @@ function submitAdminCode() {
     return;
   }
 
-  // "unlock <id>" — add elder/ascendant to the rollable pool
+  // "unlock <id>" — add elder/ascendant/emperor to the rollable pool
   if (code.startsWith('unlock ')) {
     const id = parseInt(code.slice(7).trim(), 10);
     const all = [...ELDER_AURAS, ...ASCENDANT_AURAS];
@@ -3339,20 +3438,20 @@ init();
 
 // ─── Dev / testing helpers (browser console) ─────────────────────────────────
 window.__rng = {
-  /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9950) */
+  /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) */
   cutscene(id) {
-    const all = [...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
+    const all = [...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
     showElderCutscene(aura);
   },
-  /** Add an elder/ascendant to the rollable pool by ID.  e.g. __rng.unlock(9950) */
+  /** Add an elder/ascendant/emperor to the rollable pool by ID.  e.g. __rng.unlock(9970) */
   unlock(id) {
     markElderUnlocked(id);
     console.log(`[__rng] Unlocked aura ${id} — it will now appear in rolls.`);
   },
-  /** List all elder & ascendant IDs. */
+  /** List all elder, ascendant & emperor IDs. */
   list() {
-    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS].map(a => ({ id: a.id, text: a.text })));
+    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS, ...EMPEROR_AURAS].map(a => ({ id: a.id, text: a.text })));
   },
 };

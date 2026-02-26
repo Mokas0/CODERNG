@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Biomes — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html" class="active">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>Global Biomes</h1>
+    <p class="subtitle">Temporary world events that unlock exclusive auras.</p>
+
+    <h2>How Biomes Work</h2>
+    <ul>
+      <li>Biomes are global events (same for all players, powered by Supabase)</li>
+      <li>A Discord bot triggers new biomes on a schedule</li>
+      <li>When active, a banner appears with the biome type and countdown</li>
+      <li>During an active biome, every roll has a <strong>1/500,000</strong> chance to trigger a bonus biome aura roll</li>
+      <li><strong>NULL</strong> biome has a higher <strong>1/10,000</strong> chance</li>
+      <li>Biome auras are <strong>NOT</strong> in the normal roll pool — only obtainable during events</li>
+    </ul>
+
+    <h2>Common Biomes</h2>
+    <p><em>1/5 chance per minute</em></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Biome</th>
+            <th>Emoji</th>
+            <th>Aura 1 (ID, Name, Rarity)</th>
+            <th>Aura 2 (ID, Name, Rarity)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Volcanic Surge</td>
+            <td>🌋</td>
+            <td>9910 MAGMA SOVEREIGN (1Qi)</td>
+            <td>9911 PYROCLAST ETERNAL (1.5Qi)</td>
+          </tr>
+          <tr>
+            <td>Celestial Alignment</td>
+            <td>✨</td>
+            <td>9912 STAR COURT (2Qi)</td>
+            <td>9913 NEBULA IMPERIUM (2.5Qi)</td>
+          </tr>
+          <tr>
+            <td>Void Convergence</td>
+            <td>🌑</td>
+            <td>9914 VOID ABSOLUTE (3Qi)</td>
+            <td>9915 THE UNBORN (3.5Qi)</td>
+          </tr>
+          <tr>
+            <td>Crystal Resonance</td>
+            <td>💎</td>
+            <td>9916 PRISM INFINITY (4Qi)</td>
+            <td>9917 GLACIAL GENESIS (5Qi)</td>
+          </tr>
+          <tr>
+            <td>Tempest Protocol</td>
+            <td>⚡</td>
+            <td>9918 THUNDER PRIME (6Qi)</td>
+            <td>9919 STATIC DEITY (8Qi)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Rare Biomes</h2>
+    <p><em>1/10,000 chance per minute</em></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Biome</th>
+            <th>Emoji</th>
+            <th>Aura 1 (ID, Name, Rarity)</th>
+            <th>Aura 2 (ID, Name, Rarity)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Divine Collapse</td>
+            <td>⚱️</td>
+            <td>9920 APOTHEOSIS (9.1Qi)</td>
+            <td>9921 THE FALLEN GOD (9.2Qi)</td>
+          </tr>
+          <tr>
+            <td>Astral Fracture</td>
+            <td>🌌</td>
+            <td>9922 STELLAR BREACH (9.3Qi)</td>
+            <td>9923 THE LAST STAR (9.4Qi)</td>
+          </tr>
+          <tr>
+            <td>Primordial Storm</td>
+            <td>🌪️</td>
+            <td>9924 CHAOS SOVEREIGN (9.5Qi)</td>
+            <td>9925 FIRST TEMPEST (9.6Qi)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>NULL Biome</h2>
+    <p><em>1/10,000 per minute</em></p>
+    <ul>
+      <li>One unique aura: <strong>ID 9930 NOTHING</strong> (9Q rarity)</li>
+      <li>Has <code>isNull: true</code> flag</li>
+      <li>Higher roll chance (1/10,000 vs 1/500,000) during the event</li>
+      <li>Special void-themed cutscene</li>
+    </ul>
+
+    <div class="info-box accent">
+      <div class="label">Rarity Note</div>
+      <p>Biome aura rarities are in the quintillion range (above <code>MAX_SAFE_INTEGER</code>). These values are for display only and don't affect weight calculations since biome auras use a flat 1/500,000 roll chance instead.</p>
+    </div>
+  </main>
+</body>
+</html>

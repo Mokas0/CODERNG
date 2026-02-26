@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Potions — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html" class="active">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>Potions</h1>
+    <p class="subtitle">Buy potions to stash them in your inventory, then use them before a big roll.</p>
+
+    <h2>How the Inventory Works</h2>
+    <ul>
+      <li>Buying a potion adds it to your <strong>Potion Stash</strong></li>
+      <li>Potions stay in the stash until you choose to use them</li>
+      <li><strong>"Use 1"</strong> applies a single potion's luck bonus</li>
+      <li><strong>"Use All"</strong> dumps your entire stash into luck at once</li>
+      <li>Luck resets to 1× after you roll, so use potions right before rolling</li>
+    </ul>
+
+    <h2>Regular Shop Potions</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Emoji</th>
+            <th>Name</th>
+            <th class="num">Cost</th>
+            <th class="num">Luck Bonus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🧪</td>
+            <td>Minor Luck Potion</td>
+            <td class="num">25</td>
+            <td class="num roll">+50</td>
+          </tr>
+          <tr>
+            <td>⚗️</td>
+            <td>Luck Potion</td>
+            <td class="num">50</td>
+            <td class="num roll">+150</td>
+          </tr>
+          <tr>
+            <td>🔮</td>
+            <td>Greater Luck Potion</td>
+            <td class="num">120</td>
+            <td class="num roll">+400</td>
+          </tr>
+          <tr>
+            <td>✨</td>
+            <td>Supreme Luck Elixir</td>
+            <td class="num">300</td>
+            <td class="num roll">+1,200</td>
+          </tr>
+          <tr>
+            <td>🌟</td>
+            <td>Mythic Fortune Brew</td>
+            <td class="num">700</td>
+            <td class="num roll">+3,500</td>
+          </tr>
+          <tr>
+            <td>👑</td>
+            <td>Legendary Luck Elixir</td>
+            <td class="num">5,000</td>
+            <td class="num roll">+10,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p><em>Legendary has a 0.8% chance to appear per shop rotation.</em></p>
+
+    <h2>Benny-Exclusive Potions</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Emoji</th>
+            <th>Name</th>
+            <th class="num">Cost</th>
+            <th class="num">Luck Bonus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🎒</td>
+            <td>Benny's Bargain Brew</td>
+            <td class="num">8</td>
+            <td class="num roll">+30</td>
+          </tr>
+          <tr>
+            <td>🫙</td>
+            <td>Old Road Tonic</td>
+            <td class="num">18</td>
+            <td class="num roll">+80</td>
+          </tr>
+          <tr>
+            <td>🔩</td>
+            <td>Crafter's Draft</td>
+            <td class="num">75</td>
+            <td class="num roll">+350</td>
+          </tr>
+          <tr>
+            <td>⚡</td>
+            <td>Ultraluck Potion</td>
+            <td class="num">5,000</td>
+            <td class="num roll">+50,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="info-box gold">
+      <div class="label">Secret Aura Chance</div>
+      <p>The Ultraluck Potion also has a <strong>1-in-10,000,000</strong> chance to trigger a <a href="/pages/secrets.html">Secret Aura</a> each time it's used.</p>
+    </div>
+
+    <h2>Strategy Tips</h2>
+    <ul>
+      <li>Buy cheap potions across multiple shop rotations and stockpile</li>
+      <li>Use All before your next roll for maximum luck</li>
+      <li>Benny's Bargain Brew is the best luck-per-coin deal at <strong>3.75 luck/coin</strong></li>
+      <li>The Legendary Elixir is rare but very powerful when it appears</li>
+    </ul>
+  </main>
+</body>
+</html>

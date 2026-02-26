@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Shops — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html" class="active">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>All Shops</h1>
+    <p class="subtitle">Five different shops, each with unique mechanics.</p>
+
+    <h2>Regular Potion Shop</h2>
+    <ul>
+      <li><strong>Rotation:</strong> every 5 minutes</li>
+      <li>Offers 3–4 random potions from the base pool</li>
+      <li>Prices randomly discounted 85–100% of base</li>
+      <li>0.8% chance per rotation to include the Legendary Luck Elixir</li>
+      <li>Potions go to your inventory (use when ready)</li>
+    </ul>
+
+    <h2>Benny the Wanderer</h2>
+    <ul>
+      <li>Appears randomly within each 60-minute window</li>
+      <li>No warning — you have to notice the popup</li>
+      <li>Sells all regular potions at 90% cost</li>
+      <li>Has 4 exclusive potions not sold anywhere else:</li>
+    </ul>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th class="num">Cost</th>
+            <th class="num">Luck Bonus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🎒 Benny's Bargain Brew</td>
+            <td class="num">8</td>
+            <td class="num roll">+30</td>
+          </tr>
+          <tr>
+            <td>🫙 Old Road Tonic</td>
+            <td class="num">18</td>
+            <td class="num roll">+80</td>
+          </tr>
+          <tr>
+            <td>🔩 Crafter's Draft</td>
+            <td class="num">75</td>
+            <td class="num roll">+350</td>
+          </tr>
+          <tr>
+            <td>⚡ Ultraluck Potion</td>
+            <td class="num">5,000</td>
+            <td class="num roll">+50,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Best luck-per-coin value in the game.</p>
+
+    <h2>Sneho's Forbidden Wares</h2>
+    <p>Rotation: every 10 minutes. Offers 3 random items from a 7-item pool. <strong>GAMBLE:</strong> each item has a cursed chance — if cursed, you get negative luck instead. Effect applies <strong>immediately</strong> (not inventoried).</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Emoji</th>
+            <th class="num">Cost</th>
+            <th class="num">Blessed (+luck)</th>
+            <th class="num">Cursed (−luck)</th>
+            <th class="num">Curse Chance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Shadowed Vial</td>
+            <td>🫗</td>
+            <td class="num">8</td>
+            <td class="num roll">+25</td>
+            <td class="num danger">−15</td>
+            <td class="num">50%</td>
+          </tr>
+          <tr>
+            <td>Demon's Brew</td>
+            <td>😈</td>
+            <td class="num">30</td>
+            <td class="num roll">+80</td>
+            <td class="num danger">−50</td>
+            <td class="num">40%</td>
+          </tr>
+          <tr>
+            <td>Void Essence</td>
+            <td>🕳️</td>
+            <td class="num">150</td>
+            <td class="num roll">+350</td>
+            <td class="num danger">−200</td>
+            <td class="num">30%</td>
+          </tr>
+          <tr>
+            <td>Blood Moon Extract</td>
+            <td>🌑</td>
+            <td class="num">800</td>
+            <td class="num roll">+1,200</td>
+            <td class="num danger">−700</td>
+            <td class="num">25%</td>
+          </tr>
+          <tr>
+            <td>Forbidden Pact Seal</td>
+            <td>📜</td>
+            <td class="num">5,000</td>
+            <td class="num roll">+5,000</td>
+            <td class="num danger">−3,000</td>
+            <td class="num">20%</td>
+          </tr>
+          <tr>
+            <td>Cursed Coin</td>
+            <td>🪙</td>
+            <td class="num">50</td>
+            <td class="num roll">+60</td>
+            <td class="num danger">−40</td>
+            <td class="num">65%</td>
+          </tr>
+          <tr>
+            <td>Hex Flask</td>
+            <td>💀</td>
+            <td class="num">400</td>
+            <td class="num roll">+700</td>
+            <td class="num danger">−400</td>
+            <td class="num">35%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Theo's Workshop</h2>
+    <p>Currency: <strong>Scraps</strong> (earned from salvaging). Permanent luck bonuses (gear bonus).</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Emoji</th>
+            <th class="num">Luck Bonus</th>
+            <th class="num">Scrap Cost</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Worn Gear</td>
+            <td>⚙️</td>
+            <td class="num roll">+5</td>
+            <td class="num">10 scraps</td>
+            <td>A rusty old gear. Still spins.</td>
+          </tr>
+          <tr>
+            <td>Iron Gear</td>
+            <td>🔩</td>
+            <td class="num roll">+12</td>
+            <td class="num">30 scraps</td>
+            <td>Solid iron. Noticeably luckier.</td>
+          </tr>
+          <tr>
+            <td>Steel Gear</td>
+            <td>🔧</td>
+            <td class="num roll">+35</td>
+            <td class="num">80 scraps</td>
+            <td>Precision-crafted steel.</td>
+          </tr>
+          <tr>
+            <td>Enchanted Gear</td>
+            <td>✨</td>
+            <td class="num roll">+100</td>
+            <td class="num">200 scraps</td>
+            <td>Glows faintly. Luck surges.</td>
+          </tr>
+          <tr>
+            <td>Divine Gear</td>
+            <td>🌟</td>
+            <td class="num roll">+250</td>
+            <td class="num">600 scraps</td>
+            <td>Radiates raw fortune.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="info-box accent">
+      <div class="label">Gear Bonus</div>
+      <p>All 5 gears = <strong>+402 permanent luck</strong>. Gear bonus stacks with potions.</p>
+    </div>
+
+    <h2>PayPal Store</h2>
+    <p>Real-money purchases.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th class="num">Price</th>
+            <th>Reward</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🪙 Coin Pack S</td>
+            <td class="num">$0.49</td>
+            <td>5,000 coins</td>
+          </tr>
+          <tr>
+            <td>💰 Coin Pack M</td>
+            <td class="num">$2.49</td>
+            <td>30,000 coins</td>
+          </tr>
+          <tr>
+            <td>💎 Coin Pack L</td>
+            <td class="num">$4.99</td>
+            <td>75,000 coins</td>
+          </tr>
+          <tr>
+            <td>🍀 Luck Boost S</td>
+            <td class="num">$0.99</td>
+            <td>×100 luck</td>
+          </tr>
+          <tr>
+            <td>⚡ Luck Boost L</td>
+            <td class="num">$2.49</td>
+            <td>×1,000 luck</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p><em>Luck boosts from the store apply immediately (not inventoried).</em></p>
+  </main>
+</body>
+</html>

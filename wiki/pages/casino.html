@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casino — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html" class="active">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>Casino</h1>
+    <p class="subtitle">Wager coins or auras against other players.</p>
+
+    <h2>Getting Started</h2>
+    <ul>
+      <li>The Casino requires a username (shared with Hub). Set one in the Casino tab.</li>
+      <li>Your Casino wallet is separate from your main coins — deposit to play, withdraw to take winnings.</li>
+      <li>The Casino uses Supabase for real-time multiplayer.</li>
+    </ul>
+
+    <h2>Coinflip</h2>
+    <ul>
+      <li>Create a challenge: pick an amount and a side (Heads or Tails)</li>
+      <li>Another player accepts and matches the stake</li>
+      <li>A random flip decides the winner — winner takes the full pot</li>
+      <li>50/50 odds, pure luck</li>
+    </ul>
+
+    <h2>Itemflip</h2>
+    <ul>
+      <li>Create a challenge: stake an aura from your Casino vault</li>
+      <li>Another player accepts with an aura of equal or higher rarity</li>
+      <li>Random winner takes both auras</li>
+      <li>Great for gambling rare auras</li>
+    </ul>
+
+    <h2>Aura Vault</h2>
+    <ul>
+      <li>Deposit auras from your Past Rolls or Locked Storage into the Casino vault</li>
+      <li>Withdraw auras from the vault back to your local storage</li>
+      <li>Vault is stored server-side (Supabase) — persists across devices if linked</li>
+    </ul>
+
+    <h2>Link Code System</h2>
+    <ul>
+      <li>Generate a 6-character link code in the Casino</li>
+      <li>Use the code in the Bazaar to link your Casino vault to your Bazaar account</li>
+      <li>Codes expire after ~10 minutes</li>
+      <li>Allows transferring auras between Casino and Bazaar</li>
+    </ul>
+  </main>
+</body>
+</html>

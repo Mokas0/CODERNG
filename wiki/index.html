@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home — CODERNG Wiki</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html" class="active">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>CODERNG Wiki</h1>
+    <p class="subtitle">The complete guide to every mechanic, item, and secret in CODERNG — the ultimate RNG aura roller.</p>
+
+    <div class="stat-row">
+      <div class="stat">
+        <span class="stat-value">929</span>
+        <span class="stat-label">Total Items</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">893</span>
+        <span class="stat-label">Rollable Items</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">8</span>
+        <span class="stat-label">Rarity Tiers</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">5</span>
+        <span class="stat-label">Shops</span>
+      </div>
+    </div>
+
+    <h2>Explore</h2>
+    <div class="card-grid">
+      <a href="/pages/rolling.html" class="card">
+        <span class="card-icon">🎲</span>
+        <span class="card-title">Rolling &amp; Luck</span>
+        <span class="card-desc">How the weighted random system and luck compression work</span>
+      </a>
+      <a href="/pages/items.html" class="card">
+        <span class="card-icon">📦</span>
+        <span class="card-title">Items &amp; Rarity</span>
+        <span class="card-desc">All 929 items across 8 tiers from common to 9Q</span>
+      </a>
+      <a href="/pages/currencies.html" class="card">
+        <span class="card-icon">💰</span>
+        <span class="card-title">Currencies</span>
+        <span class="card-desc">Coins, scraps, and gear bonuses explained</span>
+      </a>
+      <a href="/pages/shops.html" class="card">
+        <span class="card-icon">🛒</span>
+        <span class="card-title">All Shops</span>
+        <span class="card-desc">Regular shop, Benny, Sneho, Theo, and the Store</span>
+      </a>
+      <a href="/pages/potions.html" class="card">
+        <span class="card-icon">🧪</span>
+        <span class="card-title">Potions</span>
+        <span class="card-desc">Full potion list and the inventory system</span>
+      </a>
+      <a href="/pages/biomes.html" class="card">
+        <span class="card-icon">🌍</span>
+        <span class="card-title">Biomes</span>
+        <span class="card-desc">Global biome events and exclusive auras</span>
+      </a>
+      <a href="/pages/elders.html" class="card">
+        <span class="card-icon">👑</span>
+        <span class="card-title">Elders &amp; Ascendants</span>
+        <span class="card-desc">Secret unlock conditions for the rarest auras</span>
+      </a>
+      <a href="/pages/secrets.html" class="card">
+        <span class="card-icon">⚠</span>
+        <span class="card-title">Secret Auras</span>
+        <span class="card-desc">Ultraluck-triggered hidden auras</span>
+      </a>
+      <a href="/pages/casino.html" class="card">
+        <span class="card-icon">🎰</span>
+        <span class="card-title">Casino</span>
+        <span class="card-desc">Coinflip and Itemflip wagering</span>
+      </a>
+      <a href="/pages/bazaar.html" class="card">
+        <span class="card-icon">🏪</span>
+        <span class="card-title">Bazaar</span>
+        <span class="card-desc">Player-to-player aura marketplace</span>
+      </a>
+      <a href="/pages/quests.html" class="card">
+        <span class="card-icon">📋</span>
+        <span class="card-title">Quests</span>
+        <span class="card-desc">Daily and weekly missions with coin rewards</span>
+      </a>
+      <a href="/pages/tycoon.html" class="card">
+        <span class="card-icon">🏭</span>
+        <span class="card-title">Tycoon</span>
+        <span class="card-desc">The coin clicker minigame</span>
+      </a>
+    </div>
+
+    <h2>Game Overview</h2>
+    <p>CODERNG is a browser-based RNG aura rolling game. Players roll for items spanning rarities from 1/2 to 1/9 quadrillion. The game features multiple shops, a luck system with potions and gear, global biome events, hidden Elder and Secret auras, a casino, a player marketplace, quests, and a tycoon clicker.</p>
+    <p>Everything runs in the browser with Supabase powering multiplayer features.</p>
+  </main>
+</body>
+</html>

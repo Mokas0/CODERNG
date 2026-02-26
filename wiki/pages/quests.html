@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quests — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html" class="active">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>Quest Board</h1>
+    <p class="subtitle">Complete daily and weekly missions for massive coin rewards.</p>
+
+    <h2>Daily Quests</h2>
+    <ul>
+      <li>3 random quests from a pool of 12</li>
+      <li>Reset every 24 hours</li>
+      <li>Seeded shuffle ensures same quests per period for all players</li>
+    </ul>
+
+    <h2>Weekly Quests</h2>
+    <ul>
+      <li>2 random quests from a pool of 8</li>
+      <li>Reset every 7 days</li>
+      <li>Higher rewards than daily quests</li>
+    </ul>
+
+    <h2>Quest Types</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Tracking</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>roll</code></td>
+            <td>Cumulative</td>
+            <td>Count total rolls</td>
+          </tr>
+          <tr>
+            <td><code>salvage</code></td>
+            <td>Cumulative</td>
+            <td>Count salvaged items</td>
+          </tr>
+          <tr>
+            <td><code>sneho_buy</code></td>
+            <td>Cumulative</td>
+            <td>Count Sneho purchases</td>
+          </tr>
+          <tr>
+            <td><code>sneho_curse</code></td>
+            <td>Cumulative</td>
+            <td>Count curses received from Sneho</td>
+          </tr>
+          <tr>
+            <td><code>shop_spend</code></td>
+            <td>Cumulative</td>
+            <td>Total coins spent in shops</td>
+          </tr>
+          <tr>
+            <td><code>earn_scraps</code></td>
+            <td>Cumulative</td>
+            <td>Total scraps earned</td>
+          </tr>
+          <tr>
+            <td><code>potion_buy</code></td>
+            <td>Cumulative</td>
+            <td>Count potions purchased</td>
+          </tr>
+          <tr>
+            <td><code>luck_reach</code></td>
+            <td>Peak value</td>
+            <td>Reach a specific luck multiplier</td>
+          </tr>
+          <tr>
+            <td><code>rarity_hit</code></td>
+            <td>Peak value</td>
+            <td>Roll an item of a specific rarity or higher</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-box accent">
+      <div class="label">Peak-Value Quests</div>
+      <p>Peak-value quests (<code>luck_reach</code>, <code>rarity_hit</code>) track your <strong>best single value</strong>, not cumulative totals. Rolling a 1B rarity item once is enough — you don't need to do it multiple times.</p>
+    </div>
+
+    <h2>Example Daily Quests</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Description</th>
+            <th class="num">Target</th>
+            <th class="num">Reward</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Roll Call</td>
+            <td>Roll 50 times</td>
+            <td class="num">50 rolls</td>
+            <td class="num">500K coins</td>
+          </tr>
+          <tr>
+            <td>Salvager</td>
+            <td>Salvage 20 items</td>
+            <td class="num">20 salvages</td>
+            <td class="num">750K coins</td>
+          </tr>
+          <tr>
+            <td>Lucky Break</td>
+            <td>Reach 25x luck</td>
+            <td class="num">25x luck</td>
+            <td class="num">1M coins</td>
+          </tr>
+          <tr>
+            <td>Sneho Regular</td>
+            <td>Buy 3 items from Sneho</td>
+            <td class="num">3 buys</td>
+            <td class="num">1.2M coins</td>
+          </tr>
+          <tr>
+            <td>Potion Addict</td>
+            <td>Buy 5 potions</td>
+            <td class="num">5 potions</td>
+            <td class="num">1.5M coins</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Example Weekly Quests</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Description</th>
+            <th class="num">Target</th>
+            <th class="num">Reward</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>The Grind</td>
+            <td>Roll 500 times</td>
+            <td class="num">500 rolls</td>
+            <td class="num">10M coins</td>
+          </tr>
+          <tr>
+            <td>High Roller</td>
+            <td>Reach 100x luck</td>
+            <td class="num">100x luck</td>
+            <td class="num">15M coins</td>
+          </tr>
+          <tr>
+            <td>Coin King</td>
+            <td>Spend 5,000 coins in shops</td>
+            <td class="num">5,000 coins</td>
+            <td class="num">10M coins</td>
+          </tr>
+          <tr>
+            <td>Big Hit</td>
+            <td>Roll a 1B+ rarity item</td>
+            <td class="num">1B rarity</td>
+            <td class="num">50M coins</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

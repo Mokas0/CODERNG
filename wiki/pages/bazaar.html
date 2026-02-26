@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bazaar — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html" class="active">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>Bazaar</h1>
+    <p class="subtitle">The player-to-player aura marketplace.</p>
+
+    <h2>Requirements</h2>
+    <ul>
+      <li>Requires sign-in (email/password authentication via Supabase)</li>
+      <li>Separate from the Casino username system</li>
+      <li>Must link your Casino vault using a link code to transfer auras</li>
+    </ul>
+
+    <h2>Coin Wallet</h2>
+    <ul>
+      <li>The Bazaar has its own coin wallet (separate from local coins and Casino wallet)</li>
+      <li>Deposit coins from your local balance to the Bazaar wallet</li>
+      <li>Withdraw Bazaar coins back to local balance</li>
+      <li>All trades use Bazaar coins</li>
+    </ul>
+
+    <h2>Selling Auras</h2>
+    <ul>
+      <li>Import auras from your linked Casino vault into Bazaar inventory</li>
+      <li>Set a price in coins and list the aura for sale</li>
+      <li>Other players can browse and buy your listed auras</li>
+      <li>Cancel a listing at any time to return the aura to inventory</li>
+    </ul>
+
+    <h2>Buying Auras</h2>
+    <ul>
+      <li>Browse auras listed by other players</li>
+      <li>Purchase with Bazaar coins</li>
+      <li>Bought auras go to your Bazaar inventory</li>
+      <li>Transfer to Casino vault, then withdraw to local storage</li>
+    </ul>
+
+    <h2>Flow Overview</h2>
+    <div class="info-box accent">
+      <div class="label">Flow Summary</div>
+      <p><strong>To sell an aura:</strong> Local Storage → Casino Vault → Bazaar Inventory → List for Sale.</p>
+      <p><strong>To buy and use:</strong> Purchase → Bazaar Inventory → Casino Vault → Local Storage.</p>
+    </div>
+  </main>
+</body>
+</html>

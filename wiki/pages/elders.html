@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elders &amp; Ascendants — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html" class="active">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>Elder &amp; Ascendant Auras</h1>
+    <p class="subtitle">The rarest auras in the game, unlocked through secret conditions.</p>
+
+    <h2>How It Works</h2>
+    <ol>
+      <li>Meet the secret condition(s) — checked automatically as you play</li>
+      <li>The aura is "unlocked" and enters the roll pool at 9Q weight (1/9,000,000,000,000,000)</li>
+      <li>You must then actually <strong>ROLL</strong> it — unlocking doesn't grant it</li>
+      <li>Once rolled, it's removed from the pool (you can only get each one once)</li>
+      <li>Rolling triggers an unskippable staged cutscene</li>
+    </ol>
+
+    <h2>Elder Auras</h2>
+    <p>5 total, each requires <strong>ONE</strong> condition</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Condition</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">9950</td>
+            <td>THE GLUTTON</td>
+            <td>Buy 1,000 items from Sneho's shop</td>
+          </tr>
+          <tr>
+            <td class="num">9951</td>
+            <td>THE HOARDER</td>
+            <td>Accumulate 500 scraps</td>
+          </tr>
+          <tr>
+            <td class="num">9952</td>
+            <td>THE ANCIENT</td>
+            <td>Perform 10,000 rolls</td>
+          </tr>
+          <tr>
+            <td class="num">9953</td>
+            <td>THE FORSAKEN</td>
+            <td>Get cursed 100 times (from Sneho items)</td>
+          </tr>
+          <tr>
+            <td class="num">9954</td>
+            <td>THE DEVOTED</td>
+            <td>Spend 1,000,000 coins total</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Ascendant Auras</h2>
+    <p>5 total, each requires <strong>TWO</strong> simultaneous conditions</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Condition 1</th>
+            <th>Condition 2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">9960</td>
+            <td>THE PRIMORDIAL</td>
+            <td>10,000 rolls</td>
+            <td>500 scraps</td>
+          </tr>
+          <tr>
+            <td class="num">9961</td>
+            <td>THE CONDEMNED</td>
+            <td>100 curses</td>
+            <td>1,000 Sneho purchases</td>
+          </tr>
+          <tr>
+            <td class="num">9962</td>
+            <td>THE ABSOLUTE</td>
+            <td>1,000,000 coins spent</td>
+            <td>10,000 rolls</td>
+          </tr>
+          <tr>
+            <td class="num">9963</td>
+            <td>THE RELENTLESS</td>
+            <td>1,000 Sneho purchases</td>
+            <td>1,000,000 coins spent</td>
+          </tr>
+          <tr>
+            <td class="num">9964</td>
+            <td>THE OMNISCIENT</td>
+            <td>100 curses</td>
+            <td>500 scraps</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-box gold">
+      <div class="label">Pro Tip</div>
+      <p>Ascendants are combinations of Elder conditions. If you've unlocked all 5 Elders, you're already close to many Ascendant requirements.</p>
+    </div>
+
+    <h2>Display Rarity</h2>
+    <p>All Elder and Ascendant auras show <strong>9Q</strong> (9,000,000,000,000,000) rarity. This is for display only — once unlocked, their roll weight is 1/9Q which makes them extremely rare even in the pool.</p>
+  </main>
+</body>
+</html>

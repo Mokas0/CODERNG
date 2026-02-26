@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tycoon — CODERNG Wiki</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Menu">☰</button>
+    <a href="/index.html" class="logo">CODERNG <span>Wiki</span></a>
+  </header>
+  <aside class="sidebar">
+    <nav>
+      <a href="/index.html">Home</a>
+      <span class="nav-section">Core Mechanics</span>
+      <a href="/pages/rolling.html">Rolling &amp; Luck</a>
+      <a href="/pages/items.html">Items &amp; Rarity</a>
+      <a href="/pages/currencies.html">Currencies</a>
+      <span class="nav-section">Shops</span>
+      <a href="/pages/shops.html">All Shops</a>
+      <a href="/pages/potions.html">Potions</a>
+      <span class="nav-section">Special Auras</span>
+      <a href="/pages/biomes.html">Biomes</a>
+      <a href="/pages/elders.html">Elders &amp; Ascendants</a>
+      <a href="/pages/secrets.html">Secret Auras</a>
+      <span class="nav-section">Multiplayer</span>
+      <a href="/pages/casino.html">Casino</a>
+      <a href="/pages/bazaar.html">Bazaar</a>
+      <span class="nav-section">Activities</span>
+      <a href="/pages/quests.html">Quests</a>
+      <a href="/pages/tycoon.html" class="active">Tycoon</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <h1>Tycoon</h1>
+    <p class="subtitle">A clicker minigame for earning coins.</p>
+
+    <h2>How It Works</h2>
+    <ul>
+      <li>Click the button to earn coins (Coins Per Click = CPC)</li>
+      <li>Starting CPC: 1</li>
+      <li>Buy upgrades with coins to increase CPC</li>
+      <li>Each upgrade adds +10 CPC</li>
+      <li>Maximum 50 upgrades</li>
+    </ul>
+
+    <h2>Upgrade Costs</h2>
+    <p>Formula: <code>cost = 500 × 1.5<sup>upgradeIndex</sup></code></p>
+    <p>Cost scales exponentially but not too steeply (1.5× per level).</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="num">Upgrade #</th>
+            <th class="num">CPC After</th>
+            <th class="num">Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">1</td>
+            <td class="num">11</td>
+            <td class="num">500</td>
+          </tr>
+          <tr>
+            <td class="num">2</td>
+            <td class="num">21</td>
+            <td class="num">750</td>
+          </tr>
+          <tr>
+            <td class="num">3</td>
+            <td class="num">31</td>
+            <td class="num">1,125</td>
+          </tr>
+          <tr>
+            <td class="num">4</td>
+            <td class="num">41</td>
+            <td class="num">1,688</td>
+          </tr>
+          <tr>
+            <td class="num">5</td>
+            <td class="num">51</td>
+            <td class="num">2,531</td>
+          </tr>
+          <tr>
+            <td class="num">6</td>
+            <td class="num">61</td>
+            <td class="num">3,797</td>
+          </tr>
+          <tr>
+            <td class="num">7</td>
+            <td class="num">71</td>
+            <td class="num">5,695</td>
+          </tr>
+          <tr>
+            <td class="num">8</td>
+            <td class="num">81</td>
+            <td class="num">8,543</td>
+          </tr>
+          <tr>
+            <td class="num">9</td>
+            <td class="num">91</td>
+            <td class="num">12,814</td>
+          </tr>
+          <tr>
+            <td class="num">10</td>
+            <td class="num">101</td>
+            <td class="num">19,222</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Stats Tracked</h2>
+    <ul>
+      <li>Total clicks</li>
+      <li>Total coins earned from tycoon</li>
+      <li>Current CPC</li>
+      <li>Current upgrade level</li>
+    </ul>
+
+    <div class="info-box roll">
+      <div class="label">Max Upgrades</div>
+      <p>At max upgrades (50), CPC = 501. Each click earns 501 coins, making the Tycoon a reliable income source alongside salvaging.</p>
+    </div>
+  </main>
+</body>
+</html>
