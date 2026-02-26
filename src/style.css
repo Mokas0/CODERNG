@@ -112,6 +112,13 @@ body {
   color: var(--text);
 }
 
+.rolls-wrap {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .luck-wrap {
   font-size: 0.875rem;
   color: var(--text-muted);

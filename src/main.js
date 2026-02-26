@@ -182,6 +182,11 @@ function renderCoins() {
   if (el) el.textContent = getCoins().toLocaleString();
 }
 
+function renderRollCount() {
+  const el = document.getElementById('roll-count');
+  if (el) el.textContent = getElderRollTotal().toLocaleString();
+}
+
 function renderLuck() {
   const m = getLuckMultiplier();
   const gear = getGearBonus();
@@ -2792,6 +2797,7 @@ async function roll() {
   // Elder/Ascendant roll tracking (sneho/curse/spent tracked elsewhere)
   const newRolls = getElderRollTotal() + 1;
   localStorage.setItem(STORAGE_KEYS.elderRollTotal, String(newRolls));
+  renderRollCount();
 
   const mult = getLuckMultiplier() + getGearBonus();
   const item = weightedRandom(mult, getUnlockedElderPool());
@@ -3427,6 +3433,7 @@ function init() {
   subscribeActiveBiome();
   advanceShopRotationIfNeeded();
   renderCoins();
+  renderRollCount();
   renderLuck();
   renderHistory();
   renderLockedStorage();
