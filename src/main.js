@@ -2923,17 +2923,22 @@ async function reportRareRoll(item) {
       : item.isElder ? 'ELDER'
       : item.isSecret || item.rarity === 0 ? 'SECRET'
       : null);
-  await supabase.from('rare_rolls').insert({
+  const row = {
     username,
     aura_text: item.text,
     aura_rarity: item.rarity,
-    aura_tier: tierLabel,
     font: item.font || null,
     color: item.color || null,
     font_weight: item.fontWeight || null,
     font_style: item.fontStyle || null,
     text_shadow: item.textShadow || null,
-  });
+  };
+  if (tierLabel) row.aura_tier = tierLabel;
+  const { error } = await supabase.from('rare_rolls').insert(row);
+  if (error && tierLabel) {
+    delete row.aura_tier;
+    await supabase.from('rare_rolls').insert(row);
+  }
 }
 
 async function roll() {
