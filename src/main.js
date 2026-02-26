@@ -27,6 +27,7 @@ const STORAGE_KEYS = {
   questDailyClaimed:  'rng_quest_daily_claimed',
   questWeeklyProg:    'rng_quest_weekly_prog',
   questWeeklyClaimed: 'rng_quest_weekly_claimed',
+  potionInventory:    'rng_potion_inventory',
 };
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
@@ -88,6 +89,14 @@ function getLockedStorage() {
 }
 function setLockedStorage(arr) {
   localStorage.setItem(STORAGE_KEYS.lockedStorage, JSON.stringify(arr));
+}
+
+function getPotionInventory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.potionInventory)) || {}; }
+  catch { return {}; }
+}
+function setPotionInventory(inv) {
+  localStorage.setItem(STORAGE_KEYS.potionInventory, JSON.stringify(inv));
 }
 
 // Migrate old lock-by-id to separate storage (one-time)
@@ -241,6 +250,11 @@ const BENNY_EXCLUSIVE_POTIONS = [
   { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,   luckBonus: 350,   emoji: '🔩', desc: "Concocted from leftover parts. Great deal." },
   { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 50000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable." },
 ];
+
+const ALL_POTIONS_BY_ID = {};
+[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS].forEach(p => {
+  ALL_POTIONS_BY_ID[p.id] = p;
+});
 
 // ——— Sneho's forbidden shop ———
 // Each item has a cursedChance: if the curse triggers the luck effect is negative (cursedPenalty)
@@ -532,15 +546,15 @@ function buyPotion(potionId, fromBenny = false) {
   const potion = pool.find((p) => p.id === potionId);
   if (!potion || getCoins() < potion.cost) return;
   setCoins(getCoins() - potion.cost);
-  setLuckMultiplier(getLuckMultiplier() + potion.luckBonus);
+  const inv = getPotionInventory();
+  inv[potion.id] = (inv[potion.id] || 0) + 1;
+  setPotionInventory(inv);
   addQuestProgress('potion_buy', 1);
   addQuestProgress('shop_spend', potion.cost);
-  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   renderCoins();
-  renderLuck();
   renderShop();
+  renderPotionInventory();
   if (fromBenny) renderBennyShop();
-  if (potion.id === 'potionBennyUltraluck') triggerSecretAura().catch(console.error);
 }
 
 function buyPotionMax(potionId, fromBenny = false) {
@@ -553,14 +567,87 @@ function buyPotionMax(potionId, fromBenny = false) {
   const count = Math.floor(coins / potion.cost);
   if (count < 1) return;
   setCoins(coins - potion.cost * count);
-  setLuckMultiplier(getLuckMultiplier() + potion.luckBonus * count);
+  const inv = getPotionInventory();
+  inv[potion.id] = (inv[potion.id] || 0) + count;
+  setPotionInventory(inv);
   addQuestProgress('potion_buy', count);
   addQuestProgress('shop_spend', potion.cost * count);
-  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   renderCoins();
-  renderLuck();
   renderShop();
+  renderPotionInventory();
   if (fromBenny) renderBennyShop();
+}
+
+function usePotion(potionId) {
+  const inv = getPotionInventory();
+  if (!inv[potionId] || inv[potionId] < 1) return;
+  const potion = ALL_POTIONS_BY_ID[potionId];
+  if (!potion) return;
+  inv[potionId]--;
+  if (inv[potionId] <= 0) delete inv[potionId];
+  setPotionInventory(inv);
+  setLuckMultiplier(getLuckMultiplier() + potion.luckBonus);
+  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
+  if (potion.id === 'potionBennyUltraluck') triggerSecretAura().catch(console.error);
+  renderLuck();
+  renderPotionInventory();
+}
+
+function useAllPotions() {
+  const inv = getPotionInventory();
+  let totalLuck = 0;
+  let hasUltraluck = false;
+  for (const [id, count] of Object.entries(inv)) {
+    const potion = ALL_POTIONS_BY_ID[id];
+    if (!potion || count < 1) continue;
+    totalLuck += potion.luckBonus * count;
+    if (id === 'potionBennyUltraluck') hasUltraluck = true;
+  }
+  if (totalLuck === 0) return;
+  setPotionInventory({});
+  setLuckMultiplier(getLuckMultiplier() + totalLuck);
+  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
+  if (hasUltraluck) triggerSecretAura().catch(console.error);
+  renderLuck();
+  renderPotionInventory();
+}
+
+function renderPotionInventory() {
+  const container = document.getElementById('potion-inventory');
+  if (!container) return;
+  const inv = getPotionInventory();
+  const entries = Object.entries(inv)
+    .map(([id, count]) => ({ id, count, potion: ALL_POTIONS_BY_ID[id] }))
+    .filter(e => e.potion && e.count > 0)
+    .sort((a, b) => a.potion.luckBonus - b.potion.luckBonus);
+
+  if (entries.length === 0) {
+    container.innerHTML = '<p class="potion-inv-empty">No potions in stock. Buy some below!</p>';
+    return;
+  }
+
+  const totalLuck = entries.reduce((s, e) => s + e.potion.luckBonus * e.count, 0);
+  container.innerHTML = `
+    <div class="potion-inv-header">
+      <span>🧪 Potion Stash</span>
+      <span class="potion-inv-total">Total: +${totalLuck.toLocaleString()}× luck</span>
+    </div>
+    <div class="potion-inv-list">${entries.map(e => `
+      <div class="potion-inv-row">
+        <span class="potion-inv-emoji">${e.potion.emoji}</span>
+        <span class="potion-inv-name">${e.potion.name}</span>
+        <span class="potion-inv-count">×${e.count}</span>
+        <span class="potion-inv-bonus">+${(e.potion.luckBonus * e.count).toLocaleString()}× luck</span>
+        <button type="button" class="potion-inv-use-btn" data-potion="${e.id}">Use 1</button>
+      </div>`).join('')}
+    </div>
+    <button type="button" class="potion-inv-use-all-btn" id="potion-use-all">Use All (+${totalLuck.toLocaleString()}×)</button>
+  `;
+
+  container.querySelectorAll('.potion-inv-use-btn').forEach(btn => {
+    btn.addEventListener('click', () => usePotion(btn.dataset.potion));
+  });
+  document.getElementById('potion-use-all')?.addEventListener('click', useAllPotions);
 }
 
 function renderShop() {
@@ -579,7 +666,7 @@ function renderShop() {
         <span class="shop-item-emoji">${p.emoji}</span>
         <div class="shop-item-info">
           <span class="shop-item-name">${p.name}</span>
-          <span class="shop-item-effect">+${p.luckBonus}× luck for next roll</span>
+          <span class="shop-item-effect">+${p.luckBonus.toLocaleString()}× luck</span>
         </div>
         <div class="shop-item-actions">
           <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="false" ${!canBuy ? 'disabled' : ''}>
@@ -667,7 +754,7 @@ function renderBennyShop() {
         <span class="shop-item-emoji">${p.emoji}</span>
         <div class="shop-item-info">
           <span class="shop-item-name">${p.name}</span>
-          <span class="shop-item-effect">+${p.luckBonus}× luck (Benny's price)</span>
+          <span class="shop-item-effect">+${p.luckBonus.toLocaleString()}× luck (Benny's price)</span>
         </div>
         <div class="shop-item-actions">
           <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="true" ${!canBuy ? 'disabled' : ''}>
@@ -2931,11 +3018,11 @@ function renderTycoon() {
 
 // ——— Store (PayPal in-app purchases) ———
 const STORE_PRODUCTS = [
-  { id: 'coin_s', name: 'Coin Pack S',   price: '$0.99', emoji: '🪙', reward: '5,000 coins',    type: 'coins',  amount: 5_000 },
-  { id: 'coin_m', name: 'Coin Pack M',   price: '$4.99', emoji: '💰', reward: '30,000 coins',   type: 'coins',  amount: 30_000 },
-  { id: 'coin_l', name: 'Coin Pack L',   price: '$9.99', emoji: '💎', reward: '75,000 coins',   type: 'coins',  amount: 75_000 },
-  { id: 'luck_s', name: 'Luck Boost S',  price: '$1.99', emoji: '🍀', reward: 'x100 luck',      type: 'luck',   amount: 100 },
-  { id: 'luck_l', name: 'Luck Boost L',  price: '$4.99', emoji: '⚡', reward: 'x1,000 luck',    type: 'luck',   amount: 1_000 },
+  { id: 'coin_s', name: 'Coin Pack S',   price: '$0.49', emoji: '🪙', reward: '5,000 coins',    type: 'coins',  amount: 5_000 },
+  { id: 'coin_m', name: 'Coin Pack M',   price: '$2.49', emoji: '💰', reward: '30,000 coins',   type: 'coins',  amount: 30_000 },
+  { id: 'coin_l', name: 'Coin Pack L',   price: '$4.99', emoji: '💎', reward: '75,000 coins',   type: 'coins',  amount: 75_000 },
+  { id: 'luck_s', name: 'Luck Boost S',  price: '$0.99', emoji: '🍀', reward: 'x100 luck',      type: 'luck',   amount: 100 },
+  { id: 'luck_l', name: 'Luck Boost L',  price: '$2.49', emoji: '⚡', reward: 'x1,000 luck',    type: 'luck',   amount: 1_000 },
 ];
 
 let _paypalReady = false;
@@ -3115,6 +3202,7 @@ function init() {
     if (e.target.id === 'admin-overlay') closeAdminPanel();
   });
 
+  renderPotionInventory();
   renderTheo();
   renderSneho();
   renderQuestBoard();
