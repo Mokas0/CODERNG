@@ -118,13 +118,14 @@ const ELDER_ROLL_WEIGHT = 1 / 9_000_000_000_000_000;
 
 function weightedRandom(multiplier = 1, extraItems = []) {
   // Compress luck logarithmically so high values don't make all items equally likely.
-  // effectiveMult = 1 + log10(luck):
+  // effectiveMult = 1 + 2·log10(luck):
   //   luck=1  → 1.0  (no change — original weights)
-  //   luck=10 → 2.0  (1T mythic still ~1 million× rarer than common)
-  //   luck=100→ 3.0  (1T mythic ~8,000× rarer than common)
-  //   luck=1k → 4.0  (1T mythic ~840× rarer than common)
-  //   luck=15k→ 5.2  (1T mythic ~180× rarer — hard but rollable)
-  const effectiveMult = 1 + Math.log10(Math.max(multiplier, 1));
+  //   luck=10 → 3.0  (1T mythic ~8,000× rarer than common)
+  //   luck=21 → 3.6  (Minor potion — mid-range items noticeably boosted)
+  //   luck=100→ 5.0  (1T mythic ~180× rarer — hard but rollable)
+  //   luck=1k → 7.0  (1T mythic ~25× rarer)
+  //   luck=15k→ 9.4  (1T mythic ~18× rarer — nearly guaranteed)
+  const effectiveMult = 1 + 2 * Math.log10(Math.max(multiplier, 1));
   const pool = [...ITEMS, ...extraItems];
   const weights = pool.map((i) => Math.pow(i.weight, 1 / effectiveMult));
   const total = weights.reduce((s, w) => s + w, 0);
