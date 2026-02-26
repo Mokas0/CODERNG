@@ -978,6 +978,8 @@ const USERNAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
 const ADMIN_EMAIL = 'nicholas.mj.choe@gmail.com'; // bypasses username cooldown
 let hubChatSubscription = null;
 let hubTradesSubscription = null;
+let activeTab = 'past';
+let hubUnreadCount = 0;
 
 function getDeviceToken() {
   let token = localStorage.getItem(DEVICE_TOKEN_KEY);
@@ -1101,6 +1103,22 @@ async function claimUsername(newName) {
 }
 
 const CHAT_KEEP = 50; // max messages kept in DB at once
+
+function updateHubBadge() {
+  const btn = document.querySelector('.tab-btn[data-tab="hub"]');
+  if (!btn) return;
+  let badge = btn.querySelector('.hub-notif-badge');
+  if (hubUnreadCount > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'hub-notif-badge';
+      btn.appendChild(badge);
+    }
+    badge.textContent = hubUnreadCount > 99 ? '99+' : hubUnreadCount;
+  } else if (badge) {
+    badge.remove();
+  }
+}
 
 async function loadHubMessages() {
   const list = document.getElementById('hub-chat-list');
@@ -1880,7 +1898,13 @@ function renderHub() {
   loadHubMessages();
   loadHubTrades();
   if (!hubChatSubscription) {
-    hubChatSubscription = supabase.channel('hub-messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => loadHubMessages()).subscribe();
+    hubChatSubscription = supabase.channel('hub-messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+      loadHubMessages();
+      if (activeTab !== 'hub') {
+        hubUnreadCount++;
+        updateHubBadge();
+      }
+    }).subscribe();
   }
   if (!hubTradesSubscription) {
     hubTradesSubscription = supabase.channel('hub-trades').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trades' }, () => loadHubTrades()).subscribe();
@@ -2046,6 +2070,11 @@ function renderLockedStorage() {
 }
 
 function switchTab(tabName) {
+  activeTab = tabName;
+  if (tabName === 'hub') {
+    hubUnreadCount = 0;
+    updateHubBadge();
+  }
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     const isActive = btn.dataset.tab === tabName;
     btn.classList.toggle('active', isActive);
