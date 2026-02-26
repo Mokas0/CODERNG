@@ -2517,6 +2517,39 @@ function submitAdminCode() {
   const input = document.getElementById('admin-code');
   const msg = document.getElementById('admin-message');
   const code = (input?.value || '').trim().toLowerCase();
+
+  // "test <id>" — fire any aura's cutscene for preview
+  if (code.startsWith('test ')) {
+    const id = parseInt(code.slice(5).trim(), 10);
+    const all = [...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
+    const aura = all.find(a => a.id === id);
+    if (aura) {
+      closeAdminPanel();
+      showElderCutscene(aura);
+    } else {
+      if (msg) msg.textContent = `No aura with ID ${id}.`;
+      if (msg) msg.style.color = 'var(--danger)';
+    }
+    return;
+  }
+
+  // "unlock <id>" — add elder/ascendant to the rollable pool
+  if (code.startsWith('unlock ')) {
+    const id = parseInt(code.slice(7).trim(), 10);
+    const all = [...ELDER_AURAS, ...ASCENDANT_AURAS];
+    const aura = all.find(a => a.id === id);
+    if (aura) {
+      markElderUnlocked(id);
+      if (msg) msg.textContent = `Aura ${id} unlocked — it will now appear in rolls.`;
+      if (msg) msg.style.color = 'var(--roll)';
+      input.value = '';
+    } else {
+      if (msg) msg.textContent = `No Elder/Ascendant with ID ${id}.`;
+      if (msg) msg.style.color = 'var(--danger)';
+    }
+    return;
+  }
+
   if (code === ADMIN_CODE) {
     setCoins(getCoins() + ADMIN_COINS);
     renderCoins();
@@ -2979,3 +3012,23 @@ function init() {
 }
 
 init();
+
+// ─── Dev / testing helpers (browser console) ─────────────────────────────────
+window.__rng = {
+  /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9950) */
+  cutscene(id) {
+    const all = [...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
+    const aura = all.find(a => a.id === id);
+    if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
+    showElderCutscene(aura);
+  },
+  /** Add an elder/ascendant to the rollable pool by ID.  e.g. __rng.unlock(9950) */
+  unlock(id) {
+    markElderUnlocked(id);
+    console.log(`[__rng] Unlocked aura ${id} — it will now appear in rolls.`);
+  },
+  /** List all elder & ascendant IDs. */
+  list() {
+    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS].map(a => ({ id: a.id, text: a.text })));
+  },
+};
