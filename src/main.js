@@ -2068,7 +2068,7 @@ function switchTab(tabName) {
   if (tabName === 'quests') renderQuestBoard();
 }
 
-const RARE_ROLL_THRESHOLD  = 100_000_000;   // Jerry broadcast threshold
+const RARE_ROLL_THRESHOLD  = 1_000_000_000_000;   // Jerry broadcast threshold (1T)
 const GLOBAL_THRESHOLD     = 100_000_000;       // 100M — Global aura animation
 const UNIVERSAL_THRESHOLD  = 100_000_000_000;   // 100B — Universal aura animation
 const MYTHIC_THRESHOLD     = 1_000_000_000_000; // 1T  — Mythic aura animation
