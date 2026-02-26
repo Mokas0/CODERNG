@@ -1182,24 +1182,24 @@ function isUserBanned(username) {
 }
 
 async function banUser(username) {
-  if (!supabase) return false;
+  if (!supabase) return 'Supabase not connected.';
   const lower = username.toLowerCase();
   const { error } = await supabase.from('chat_bans').upsert(
     { username: lower, banned_by: getHubUsername() || 'admin', banned_at: new Date().toISOString() },
     { onConflict: 'username' }
   );
-  if (error) return false;
+  if (error) return error.message || 'Unknown error';
   chatBanCache.add(lower);
-  return true;
+  return null;
 }
 
 async function unbanUser(username) {
-  if (!supabase) return false;
+  if (!supabase) return 'Supabase not connected.';
   const lower = username.toLowerCase();
   const { error } = await supabase.from('chat_bans').delete().eq('username', lower);
-  if (error) return false;
+  if (error) return error.message || 'Unknown error';
   chatBanCache.delete(lower);
-  return true;
+  return null;
 }
 
 async function listBannedUsers() {
@@ -1287,14 +1287,14 @@ async function sendHubMessage() {
     const target = parts.slice(1).join(' ').trim();
 
     if (cmd === '/ban' && target) {
-      const ok = await banUser(target);
-      showChatWarning(ok ? `Banned "${target}" from chat.` : `Failed to ban "${target}". Make sure the chat_bans table exists.`);
+      const err = await banUser(target);
+      showChatWarning(err ? `Failed to ban "${target}": ${err}` : `Banned "${target}" from chat.`);
       input.value = '';
       return;
     }
     if (cmd === '/unban' && target) {
-      const ok = await unbanUser(target);
-      showChatWarning(ok ? `Unbanned "${target}".` : `Failed to unban "${target}".`);
+      const err = await unbanUser(target);
+      showChatWarning(err ? `Failed to unban "${target}": ${err}` : `Unbanned "${target}".`);
       input.value = '';
       return;
     }
