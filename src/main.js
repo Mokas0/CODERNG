@@ -1186,7 +1186,7 @@ async function banUser(username) {
   const lower = username.toLowerCase();
   await supabase.from('chat_bans').delete().eq('username', lower);
   const { error } = await supabase.from('chat_bans').insert(
-    { username: lower, banned_by: getHubUsername() || 'admin', banned_at: new Date().toISOString() }
+    { username: lower, banned_by: getHubUsername() || 'admin', created_at: new Date().toISOString() }
   );
   if (error) return error.message || 'Unknown error';
   chatBanCache.add(lower);
