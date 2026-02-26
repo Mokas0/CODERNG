@@ -2781,6 +2781,18 @@ const MYTHIC_CUTSCENES = {
   9113: { quote: 'It collapsed. Then it un-collapsed. Nobody was prepared.',            bg: '#0a0800', accentA: '#ffcc00', accentB: '#442200' },
   9114: { quote: 'The same number. But wrong. Profoundly, irreversibly wrong.',        bg: '#000000', accentA: '#ffffff', accentB: '#ff0000' },
 
+  // ─── Geometrical Auras (Incarnatus potion, pointercrate top 10) ────────────
+  9200: { quote: 'Six minutes of relentless chaos.',   bg: '#000510', accentA: '#00d4ff', accentB: '#003344' },
+  9201: { quote: 'Thin edge-flying. No room for error.', bg: '#100300', accentA: '#ff4400', accentB: '#550000' },
+  9202: { quote: 'Frame-perfect. Memory barriers.',     bg: '#080008', accentA: '#9966ff', accentB: '#220044' },
+  9203: { quote: 'The wave that never stops.',           bg: '#000510', accentA: '#00aaff', accentB: '#003366' },
+  9204: { quote: 'Nothing. And everything.',            bg: '#050505', accentA: '#666666', accentB: '#111111' },
+  9205: { quote: 'Processing. Always processing.',      bg: '#000a04', accentA: '#00ff88', accentB: '#004422' },
+  9206: { quote: 'You know what this is.',               bg: '#0a000a', accentA: '#ff00ff', accentB: '#440044' },
+  9207: { quote: 'Every end. Every single one.',        bg: '#100800', accentA: '#ffaa00', accentB: '#442200' },
+  9208: { quote: 'Beyond the galaxy.',                  bg: '#080008', accentA: '#aa66ff', accentB: '#220055' },
+  9209: { quote: 'Subsumed. Consumed. One.',            bg: '#100300', accentA: '#ff3300', accentB: '#440000' },
+
   // ─── Elder Auras (hidden condition unlocks, unskippable cutscene) ─────────
   9950: { bg: '#0a0000', accentA: '#cc2200', accentB: '#660000' },
   9951: { bg: '#0a0800', accentA: '#d4af37', accentB: '#886600' },
@@ -3665,10 +3677,24 @@ function submitAdminCode() {
     return;
   }
 
+  // "geodash" or "geodash <id>" — play Geometrical aura cutscene (IDs 9200–9209)
+  if (code === 'geodash' || code.startsWith('geodash ')) {
+    const id = code === 'geodash' ? GEOMETRICAL_AURAS[Math.floor(Math.random() * GEOMETRICAL_AURAS.length)].id : parseInt(code.slice(8).trim(), 10);
+    const aura = GEOMETRICAL_AURAS.find(a => a.id === id);
+    if (aura) {
+      closeAdminPanel();
+      showElderCutscene({ ...aura });
+    } else {
+      if (msg) msg.textContent = `Geometrical ID 9200–9209. Use: geodash or geodash 9200`;
+      if (msg) msg.style.color = 'var(--danger)';
+    }
+    return;
+  }
+
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
+    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
@@ -4175,9 +4201,9 @@ init();
 
 // ─── Dev / testing helpers (browser console) ─────────────────────────────────
 window.__rng = {
-  /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) */
+  /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) or __rng.cutscene(9200) */
   cutscene(id) {
-    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...ITEMS];
+    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
     showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });
