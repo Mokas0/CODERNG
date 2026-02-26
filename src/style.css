@@ -185,10 +185,15 @@ body {
 .result-text {
   margin: 0 0 1.5rem;
   font-size: clamp(1.75rem, 6vw, 3rem);
-  line-height: var(--line-tight);
-  min-height: 1.2em;
+  line-height: 1.3;
+  height: 3.9em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 600;
   transition: font-family 0.2s, color 0.2s;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .roll-btn {
