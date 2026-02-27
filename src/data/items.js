@@ -926,12 +926,27 @@ export const JIA_VOID_AURAS = [
     rarity: -1, isSupremeKing: true, isJiaVoid: true },
 ];
 
+// Void Queen (World 2 only): enemy of the Supreme King; only from Potion of Destruction
+export const VOID_QUEEN_AURA = {
+  id: 10140, text: '♔ THE VOID QUEEN ♔',
+  font: 'Cinzel', color: '#8800cc', fontWeight: '900', fontStyle: 'normal',
+  textShadow: '0 0 30px #aa00ff, 0 0 80px #6600aa, 0 0 140px #330033',
+  rarity: -1, isVoidQueen: true,
+};
+
 // Jia shop: unfathomably rare items (World 2 only, buy with NULL COINS)
 export const JIA_RARE_ITEMS = [
   { id: 10130, text: 'NULL FRAGMENT', font: 'Space Mono', color: '#444444', fontWeight: '700', fontStyle: 'normal', textShadow: 'none', rarity: 1e15, costNullCoins: 80, emoji: '⬛' },
   { id: 10131, text: 'VOID SHARD', font: 'Unbounded', color: '#6600aa', fontWeight: '900', fontStyle: 'normal', textShadow: '0 0 15px #8800ff', rarity: 5e15, costNullCoins: 200, emoji: '💜' },
   { id: 10132, text: 'THE UNSPOKEN', font: 'Cinzel', color: '#ffffff', fontWeight: '900', fontStyle: 'normal', textShadow: '0 0 20px #fff', rarity: 2e16, costNullCoins: 450, emoji: '◇' },
   { id: 10133, text: 'ABSOLUTE ZERO', font: 'JetBrains Mono', color: '#00aaff', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 18px #00ddff', rarity: 1e17, costNullCoins: 900, emoji: '❄' },
+];
+
+// Materials sold by Material Seller (all worlds); ids 20101+ avoid clash with Jia material ids
+export const SELLER_MATERIALS = [
+  { id: 20101, name: 'Herb', costCoins: 5, emoji: '🌿' },
+  { id: 20102, name: 'Empty Vial', costCoins: 12, emoji: '🧪' },
+  { id: 20103, name: 'Luck Essence', costCoins: 35, emoji: '✨' },
 ];
 
 // Tier 2 Auras — only unlockable after receiving THE SUPREME KING. Post-Supreme tier.

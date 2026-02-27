@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, classifyAuraType } from './data/items.js';
+import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, SELLER_MATERIALS, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
@@ -45,6 +45,7 @@ const STORAGE_KEYS = {
   potionInventory: STORAGE_PREFIX + 'potion_inventory',
   competitionType: STORAGE_PREFIX + 'competition_type',
   nullCoins: STORAGE_PREFIX + 'null_coins',
+  materials: STORAGE_PREFIX + 'materials',
 };
 
 const WORLD_CONFIG = {
@@ -84,6 +85,42 @@ function setScraps(n) {
   // THE HOARDER check happens after scraps settle; defer so getters are current
   setTimeout(() => { checkElderUnlock(); checkAscendantUnlock(); checkEmperorUnlock(); }, 0);
 }
+
+function getMaterials() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.materials)) || {}; }
+  catch { return {}; }
+}
+function setMaterials(obj) {
+  localStorage.setItem(STORAGE_KEYS.materials, JSON.stringify(obj));
+}
+function getMaterialCount(id) {
+  const m = getMaterials();
+  return Math.max(0, Math.floor(m[id] || 0));
+}
+function addMaterial(id, n) {
+  if (!n || n < 1) return;
+  const m = getMaterials();
+  m[id] = (m[id] || 0) + n;
+  setMaterials(m);
+}
+function hasMaterials(recipe) {
+  if (!Array.isArray(recipe)) return false;
+  for (const { id, n } of recipe) {
+    if (getMaterialCount(id) < n) return false;
+  }
+  return true;
+}
+function consumeMaterials(recipe) {
+  if (!hasMaterials(recipe)) return false;
+  const m = getMaterials();
+  for (const { id, n } of recipe) {
+    m[id] = Math.max(0, (m[id] || 0) - n);
+    if (m[id] <= 0) delete m[id];
+  }
+  setMaterials(m);
+  return true;
+}
+
 const GEAR_LUCK_CAP = 15_000;
 
 function getGearBonus() {
@@ -670,8 +707,14 @@ const SUPREME_LUCK_POTION = {
 const SUPREME_POTION_APPEAR_CHANCE = 1 / 100;
 const SUPREME_KING_SPAWN_CHANCE = 1 / 1_000;
 
+// Potion of Destruction — crafted from Jia materials (World 2); guarantees Void Queen
+const POTION_OF_DESTRUCTION = {
+  id: 'potionDestruction', name: 'Potion of Destruction', luckBonus: 0, emoji: '💀',
+  desc: 'Use in World 2 to summon THE VOID QUEEN. The enemy of the Supreme King.',
+};
+
 const ALL_POTIONS_BY_ID = {};
-[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION].forEach(p => {
+[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION, POTION_OF_DESTRUCTION].forEach(p => {
   ALL_POTIONS_BY_ID[p.id] = p;
 });
 
@@ -1016,10 +1059,19 @@ function usePotion(potionId) {
   if (!inv[potionId] || inv[potionId] < 1) return;
   const potion = ALL_POTIONS_BY_ID[potionId];
   if (!potion) return;
+  if (potion.id === 'potionDestruction') {
+    if (WORLD_ID !== 2) return; // Only usable in World 2; do not consume
+    inv[potionId]--;
+    if (inv[potionId] <= 0) delete inv[potionId];
+    setPotionInventory(inv);
+    triggerVoidQueen().catch(console.error);
+    renderPotionInventory();
+    return;
+  }
   inv[potionId]--;
   if (inv[potionId] <= 0) delete inv[potionId];
   setPotionInventory(inv);
-  setLuckMultiplier(getLuckMultiplier() + potion.luckBonus);
+  setLuckMultiplier(getLuckMultiplier() + (potion.luckBonus || 0));
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (potion.id === 'potionBennyUltraluck') triggerSecretAura().catch(console.error);
   if (potion.id === 'potionSupremeLuck') triggerSupremeKing().catch(console.error);
@@ -1033,14 +1085,18 @@ function useAllPotions() {
   let hasUltraluck = false;
   let hasSupreme = false;
   for (const [id, count] of Object.entries(inv)) {
+    if (id === 'potionDestruction') continue; // Use individually in World 2 only
     const potion = ALL_POTIONS_BY_ID[id];
     if (!potion || count < 1) continue;
-    totalLuck += potion.luckBonus * count;
+    totalLuck += (potion.luckBonus || 0) * count;
     if (id === 'potionBennyUltraluck') hasUltraluck = true;
     if (id === 'potionSupremeLuck') hasSupreme = true;
   }
   if (totalLuck === 0) return;
-  setPotionInventory({});
+  const toRemove = Object.keys(inv).filter(k => k !== 'potionDestruction');
+  const newInv = {};
+  if (inv.potionDestruction) newInv.potionDestruction = inv.potionDestruction;
+  setPotionInventory(newInv);
   setLuckMultiplier(getLuckMultiplier() + totalLuck);
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (hasUltraluck) triggerSecretAura().catch(console.error);
@@ -1056,27 +1112,30 @@ function renderPotionInventory() {
   const entries = Object.entries(inv)
     .map(([id, count]) => ({ id, count, potion: ALL_POTIONS_BY_ID[id] }))
     .filter(e => e.potion && e.count > 0)
-    .sort((a, b) => a.potion.luckBonus - b.potion.luckBonus);
+    .sort((a, b) => (a.potion.luckBonus || 0) - (b.potion.luckBonus || 0));
 
   if (entries.length === 0) {
     container.innerHTML = '<p class="potion-inv-empty">No potions in stock. Buy some below!</p>';
     return;
   }
 
-  const totalLuck = entries.reduce((s, e) => s + e.potion.luckBonus * e.count, 0);
+  const totalLuck = entries.reduce((s, e) => s + (e.potion.luckBonus || 0) * e.count, 0);
   container.innerHTML = `
     <div class="potion-inv-header">
       <span>🧪 Potion Stash</span>
       <span class="potion-inv-total">Total: +${totalLuck.toLocaleString()}× luck</span>
     </div>
-    <div class="potion-inv-list">${entries.map(e => `
+    <div class="potion-inv-list">${entries.map(e => {
+      const bonusText = (e.potion.luckBonus || 0) > 0 ? `+${(e.potion.luckBonus * e.count).toLocaleString()}× luck` : (e.potion.desc || 'Special effect');
+      return `
       <div class="potion-inv-row">
         <span class="potion-inv-emoji">${e.potion.emoji}</span>
         <span class="potion-inv-name">${e.potion.name}</span>
         <span class="potion-inv-count">×${e.count}</span>
-        <span class="potion-inv-bonus">+${(e.potion.luckBonus * e.count).toLocaleString()}× luck</span>
+        <span class="potion-inv-bonus">${bonusText}</span>
         <button type="button" class="potion-inv-use-btn" data-potion="${e.id}">Use 1</button>
-      </div>`).join('')}
+      </div>`;
+    }).join('')}
     </div>
     <button type="button" class="potion-inv-use-all-btn" id="potion-use-all">Use All (+${totalLuck.toLocaleString()}×)</button>
   `;
@@ -1370,11 +1429,10 @@ function buyJiaRareItem(item) {
   const nc = getNullCoins();
   if (nc < item.costNullCoins) return;
   setNullCoins(nc - item.costNullCoins);
-  if (grantItemById(item.id)) {
-    renderJiaPanel();
-    const balanceEl = document.getElementById('jia-null-coins');
-    if (balanceEl) balanceEl.textContent = getNullCoins().toLocaleString();
-  }
+  addMaterial(item.id, 1);
+  renderJiaPanel();
+  const balanceEl = document.getElementById('jia-null-coins');
+  if (balanceEl) balanceEl.textContent = getNullCoins().toLocaleString();
 }
 
 function renderJiaPanel() {
@@ -1435,6 +1493,121 @@ function renderJiaPanel() {
       btn.addEventListener('click', () => buyJiaVoidPotion());
     });
   }
+}
+
+// ——— Crafter (all worlds: craft potions from materials) ———
+function getMaterialLabel(id) {
+  const j = JIA_RARE_ITEMS.find(i => i.id === id);
+  if (j) return j.text;
+  const s = SELLER_MATERIALS.find(m => m.id === id);
+  if (s) return s.name;
+  return `Material ${id}`;
+}
+
+const CRAFTING_RECIPES = [
+  { id: 'potionDestruction', name: 'Potion of Destruction', outputType: 'potion', outputId: 'potionDestruction', materials: [{ id: 10130, n: 1 }, { id: 10131, n: 1 }, { id: 10132, n: 1 }, { id: 10133, n: 1 }], world: 2 },
+  { id: 'potionMinor', name: 'Minor Luck Potion', outputType: 'potion', outputId: 'potion1', materials: [{ id: 20101, n: 2 }, { id: 20102, n: 1 }] },
+];
+
+function openCrafter() {
+  const overlay = document.getElementById('crafter-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    renderCrafterPanel();
+  }
+}
+
+function closeCrafter() {
+  const overlay = document.getElementById('crafter-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function renderCrafterPanel() {
+  const materialsEl = document.getElementById('crafter-materials');
+  const recipesEl = document.getElementById('crafter-recipes');
+  if (!materialsEl || !recipesEl) return;
+  const mats = getMaterials();
+  const matIds = [...new Set([...JIA_RARE_ITEMS.map(i => i.id), ...SELLER_MATERIALS.map(m => m.id)])];
+  const haveAny = matIds.some(id => (mats[id] || 0) > 0);
+  materialsEl.innerHTML = haveAny
+    ? matIds.filter(id => (mats[id] || 0) > 0).map(id => `<span class="crafter-mat">${getMaterialLabel(id)}: ${mats[id]}</span>`).join(' · ')
+    : '<p class="tab-desc">No materials yet. Buy from the Material Seller or from Jia (World 2).</p>';
+  const recipes = CRAFTING_RECIPES.filter(r => !r.world || r.world === WORLD_ID);
+  recipesEl.innerHTML = recipes.map(rec => {
+    const canCraft = hasMaterials(rec.materials);
+    const reqText = rec.materials.map(({ id, n }) => `${n}× ${getMaterialLabel(id)}`).join(', ');
+    return `<div class="shop-item crafter-recipe">
+      <div class="crafter-recipe-info">
+        <span class="shop-item-name">${rec.name}</span>
+        <span class="shop-item-effect">Requires: ${reqText}</span>
+      </div>
+      <button type="button" class="shop-buy-btn crafter-craft-btn" data-recipe-id="${rec.id}" ${!canCraft ? 'disabled' : ''}>Craft</button>
+    </div>`;
+  }).join('');
+  recipesEl.querySelectorAll('.crafter-craft-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const rec = CRAFTING_RECIPES.find(r => r.id === btn.dataset.recipeId);
+      if (!rec || !hasMaterials(rec.materials)) return;
+      if (!consumeMaterials(rec.materials)) return;
+      if (rec.outputType === 'potion') {
+        const inv = getPotionInventory();
+        inv[rec.outputId] = (inv[rec.outputId] || 0) + 1;
+        setPotionInventory(inv);
+        renderPotionInventory();
+      }
+      renderCrafterPanel();
+    });
+  });
+}
+
+// ——— Material Seller (all worlds: buy materials for coins) ———
+function openMaterialSeller() {
+  const overlay = document.getElementById('materialseller-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    renderMaterialSellerShop();
+  }
+}
+
+function closeMaterialSeller() {
+  const overlay = document.getElementById('materialseller-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function renderMaterialSellerShop() {
+  const list = document.getElementById('materialseller-shop-list');
+  if (!list) return;
+  const coins = getCoins();
+  list.innerHTML = SELLER_MATERIALS.map(m => {
+    const canBuy = coins >= m.costCoins;
+    return `<div class="shop-item">
+      <span class="shop-item-emoji">${m.emoji}</span>
+      <div class="shop-item-info">
+        <span class="shop-item-name">${m.name}</span>
+        <span class="shop-item-effect">${m.costCoins} coins</span>
+      </div>
+      <button type="button" class="shop-buy-btn materialseller-buy" data-material-id="${m.id}" ${!canBuy ? 'disabled' : ''}>Buy</button>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.materialseller-buy').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.materialId, 10);
+      const m = SELLER_MATERIALS.find(x => x.id === id);
+      if (!m || getCoins() < m.costCoins) return;
+      setCoins(getCoins() - m.costCoins);
+      addMaterial(id, 1);
+      renderCoins();
+      renderMaterialSellerShop();
+    });
+  });
 }
 
 // ——— Sneho (forbidden rotating shop, 10-min rotation) ———
@@ -2450,7 +2623,7 @@ function closeDevPanel() {
 }
 
 function grantItemById(id) {
-  const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+  const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
   const item = all.find(a => a.id === id);
   if (!item) return false;
   const isElder = ELDER_AURAS.some(a => a.id === id);
@@ -2458,9 +2631,10 @@ function grantItemById(id) {
   const isEmperor = EMPEROR_AURAS.some(a => a.id === id);
   const isTier2 = TIER2_AURAS.some(a => a.id === id);
   const isSupremeKing = id === 9999 || JIA_VOID_AURAS.some(a => a.id === id);
+  const isVoidQueen = id === VOID_QUEEN_AURA.id;
   const isGeometrical = GEOMETRICAL_AURAS.some(a => a.id === id);
-  if (isElder || isAscendant || isEmperor || isTier2 || isSupremeKing) markElderReceived(id);
-  const tierTag = isGeometrical ? 'geometrical' : isTier2 ? 'tier2' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
+  if (isElder || isAscendant || isEmperor || isTier2 || isSupremeKing || isVoidQueen) markElderReceived(id);
+  const tierTag = isGeometrical ? 'geometrical' : isVoidQueen ? 'voidqueen' : isTier2 ? 'tier2' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
   const history = getHistory();
   history.push({
     historyId: `${Date.now()}-${tierTag}-${id}`,
@@ -2473,6 +2647,7 @@ function grantItemById(id) {
     isEmperor: isEmperor || false,
     isTier2: isTier2 || false,
     isSupremeKing: isSupremeKing || false,
+    isVoidQueen: isVoidQueen || false,
     isGeometrical: isGeometrical || false,
   });
   setHistory(history);
@@ -2846,10 +3021,12 @@ function renderHistory() {
       const isEmperor   = h.isEmperor   || false;
       const isTier2     = h.isTier2     || false;
       const isSupremeKing = h.isSupremeKing || false;
+      const isVoidQueen   = h.isVoidQueen   || false;
       const isGeometrical = h.isGeometrical || false;
       const isMutation  = h.isMutation  || false;
       const isNull      = h.isNull      || false;
       const specialClass = isSupremeKing ? ' history-item--supreme-king'
+        : isVoidQueen ? ' history-item--void-queen'
         : isSecret ? ' history-item--secret'
         : isBiome     ? ' history-item--biome'
         : isEmperor   ? ' history-item--emperor'
@@ -2860,9 +3037,11 @@ function renderHistory() {
         : isMutation  ? ' history-item--mutation'
         : isNull      ? ' history-item--null'
         : '';
-      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isTier2 || isGeometrical || isNull || isSupremeKing;
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isTier2 || isGeometrical || isNull || isSupremeKing || isVoidQueen;
       const categoryBadge = isSupremeKing
         ? `<span class="supreme-king-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>`
+        : isVoidQueen
+        ? `<span class="void-queen-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#aa00ff;opacity:.95;text-shadow:0 0 12px #aa00ff, 0 0 24px #6600aa;">♔ VOID QUEEN</span>`
         : isSecret
         ? '<span class="secret-badge">⚠ SECRET</span>'
         : isBiome
@@ -2947,6 +3126,7 @@ function renderLockedStorage() {
     .map((h, i) => {
       const idx = locked.length - 1 - i;
       const lineage = h.isSupremeKing ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>'
+        : h.isVoidQueen ? '<span class="lineage-badge" style="color:#aa00ff;text-shadow:0 0 12px #aa00ff, 0 0 24px #6600aa;">♔ VOID QUEEN</span>'
         : h.isEmperor ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>'
         : h.isTier2 ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>'
         : h.isGeometrical ? '<span class="lineage-badge" style="color:#00d4ff;text-shadow:0 0 10px #00d4ff;">🔷 GEOMETRICAL</span>'
@@ -2954,6 +3134,7 @@ function renderLockedStorage() {
         : h.isAscendant ? '<span class="lineage-badge" style="color:#00ddaa;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>'
         : '';
       const tierClass = h.isSupremeKing ? ' history-item--supreme-king'
+        : h.isVoidQueen ? ' history-item--void-queen'
         : h.isEmperor ? ' history-item--emperor'
         : h.isTier2 ? ' history-item--tier2'
         : h.isGeometrical ? ' history-item--geometrical'
@@ -3224,6 +3405,7 @@ const JIA_VOID_CUTSCENES = {
   10120: { quote: 'The void has a sovereign. You met them.',   bg: '#0a0015', accentA: '#8800ff', accentB: '#330044' },
   10121: { quote: 'Nothing rules. You bowed anyway.',          bg: '#050505', accentA: '#333333', accentB: '#000000' },
   10122: { quote: 'Eternal is not a word. It is this.',        bg: '#080808', accentA: '#ffffff', accentB: '#666666' },
+  10140: { quote: 'The Supreme King has an enemy. You summoned her.', bg: '#0f0018', accentA: '#aa00ff', accentB: '#440066' },
 };
 
 // ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
@@ -3510,6 +3692,15 @@ const ELDER_STAGES = {
     '♔ ETERNAL NULL ♔',
   ],
 
+  // ─── Void Queen (World 2 — Potion of Destruction) ─────────────────────────
+  10140: [
+    'You drank the Potion of Destruction.',
+    'Where the Supreme King rules, something else opposes.',
+    'The void does not bow. It has a Queen.',
+    'She who was never meant to be summoned — is here.',
+    '♔ THE VOID QUEEN ♔',
+  ],
+
   // ─── Tier 2 Auras (post-Supreme King, Sol's RNG-style) ─────────────────────
   9980: ['You have surpassed the throne.', 'Light bends. Time folds.', 'THE TRANSCENDENT awakens.', 'Beyond Supreme. Beyond all.'],
   9981: ['The void looked up.', 'It saw something higher.', 'VOID ASCENSION.', 'From nothing. To everything.'],
@@ -3654,7 +3845,7 @@ async function showElderCutscene(aura) {
   );
   overlay.classList.add('rarity-overlay--elder');
   if (aura.isTier2) overlay.classList.add('rarity-overlay--tier2');
-  if (aura.isSupremeKing || aura.isTier2) overlay.classList.add('rarity-overlay--has-star');
+  if (aura.isSupremeKing || aura.isVoidQueen || aura.isTier2) overlay.classList.add('rarity-overlay--has-star');
   overlay.style.opacity = '1';
   overlay.setAttribute('aria-hidden', 'false');
 
@@ -3688,6 +3879,7 @@ async function showElderCutscene(aura) {
 
   // --- Final aura reveal ---
   const tierLabel = aura.isSupremeKing ? '♔ UNOBTAINABLE ♔'
+    : aura.isVoidQueen ? '♔ THE VOID QUEEN ♔'
     : aura.isTier2 ? '✦ Tier 2 Aura ✦'
     : aura.isEmperor ? '♛ Emperor Aura ♛'
     : aura.isAscendant ? '⬡ Ascendant Aura ⬡'
@@ -4101,11 +4293,36 @@ async function triggerSupremeKing() {
   await showElderCutscene(aura);
 }
 
+async function triggerVoidQueen() {
+  while (isAnimating) await new Promise(r => setTimeout(r, 200));
+  const aura = { ...VOID_QUEEN_AURA, isVoidQueen: true };
+  markElderReceived(aura.id);
+  const history = getHistory();
+  history.push({
+    historyId: `${Date.now()}-voidqueen-${Math.random().toString(36).slice(2)}`,
+    id: aura.id,
+    text: aura.text,
+    font: aura.font,
+    color: aura.color,
+    fontWeight: aura.fontWeight || '400',
+    fontStyle: aura.fontStyle || 'normal',
+    textShadow: aura.textShadow || '',
+    rarity: aura.rarity,
+    isVoidQueen: true,
+  });
+  setHistory(history);
+  renderHistory();
+  renderResult(aura);
+  await reportRareRoll({ ...aura, aura_rarity_label: 'VOID_QUEEN' });
+  await showElderCutscene(aura);
+}
+
 async function reportRareRoll(item) {
   if (!supabase) return;
   const username = getHubUsername() || null;
   const tierLabel = item.aura_rarity_label
     || (item.isSupremeKing ? 'UNOBTAINABLE'
+      : item.isVoidQueen ? 'VOID_QUEEN'
       : item.isEmperor ? 'EMPEROR'
       : item.isTier2 ? 'TIER2'
       : item.isAscendant ? 'ASCENDANT'
@@ -4332,7 +4549,7 @@ function submitAdminCode() {
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
@@ -4814,6 +5031,16 @@ function init() {
   document.getElementById('jia-overlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'jia-overlay') closeJia();
   });
+  document.getElementById('crafter-popup-btn')?.addEventListener('click', openCrafter);
+  document.getElementById('crafter-close')?.addEventListener('click', closeCrafter);
+  document.getElementById('crafter-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'crafter-overlay') closeCrafter();
+  });
+  document.getElementById('materialseller-popup-btn')?.addEventListener('click', openMaterialSeller);
+  document.getElementById('materialseller-close')?.addEventListener('click', closeMaterialSeller);
+  document.getElementById('materialseller-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'materialseller-overlay') closeMaterialSeller();
+  });
 
   // Wire up username inputs — listeners only, UI state set by refreshUsernameUI()
   const hubUsernameInput = document.getElementById('hub-username');
@@ -4928,7 +5155,7 @@ init();
 window.__rng = {
   /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) or __rng.cutscene(9200) */
   cutscene(id) {
-    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
     showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });
