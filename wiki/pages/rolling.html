@@ -126,6 +126,15 @@
       <div class="label">Why Luck Compression?</div>
       <p>Without compression, extremely high luck would make every item's adjusted weight approach equality. At that point, rarity would cease to matter — a 1/2 item and a 1/9 quadrillion item would have nearly the same chance. The <code>luck^0.4</code> compression ensures that luck boosts your odds meaningfully without completely flattening the rarity curve. Rare items become more attainable, but they still stay rarer than common ones.</p>
     </div>
+
+    <h2>World 2</h2>
+    <p><strong>World 2</strong> is a separate page (same domain) with its own progress: separate coins, history, luck, and storage. Key differences:</p>
+    <ul>
+      <li><strong>Roll pool:</strong> Only 20 insanely high-rarity auras (plus many super-common auras for balance)</li>
+      <li><strong>Hard luck cap:</strong> Effective multiplier is capped at <strong>30×</strong>. Formula: <code>effectiveMult = min(luck^0.4, 30)</code>. Raw luck can exceed this (e.g. from potions), but rolls and display never use more than 30×</li>
+      <li><strong>Exclusive NPCs:</strong> Jia appears 1/180 every minute; NULL COINS, Void Potion, and crafting materials are World 2 only. The Crafter and Material Seller are available in both worlds</li>
+      <li>Switch between World 1 and World 2 via the links on each page</li>
+    </ul>
   </main>
 </body>
 </html>

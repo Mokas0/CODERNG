@@ -1512,7 +1512,7 @@ function getMaterialLabel(id) {
 }
 
 const CRAFTING_RECIPES = [
-  { id: 'potionDestruction', name: 'Potion of Destruction', outputType: 'potion', outputId: 'potionDestruction', materials: [{ id: 10130, n: 1 }, { id: 10131, n: 1 }, { id: 10132, n: 1 }, { id: 10133, n: 1 }], world: 2 },
+  { id: 'potionDestruction', name: 'Potion of Destruction', outputType: 'potion', outputId: 'potionDestruction', materials: [{ id: 10130, n: 5 }, { id: 10131, n: 5 }, { id: 10132, n: 5 }, { id: 10133, n: 5 }], world: 2 },
   { id: 'potionMinor', name: 'Minor Luck Potion', outputType: 'potion', outputId: 'potion1', materials: [{ id: 20101, n: 2 }, { id: 20102, n: 1 }] },
 ];
 
