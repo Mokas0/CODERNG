@@ -404,6 +404,313 @@ begin
 end;
 $$;
 
+-- ─── Bazaar Business Investments ───
+create table if not exists public.bazaar_business_investments (
+  id bigint generated always as identity primary key,
+  investor_id uuid not null references auth.users(id) on delete cascade,
+  business_owner_id uuid not null references auth.users(id) on delete cascade,
+  amount int not null check (amount >= 0),
+  created_at timestamptz default now(),
+  unique(investor_id, business_owner_id)
+);
+
+alter table public.bazaar_business_investments enable row level security;
+create policy "Bazaar investments own" on public.bazaar_business_investments for all using (auth.uid() = investor_id);
+
+create table if not exists public.bazaar_business_stats (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  total_invested int not null default 0,
+  investor_count int not null default 0,
+  sales_count int not null default 0,
+  updated_at timestamptz default now()
+);
+
+alter table public.bazaar_business_stats enable row level security;
+create policy "Bazaar business stats read" on public.bazaar_business_stats for select using (true);
+
+-- RPC: invest in another player's business
+create or replace function public.bazaar_invest_in_business(p_owner_id uuid, p_amount int)
+returns table(success boolean, message text)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_bal int;
+  v_cur int;
+begin
+  if auth.uid() is null then
+    return query select false, 'Not signed in'::text;
+    return;
+  end if;
+  if p_owner_id = auth.uid() then
+    return query select false, 'Cannot invest in yourself'::text;
+    return;
+  end if;
+  if p_amount is null or p_amount <= 0 then
+    return query select false, 'Invalid amount'::text;
+    return;
+  end if;
+  select coalesce(coins_balance, 0) into v_bal from bazaar_wallets where user_id = auth.uid();
+  if v_bal < p_amount then
+    return query select false, 'Not enough Bazaar balance'::text;
+    return;
+  end if;
+  update bazaar_wallets set coins_balance = coins_balance - p_amount, updated_at = now()
+  where user_id = auth.uid();
+  insert into bazaar_business_investments (investor_id, business_owner_id, amount)
+  values (auth.uid(), p_owner_id, p_amount)
+  on conflict (investor_id, business_owner_id) do update set amount = bazaar_business_investments.amount + p_amount;
+  insert into bazaar_business_stats (user_id, total_invested, investor_count, sales_count)
+  values (p_owner_id,
+    (select coalesce(sum(amount), 0) from bazaar_business_investments where business_owner_id = p_owner_id),
+    (select count(distinct investor_id) from bazaar_business_investments where business_owner_id = p_owner_id),
+    coalesce((select sales_count from bazaar_business_stats where user_id = p_owner_id), 0))
+  on conflict (user_id) do update set
+    total_invested = (select coalesce(sum(amount), 0) from bazaar_business_investments where business_owner_id = p_owner_id),
+    investor_count = (select count(distinct investor_id) from bazaar_business_investments where business_owner_id = p_owner_id),
+    updated_at = now();
+  return query select true, ''::text;
+end;
+$$;
+
+-- RPC: divest from a business
+create or replace function public.bazaar_divest_from_business(p_owner_id uuid, p_amount int)
+returns table(success boolean, message text)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_cur int;
+begin
+  if auth.uid() is null then
+    return query select false, 'Not signed in'::text;
+    return;
+  end if;
+  if p_amount is null or p_amount <= 0 then
+    return query select false, 'Invalid amount'::text;
+    return;
+  end if;
+  select amount into v_cur from bazaar_business_investments
+  where investor_id = auth.uid() and business_owner_id = p_owner_id;
+  v_cur := coalesce(v_cur, 0);
+  if v_cur < p_amount then
+    return query select false, 'Not enough invested'::text;
+    return;
+  end if;
+  update bazaar_business_investments set amount = amount - p_amount
+  where investor_id = auth.uid() and business_owner_id = p_owner_id;
+  delete from bazaar_business_investments
+  where investor_id = auth.uid() and business_owner_id = p_owner_id and amount <= 0;
+  update bazaar_wallets set coins_balance = coins_balance + p_amount, updated_at = now()
+  where user_id = auth.uid();
+  insert into bazaar_wallets (user_id, coins_balance)
+  values (auth.uid(), p_amount)
+  on conflict (user_id) do update set coins_balance = bazaar_wallets.coins_balance + p_amount, updated_at = now();
+  update bazaar_business_stats set
+    total_invested = (select coalesce(sum(amount), 0) from bazaar_business_investments where business_owner_id = p_owner_id),
+    investor_count = (select count(distinct investor_id) from bazaar_business_investments where business_owner_id = p_owner_id),
+    updated_at = now()
+  where user_id = p_owner_id;
+  return query select true, ''::text;
+end;
+$$;
+
+grant execute on function public.bazaar_invest_in_business(uuid, int) to authenticated;
+grant execute on function public.bazaar_divest_from_business(uuid, int) to authenticated;
+
+-- ─── Bazaar Volume Stats (for BZX stock price) ───
+create table if not exists public.bazaar_volume_stats (
+  id int primary key default 1 check (id = 1),
+  period_start timestamptz not null default now(),
+  sales_count int not null default 0,
+  volume_coins int not null default 0
+);
+
+alter table public.bazaar_volume_stats enable row level security;
+create policy "Bazaar volume stats read" on public.bazaar_volume_stats for select using (true);
+
+insert into public.bazaar_volume_stats (id, period_start, sales_count, volume_coins)
+values (1, now(), 0, 0) on conflict (id) do nothing;
+
+-- ─── Bazaar Stock Ticker (BZX) ───
+create table if not exists public.bazaar_stock_ticker (
+  symbol text primary key,
+  price numeric not null default 100,
+  shares_outstanding int not null default 0,
+  updated_at timestamptz default now()
+);
+
+alter table public.bazaar_stock_ticker enable row level security;
+create policy "Bazaar ticker read" on public.bazaar_stock_ticker for select using (true);
+create policy "Bazaar ticker rpc" on public.bazaar_stock_ticker for all using (true);
+
+insert into public.bazaar_stock_ticker (symbol, price, shares_outstanding)
+values ('BZX', 100, 0) on conflict (symbol) do nothing;
+
+-- ─── Bazaar Stock Holdings ───
+create table if not exists public.bazaar_stock_holdings (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  symbol text not null references public.bazaar_stock_ticker(symbol),
+  shares int not null default 0 check (shares >= 0),
+  avg_buy_price numeric,
+  primary key (user_id, symbol)
+);
+
+alter table public.bazaar_stock_holdings enable row level security;
+create policy "Bazaar holdings own" on public.bazaar_stock_holdings for all using (auth.uid() = user_id);
+
+-- Trigger: update volume stats and business sales when a listing is sold
+create or replace function public.bazaar_on_listing_sold()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.status = 'sold' and (old.status is null or old.status != 'sold') then
+    insert into bazaar_business_stats (user_id, total_invested, investor_count, sales_count)
+    values (new.seller_id, 0, 0, 1)
+    on conflict (user_id) do update set sales_count = bazaar_business_stats.sales_count + 1, updated_at = now();
+    update bazaar_volume_stats set
+      period_start = case when period_start < now() - interval '24 hours' then now() else period_start end,
+      sales_count = case when period_start < now() - interval '24 hours' then 1 else sales_count + 1 end,
+      volume_coins = case when period_start < now() - interval '24 hours' then new.price else volume_coins + new.price end
+    where id = 1;
+    perform public.bazaar_stock_update_price('BZX');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists bazaar_listing_sold_trigger on public.bazaar_listings;
+create trigger bazaar_listing_sold_trigger
+  after update on public.bazaar_listings
+  for each row execute function public.bazaar_on_listing_sold();
+
+-- RPC: get BZX price and 24h stats
+create or replace function public.bazaar_stock_get_price(p_symbol text default 'BZX')
+returns table(price numeric, sales_24h int, volume_24h int)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_row record;
+  v_stats record;
+begin
+  select t.price into v_row from bazaar_stock_ticker t where t.symbol = p_symbol;
+  if v_row.price is null then
+    return;
+  end if;
+  select coalesce(sales_count, 0), coalesce(volume_coins, 0) into v_stats
+  from bazaar_volume_stats where id = 1;
+  return query select v_row.price, coalesce(v_stats.sales_count, 0)::int, coalesce(v_stats.volume_coins, 0)::int;
+end;
+$$;
+
+-- RPC: update ticker price from volume stats
+create or replace function public.bazaar_stock_update_price(p_symbol text default 'BZX')
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_sales int;
+  v_volume int;
+  v_new_price numeric;
+begin
+  select coalesce(sales_count, 0), coalesce(volume_coins, 0) into v_sales, v_volume
+  from bazaar_volume_stats where id = 1;
+  v_new_price := 100 + (v_sales * 2) + (v_volume / 10000.0);
+  v_new_price := greatest(10, least(10000, v_new_price));
+  update bazaar_stock_ticker set price = v_new_price, updated_at = now() where symbol = p_symbol;
+end;
+$$;
+
+-- RPC: buy BZX shares
+create or replace function public.bazaar_stock_buy(p_symbol text default 'BZX', p_shares int default 1)
+returns table(success boolean, message text)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_price numeric;
+  v_cost numeric;
+  v_bal int;
+  v_cur_shares int;
+  v_cur_avg numeric;
+  v_new_avg numeric;
+begin
+  if auth.uid() is null then
+    return query select false, 'Not signed in'::text;
+    return;
+  end if;
+  if p_shares is null or p_shares <= 0 then
+    return query select false, 'Invalid shares'::text;
+    return;
+  end if;
+  select price into v_price from bazaar_stock_ticker where symbol = p_symbol;
+  if v_price is null then
+    return query select false, 'Unknown ticker'::text;
+    return;
+  end if;
+  v_cost := v_price * p_shares;
+  select coalesce(coins_balance, 0) into v_bal from bazaar_wallets where user_id = auth.uid();
+  if v_bal < v_cost then
+    return query select false, 'Not enough Bazaar balance'::text;
+    return;
+  end if;
+  update bazaar_wallets set coins_balance = coins_balance - v_cost, updated_at = now()
+  where user_id = auth.uid();
+  select coalesce(shares, 0), avg_buy_price into v_cur_shares, v_cur_avg
+  from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol;
+  v_cur_shares := coalesce(v_cur_shares, 0);
+  v_new_avg := case
+    when v_cur_shares = 0 then v_price
+    else ((v_cur_avg * v_cur_shares) + (v_price * p_shares)) / (v_cur_shares + p_shares)
+  end;
+  insert into bazaar_stock_holdings (user_id, symbol, shares, avg_buy_price)
+  values (auth.uid(), p_symbol, p_shares, v_price)
+  on conflict (user_id, symbol) do update set
+    shares = bazaar_stock_holdings.shares + p_shares,
+    avg_buy_price = v_new_avg;
+  update bazaar_stock_ticker set shares_outstanding = shares_outstanding + p_shares, updated_at = now()
+  where symbol = p_symbol;
+  return query select true, ''::text;
+end;
+$$;
+
+-- RPC: sell BZX shares
+create or replace function public.bazaar_stock_sell(p_symbol text default 'BZX', p_shares int default 1)
+returns table(success boolean, message text)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_price numeric;
+  v_proceeds numeric;
+  v_cur_shares int;
+begin
+  if auth.uid() is null then
+    return query select false, 'Not signed in'::text;
+    return;
+  end if;
+  if p_shares is null or p_shares <= 0 then
+    return query select false, 'Invalid shares'::text;
+    return;
+  end if;
+  select price into v_price from bazaar_stock_ticker where symbol = p_symbol;
+  if v_price is null then
+    return query select false, 'Unknown ticker'::text;
+    return;
+  end if;
+  select shares into v_cur_shares from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol;
+  v_cur_shares := coalesce(v_cur_shares, 0);
+  if v_cur_shares < p_shares then
+    return query select false, 'Not enough shares'::text;
+    return;
+  end if;
+  v_proceeds := v_price * p_shares;
+  insert into bazaar_wallets (user_id, coins_balance)
+  values (auth.uid(), v_proceeds)
+  on conflict (user_id) do update set coins_balance = bazaar_wallets.coins_balance + v_proceeds, updated_at = now();
+  update bazaar_stock_holdings set shares = shares - p_shares
+  where user_id = auth.uid() and symbol = p_symbol;
+  delete from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol and shares <= 0;
+  update bazaar_stock_ticker set shares_outstanding = greatest(0, shares_outstanding - p_shares), updated_at = now()
+  where symbol = p_symbol;
+  return query select true, ''::text;
+end;
+$$;
+
+grant execute on function public.bazaar_stock_get_price(text) to anon;
+grant execute on function public.bazaar_stock_get_price(text) to authenticated;
+grant execute on function public.bazaar_stock_update_price(text) to authenticated;
+grant execute on function public.bazaar_stock_buy(text, int) to authenticated;
+grant execute on function public.bazaar_stock_sell(text, int) to authenticated;
+
 grant execute on function public.generate_casino_link_code(text) to anon;
 grant execute on function public.generate_casino_link_code(text) to authenticated;
 grant execute on function public.link_casino_to_account(text, text) to authenticated;

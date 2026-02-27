@@ -2628,7 +2628,7 @@ async function bazaarFetchBalance() {
 
 function showBazaarBalanceMsg(text, isError = false) {
   const el = document.getElementById('bazaar-balance-msg');
-  if (el) { el.textContent = text; el.style.color = isError ? 'var(--danger)' : 'var(--roll)'; }
+  if (el) { el.textContent = text; el.style.color = isError ? 'var(--danger)' : 'var(--roll)'; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 4000); }
 }
 
 async function bazaarDepositCoins() {
@@ -2689,26 +2689,35 @@ async function bazaarImportAura(auraId) {
 }
 
 async function bazaarCreateListing(inventoryId, price) {
-  if (!authUser || !supabase || !inventoryId || !price || price < 1) return;
+  if (!authUser || !supabase || !inventoryId || !price || price < 1) { showBazaarBalanceMsg('Enter a valid price.', true); return; }
   const { data, error } = await supabase.rpc('bazaar_create_listing', { p_inventory_id: inventoryId, p_price: price });
   const result = Array.isArray(data) ? data[0] : data;
-  if (error || !result?.success) return;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'List failed', true); return; }
+  showBazaarBalanceMsg('Listed.');
   renderBazaar();
 }
 
 async function bazaarBuyListing(listingId) {
   if (!authUser || !supabase) return;
+  const btn = document.querySelector(`.bazaar-buy-btn[data-id="${listingId}"]`);
+  if (btn) btn.disabled = true;
   const { data, error } = await supabase.rpc('bazaar_buy_listing', { p_listing_id: listingId });
   const result = Array.isArray(data) ? data[0] : data;
-  if (error || !result?.success) return;
-  renderBazaar();
+  if (error || !result?.success) {
+    showBazaarBalanceMsg(result?.message || error?.message || 'Purchase failed', true);
+    if (btn) btn.disabled = false;
+  } else {
+    showBazaarBalanceMsg('Purchased.');
+    renderBazaar();
+  }
 }
 
 async function bazaarCancelListing(listingId) {
   if (!authUser || !supabase) return;
   const { data, error } = await supabase.rpc('bazaar_cancel_listing', { p_listing_id: listingId });
   const result = Array.isArray(data) ? data[0] : data;
-  if (error || !result?.success) return;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'Cancel failed', true); return; }
+  showBazaarBalanceMsg('Listing cancelled.');
   renderBazaar();
 }
 
@@ -2716,9 +2725,61 @@ async function bazaarWithdrawAuraToCasino(inventoryId) {
   if (!authUser || !supabase) return;
   const { data, error } = await supabase.rpc('bazaar_withdraw_aura_to_casino', { p_inventory_id: inventoryId });
   const result = Array.isArray(data) ? data[0] : data;
-  if (error || !result?.success) return;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'Withdraw failed', true); return; }
   await loadCasinoAuraVault();
   renderCasino();
+  renderBazaar();
+}
+
+async function bazaarStockBuy() {
+  if (!authUser || !supabase) return;
+  const shares = Math.floor(Number(document.getElementById('bazaar-stock-buy-shares')?.value || 0));
+  if (shares < 1) { showBazaarBalanceMsg('Enter shares to buy.', true); return; }
+  const btn = document.getElementById('bazaar-stock-buy-btn');
+  if (btn) btn.disabled = true;
+  const { data, error } = await supabase.rpc('bazaar_stock_buy', { p_symbol: 'BZX', p_shares: shares });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (btn) btn.disabled = false;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'Buy failed', true); return; }
+  document.getElementById('bazaar-stock-buy-shares').value = '';
+  showBazaarBalanceMsg('Bought ' + shares + ' BZX shares.');
+  renderBazaar();
+}
+
+async function bazaarStockSell() {
+  if (!authUser || !supabase) return;
+  const shares = Math.floor(Number(document.getElementById('bazaar-stock-sell-shares')?.value || 0));
+  if (shares < 1) { showBazaarBalanceMsg('Enter shares to sell.', true); return; }
+  const btn = document.getElementById('bazaar-stock-sell-btn');
+  if (btn) btn.disabled = true;
+  const { data, error } = await supabase.rpc('bazaar_stock_sell', { p_symbol: 'BZX', p_shares: shares });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (btn) btn.disabled = false;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'Sell failed', true); return; }
+  document.getElementById('bazaar-stock-sell-shares').value = '';
+  showBazaarBalanceMsg('Sold ' + shares + ' BZX shares.');
+  renderBazaar();
+}
+
+async function bazaarInvestInBusiness(ownerId, amount) {
+  if (!authUser || !supabase) return;
+  const amt = Math.floor(Number(amount || 0));
+  if (amt < 1) { showBazaarBalanceMsg('Enter amount to invest.', true); return; }
+  const { data, error } = await supabase.rpc('bazaar_invest_in_business', { p_owner_id: ownerId, p_amount: amt });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'Invest failed', true); return; }
+  showBazaarBalanceMsg('Invested ' + amt.toLocaleString() + ' coins.');
+  renderBazaar();
+}
+
+async function bazaarDivestFromBusiness(ownerId, amount) {
+  if (!authUser || !supabase) return;
+  const amt = Math.floor(Number(amount || 0));
+  if (amt < 1) { showBazaarBalanceMsg('Enter amount to divest.', true); return; }
+  const { data, error } = await supabase.rpc('bazaar_divest_from_business', { p_owner_id: ownerId, p_amount: amt });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) { showBazaarBalanceMsg(result?.message || error?.message || 'Divest failed', true); return; }
+  showBazaarBalanceMsg('Divested ' + amt.toLocaleString() + ' coins.');
   renderBazaar();
 }
 
@@ -2759,6 +2820,50 @@ function renderBazaar() {
     if (sellerIds.length) {
       const { data: profs } = await supabase.from('profiles').select('id, display_name').in('id', sellerIds);
       (profs || []).forEach((p) => { sellerNames[p.id] = p.display_name; });
+    }
+    const investSellerIds = [...new Set((listings || []).map((l) => l.seller_id))].filter((id) => id !== authUser.id);
+    let businessStats = {};
+    if (investSellerIds.length) {
+      const { data: statsRows } = await supabase.from('bazaar_business_stats').select('user_id, total_invested, investor_count, sales_count').in('user_id', investSellerIds);
+      (statsRows || []).forEach((r) => { businessStats[r.user_id] = r; });
+    }
+    const investListEl = document.getElementById('bazaar-invest-list');
+    if (investListEl) {
+      const investRows = investSellerIds.map((ownerId) => {
+        const name = sellerNames[ownerId] || '?';
+        const stat = businessStats[ownerId] || {};
+        const totalInv = stat.total_invested || 0;
+        const sales = stat.sales_count || 0;
+        return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(name)} — ${totalInv.toLocaleString()} invested · ${sales} sales</span><input type="number" class="casino-amount-input bazaar-invest-amount" placeholder="Amount" min="1" data-owner="${ownerId}" style="width:80px" /><button type="button" class="hub-btn bazaar-invest-btn" data-owner="${ownerId}">Invest</button></div>`;
+      });
+      investListEl.innerHTML = investRows.length ? investRows.join('') : '<p class="casino-empty">No other sellers with listings. List some auras to appear here.</p>';
+      investListEl.querySelectorAll('.bazaar-invest-btn').forEach((btn) => {
+        const ownerId = btn.dataset.owner;
+        const row = btn.closest('.casino-row');
+        const input = row?.querySelector('.bazaar-invest-amount');
+        btn.addEventListener('click', () => bazaarInvestInBusiness(ownerId, input?.value));
+      });
+    }
+    const { data: myInvData } = await supabase.from('bazaar_business_investments').select('business_owner_id, amount').eq('investor_id', authUser.id);
+    const myInvOwnerIds = [...new Set((myInvData || []).map((i) => i.business_owner_id))];
+    let myInvNames = {};
+    if (myInvOwnerIds.length) {
+      const { data: invProfs } = await supabase.from('profiles').select('id, display_name').in('id', myInvOwnerIds);
+      (invProfs || []).forEach((p) => { myInvNames[p.id] = p.display_name; });
+    }
+    const myInvEl = document.getElementById('bazaar-my-investments');
+    if (myInvEl) {
+      const myInvRows = (myInvData || []).map((inv) => {
+        const name = myInvNames[inv.business_owner_id] || '?';
+        return `<div class="casino-row"><span class="casino-row-desc">${escapeHtml(name)} — ${(inv.amount || 0).toLocaleString()} invested</span><input type="number" class="casino-amount-input bazaar-divest-amount" placeholder="Amount" min="1" data-owner="${inv.business_owner_id}" style="width:80px" /><button type="button" class="hub-btn hub-btn--secondary bazaar-divest-btn" data-owner="${inv.business_owner_id}">Divest</button></div>`;
+      });
+      myInvEl.innerHTML = myInvRows.length ? myInvRows.join('') : '<p class="casino-empty">No investments yet.</p>';
+      myInvEl.querySelectorAll('.bazaar-divest-btn').forEach((btn) => {
+        const ownerId = btn.dataset.owner;
+        const row = btn.closest('.casino-row');
+        const input = row?.querySelector('.bazaar-divest-amount');
+        btn.addEventListener('click', () => bazaarDivestFromBusiness(ownerId, input?.value));
+      });
     }
     const listEl = document.getElementById('bazaar-listings');
     if (listEl) {
@@ -2804,6 +2909,24 @@ function renderBazaar() {
         ? myList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span> <strong>${a.price} coins</strong><button type="button" class="hub-btn hub-btn--secondary bazaar-cancel-btn" data-id="${a.id}">Cancel</button></div>`).join('')
         : '<p class="casino-empty">No active listings.</p>';
       myEl.querySelectorAll('.bazaar-cancel-btn').forEach((btn) => btn.addEventListener('click', () => bazaarCancelListing(Number(btn.dataset.id))));
+    }
+    const { data: stockData } = await supabase.rpc('bazaar_stock_get_price', { p_symbol: 'BZX' });
+    const stockRow = Array.isArray(stockData) ? stockData[0] : stockData;
+    const priceEl = document.getElementById('bazaar-stock-price');
+    const salesEl = document.getElementById('bazaar-stock-sales');
+    const volEl = document.getElementById('bazaar-stock-volume');
+    if (priceEl) priceEl.textContent = stockRow?.price != null ? Math.round(stockRow.price).toLocaleString() : '—';
+    if (salesEl) salesEl.textContent = stockRow?.sales_24h != null ? stockRow.sales_24h.toLocaleString() : '—';
+    if (volEl) volEl.textContent = stockRow?.volume_24h != null ? stockRow.volume_24h.toLocaleString() : '—';
+    const { data: holdingsData } = await supabase.from('bazaar_stock_holdings').select('shares, avg_buy_price').eq('user_id', authUser.id).eq('symbol', 'BZX').single();
+    const holdingsEl = document.getElementById('bazaar-stock-holdings');
+    if (holdingsEl) {
+      const sh = holdingsData?.shares ?? 0;
+      const avg = holdingsData?.avg_buy_price;
+      const p = stockRow?.price ?? 0;
+      const val = sh * p;
+      const pl = avg != null && sh > 0 ? ((p - avg) / avg * 100).toFixed(1) : null;
+      holdingsEl.textContent = `My BZX: ${sh.toLocaleString()} shares${val > 0 ? ` · Value: ${Math.round(val).toLocaleString()} coins` : ''}${pl != null ? ` · P/L: ${Number(pl) >= 0 ? '+' : ''}${pl}%` : ''}`;
     }
     } catch (err) {
       console.error('[Bazaar]', err);
@@ -4989,6 +5112,8 @@ function init() {
   document.getElementById('bazaar-deposit-btn')?.addEventListener('click', bazaarDepositCoins);
   document.getElementById('bazaar-withdraw-btn')?.addEventListener('click', bazaarWithdrawCoins);
   document.getElementById('bazaar-link-btn')?.addEventListener('click', bazaarLinkCasino);
+  document.getElementById('bazaar-stock-buy-btn')?.addEventListener('click', bazaarStockBuy);
+  document.getElementById('bazaar-stock-sell-btn')?.addEventListener('click', bazaarStockSell);
 
   if (supabase) {
     supabase.auth.getSession().then(({ data: { session } }) => {

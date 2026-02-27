@@ -201,6 +201,27 @@
               </div>
               <div class="bazaar-sections">
                 <div class="casino-section">
+                  <h3 class="hub-heading">Stocks — BZX</h3>
+                  <p class="bazaar-stock-desc">Bazaar Index tracks marketplace activity. Price rises with sales.</p>
+                  <div id="bazaar-stocks-panel" class="bazaar-stocks-panel">
+                    <p class="bazaar-stock-price">Price: <strong id="bazaar-stock-price">—</strong> · 24h sales: <span id="bazaar-stock-sales">—</span> · Volume: <span id="bazaar-stock-volume">—</span></p>
+                    <div class="bazaar-stock-actions">
+                      <input type="number" id="bazaar-stock-buy-shares" class="casino-amount-input" placeholder="Shares" min="1" />
+                      <button type="button" id="bazaar-stock-buy-btn" class="hub-btn">Buy</button>
+                      <input type="number" id="bazaar-stock-sell-shares" class="casino-amount-input" placeholder="Shares" min="1" />
+                      <button type="button" id="bazaar-stock-sell-btn" class="hub-btn hub-btn--secondary">Sell</button>
+                    </div>
+                    <p id="bazaar-stock-holdings" class="bazaar-stock-holdings">My BZX: 0 shares</p>
+                  </div>
+                </div>
+                <div class="casino-section">
+                  <h3 class="hub-heading">Invest in sellers</h3>
+                  <p class="bazaar-stock-desc">Invest Bazaar coins in other players' businesses. Support top sellers.</p>
+                  <div id="bazaar-invest-list" class="casino-list"></div>
+                  <h4 class="bazaar-subheading">My investments</h4>
+                  <div id="bazaar-my-investments" class="casino-list"></div>
+                </div>
+                <div class="casino-section">
                   <h3 class="hub-heading">Browse listings</h3>
                   <div id="bazaar-listings" class="casino-list"></div>
                 </div>
