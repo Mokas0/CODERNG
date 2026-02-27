@@ -553,17 +553,17 @@ function renderLuck() {
 }
 
 function luckCost(currentMult) {
-  // Cost scales linearly with current multiplier so each +5 click gets progressively more expensive.
+  // Cost scales linearly with current multiplier so each +2 click gets progressively more expensive.
   return Math.floor(50 * Math.max(currentMult, 1));
 }
 
 // Theo's gears: permanent luck boosters bought with scraps
 const GEAR_TIERS = [
-  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 5,   cost: 10,  desc: 'A rusty old gear. Still spins.' },
-  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 12,  cost: 30,  desc: 'Solid iron. Noticeably luckier.' },
-  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 35,  cost: 80,  desc: 'Precision-crafted steel.' },
-  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 100, cost: 200, desc: 'Glows faintly. Luck surges.' },
-  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 250, cost: 600, desc: 'Radiates raw fortune.' },
+  { id: 'gear_worn',      name: 'Worn Gear',      emoji: '⚙️',  luckBonus: 2,   cost: 10,  desc: 'A rusty old gear. Still spins.' },
+  { id: 'gear_iron',      name: 'Iron Gear',      emoji: '🔩',  luckBonus: 6,   cost: 30,  desc: 'Solid iron. Noticeably luckier.' },
+  { id: 'gear_steel',     name: 'Steel Gear',     emoji: '🔧',  luckBonus: 17,  cost: 80,  desc: 'Precision-crafted steel.' },
+  { id: 'gear_enchanted', name: 'Enchanted Gear', emoji: '✨',  luckBonus: 50,  cost: 200, desc: 'Glows faintly. Luck surges.' },
+  { id: 'gear_divine',    name: 'Divine Gear',    emoji: '🌟',  luckBonus: 125, cost: 600, desc: 'Radiates raw fortune.' },
 ];
 
 // Scraps drop chance and amount from salvaging
@@ -583,34 +583,34 @@ function scrapsFromSalvage(rarity) {
 
 // Shop potions: id, name, cost, luckBonus (added to current multiplier for next roll)
 const POTIONS = [
-  { id: 'potion1', name: 'Minor Luck Potion', cost: 25,  luckBonus: 50,   emoji: '🧪' },
-  { id: 'potion2', name: 'Luck Potion',        cost: 50,  luckBonus: 150,  emoji: '⚗️' },
-  { id: 'potion3', name: 'Greater Luck Potion',cost: 120, luckBonus: 400,  emoji: '🔮' },
-  { id: 'potion4', name: 'Supreme Luck Elixir',cost: 300, luckBonus: 1200, emoji: '✨' },
-  { id: 'potion5', name: 'Mythic Fortune Brew', cost: 700, luckBonus: 3500, emoji: '🌟' },
+  { id: 'potion1', name: 'Minor Luck Potion', cost: 25,  luckBonus: 25,   emoji: '🧪' },
+  { id: 'potion2', name: 'Luck Potion',        cost: 50,  luckBonus: 75,   emoji: '⚗️' },
+  { id: 'potion3', name: 'Greater Luck Potion',cost: 120, luckBonus: 200,  emoji: '🔮' },
+  { id: 'potion4', name: 'Supreme Luck Elixir',cost: 300, luckBonus: 600,  emoji: '✨' },
+  { id: 'potion5', name: 'Mythic Fortune Brew', cost: 700, luckBonus: 1750, emoji: '🌟' },
 ];
 // Very rare spawn in rotating shop only (not in Benny's list)
-const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: 'Legendary Luck Elixir', cost: 5000, luckBonus: 10000, emoji: '👑' };
+const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: 'Legendary Luck Elixir', cost: 5000, luckBonus: 5000, emoji: '👑' };
 const LEGENDARY_POTION_SPAWN_CHANCE = 0.008;
 // Benny-exclusive potions (not sold anywhere else)
 const BENNY_EXCLUSIVE_POTIONS = [
-  { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,    luckBonus: 30,    emoji: '🎒', desc: "Dirt cheap and it works." },
-  { id: 'potionBennyTonic',      name: "Old Road Tonic",        cost: 18,   luckBonus: 80,    emoji: '🫙', desc: "Brewed on the road. Surprisingly potent." },
-  { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,   luckBonus: 350,   emoji: '🔩', desc: "Concocted from leftover parts. Great deal." },
-  { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 50000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable." },
+  { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,    luckBonus: 15,    emoji: '🎒', desc: "Dirt cheap and it works." },
+  { id: 'potionBennyTonic',      name: "Old Road Tonic",        cost: 18,   luckBonus: 40,    emoji: '🫙', desc: "Brewed on the road. Surprisingly potent." },
+  { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,   luckBonus: 175,   emoji: '🔩', desc: "Concocted from leftover parts. Great deal." },
+  { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 25000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable." },
 ];
 
 // Patrick-exclusive potions — huge luck, hefty price. Patrick appears 2× rarer than Benny.
 const PATRICK_EXCLUSIVE_POTIONS = [
-  { id: 'potionPatrickMega',     name: "Patrick's Mega Brew",   cost: 50000,  luckBonus: 500_000,   emoji: '🌟', desc: 'Massive luck. Massive price.' },
-  { id: 'potionPatrickTitan',    name: "Patrick's Titan Elixir", cost: 250_000, luckBonus: 2_500_000, emoji: '💫', desc: 'For those who spare no expense.' },
-  { id: 'potionPatrickColossus', name: "Patrick's Colossus",    cost: 1_000_000, luckBonus: 15_000_000, emoji: '🔮', desc: 'The big one. You know what you\'re paying for.' },
+  { id: 'potionPatrickMega',     name: "Patrick's Mega Brew",   cost: 50000,  luckBonus: 250_000,   emoji: '🌟', desc: 'Massive luck. Massive price.' },
+  { id: 'potionPatrickTitan',    name: "Patrick's Titan Elixir", cost: 250_000, luckBonus: 1_250_000, emoji: '💫', desc: 'For those who spare no expense.' },
+  { id: 'potionPatrickColossus', name: "Patrick's Colossus",    cost: 1_000_000, luckBonus: 7_500_000, emoji: '🔮', desc: 'The big one. You know what you\'re paying for.' },
 ];
 
 // Supreme Luck Potion — 1/100 chance to appear in Benny's shop per visit
 const SUPREME_LUCK_POTION = {
   id: 'potionSupremeLuck', name: 'Supreme Luck Potion', cost: 150000,
-  luckBonus: 30_000_000, emoji: '👑✨', desc: 'The rarest potion in existence. Benny found it once. He may never find another.',
+  luckBonus: 15_000_000, emoji: '👑✨', desc: 'The rarest potion in existence. Benny found it once. He may never find another.',
 };
 const SUPREME_POTION_APPEAR_CHANCE = 1 / 100;
 const SUPREME_KING_SPAWN_CHANCE = 1 / 10_000;
@@ -623,13 +623,13 @@ const ALL_POTIONS_BY_ID = {};
 // ——— Sneho's forbidden shop ———
 // Each item has a cursedChance: if the curse triggers the luck effect is negative (cursedPenalty)
 const SNEHO_ITEMS = [
-  { id: 'sneho1', name: 'Shadowed Vial',       cost: 8,    luckBonus: 25,    cursedChance: 0.50, cursedPenalty: -15,    emoji: '🫗',  desc: 'Could go either way.' },
-  { id: 'sneho2', name: "Demon's Brew",         cost: 30,   luckBonus: 80,    cursedChance: 0.40, cursedPenalty: -50,    emoji: '😈',  desc: 'Smells of sulfur. High risk, high reward.' },
-  { id: 'sneho3', name: 'Void Essence',         cost: 150,  luckBonus: 350,   cursedChance: 0.30, cursedPenalty: -200,   emoji: '🕳️', desc: 'Bottled nothing. Unstable.' },
-  { id: 'sneho4', name: 'Blood Moon Extract',   cost: 800,  luckBonus: 1200,  cursedChance: 0.25, cursedPenalty: -700,   emoji: '🌑',  desc: 'Only available on the wrong night.' },
-  { id: 'sneho5', name: 'Forbidden Pact Seal',  cost: 5000, luckBonus: 5000,  cursedChance: 0.20, cursedPenalty: -3000,  emoji: '📜',  desc: 'Sign your soul away. Might be worth it.' },
-  { id: 'sneho6', name: 'Cursed Coin',          cost: 50,   luckBonus: 60,    cursedChance: 0.65, cursedPenalty: -40,    emoji: '🪙',  desc: 'Suspiciously cheap.' },
-  { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 700,   cursedChance: 0.35, cursedPenalty: -400,   emoji: '💀',  desc: 'Handle with care. Or don\'t.' },
+  { id: 'sneho1', name: 'Shadowed Vial',       cost: 8,    luckBonus: 12,    cursedChance: 0.50, cursedPenalty: -8,     emoji: '🫗',  desc: 'Could go either way.' },
+  { id: 'sneho2', name: "Demon's Brew",         cost: 30,   luckBonus: 40,    cursedChance: 0.40, cursedPenalty: -25,    emoji: '😈',  desc: 'Smells of sulfur. High risk, high reward.' },
+  { id: 'sneho3', name: 'Void Essence',         cost: 150,  luckBonus: 175,   cursedChance: 0.30, cursedPenalty: -100,   emoji: '🕳️', desc: 'Bottled nothing. Unstable.' },
+  { id: 'sneho4', name: 'Blood Moon Extract',   cost: 800,  luckBonus: 600,   cursedChance: 0.25, cursedPenalty: -350,   emoji: '🌑',  desc: 'Only available on the wrong night.' },
+  { id: 'sneho5', name: 'Forbidden Pact Seal',  cost: 5000, luckBonus: 2500, cursedChance: 0.20, cursedPenalty: -1500, emoji: '📜',  desc: 'Sign your soul away. Might be worth it.' },
+  { id: 'sneho6', name: 'Cursed Coin',          cost: 50,   luckBonus: 30,    cursedChance: 0.65, cursedPenalty: -20,    emoji: '🪙',  desc: 'Suspiciously cheap.' },
+  { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 350,   cursedChance: 0.35, cursedPenalty: -200,   emoji: '💀',  desc: 'Handle with care. Or don\'t.' },
 ];
 
 // Incarnatus — 1/5000 chance to appear in Sneho (no luck modifier). Grants a Geometrical aura.
@@ -3808,7 +3808,7 @@ function buyLuck() {
   const cost = luckCost(getLuckMultiplier());
   if (getCoins() < cost) return;
   setCoins(getCoins() - cost);
-  setLuckMultiplier(getLuckMultiplier() + 5);
+  setLuckMultiplier(getLuckMultiplier() + 2);
   addQuestProgress('shop_spend', cost);
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   renderCoins();
