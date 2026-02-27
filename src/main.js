@@ -2272,8 +2272,9 @@ function grantItemById(id) {
   const isEmperor = EMPEROR_AURAS.some(a => a.id === id);
   const isTier2 = TIER2_AURAS.some(a => a.id === id);
   const isSupremeKing = id === 9999;
+  const isGeometrical = GEOMETRICAL_AURAS.some(a => a.id === id);
   if (isElder || isAscendant || isEmperor || isTier2 || isSupremeKing) markElderReceived(id);
-  const tierTag = isTier2 ? 'tier2' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
+  const tierTag = isGeometrical ? 'geometrical' : isTier2 ? 'tier2' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
   const history = getHistory();
   history.push({
     historyId: `${Date.now()}-${tierTag}-${id}`,
@@ -2286,6 +2287,7 @@ function grantItemById(id) {
     isEmperor: isEmperor || false,
     isTier2: isTier2 || false,
     isSupremeKing: isSupremeKing || false,
+    isGeometrical: isGeometrical || false,
   });
   setHistory(history);
   renderHistory();
@@ -2658,6 +2660,7 @@ function renderHistory() {
       const isEmperor   = h.isEmperor   || false;
       const isTier2     = h.isTier2     || false;
       const isSupremeKing = h.isSupremeKing || false;
+      const isGeometrical = h.isGeometrical || false;
       const isMutation  = h.isMutation  || false;
       const isNull      = h.isNull      || false;
       const specialClass = isSupremeKing ? ' history-item--supreme-king'
@@ -2665,12 +2668,13 @@ function renderHistory() {
         : isBiome     ? ' history-item--biome'
         : isEmperor   ? ' history-item--emperor'
         : isTier2     ? ' history-item--tier2'
+        : isGeometrical ? ' history-item--geometrical'
         : isElder     ? ' history-item--elder'
         : isAscendant ? ' history-item--ascendant'
         : isMutation  ? ' history-item--mutation'
         : isNull      ? ' history-item--null'
         : '';
-      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isTier2 || isNull || isSupremeKing;
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isTier2 || isGeometrical || isNull || isSupremeKing;
       const categoryBadge = isSupremeKing
         ? `<span class="supreme-king-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>`
         : isSecret
@@ -2681,7 +2685,9 @@ function renderHistory() {
             ? `<span class="emperor-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>`
             : isTier2
               ? `<span class="tier2-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.9;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>`
-              : isElder
+              : isGeometrical
+                ? `<span class="geometrical-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00d4ff;opacity:.9;text-shadow:0 0 10px #00d4ff;">🔷 GEOMETRICAL</span>`
+                : isElder
                 ? `<span class="elder-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
                 : isAscendant
                   ? `<span class="ascendant-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
@@ -2757,12 +2763,14 @@ function renderLockedStorage() {
       const lineage = h.isSupremeKing ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>'
         : h.isEmperor ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>'
         : h.isTier2 ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>'
+        : h.isGeometrical ? '<span class="lineage-badge" style="color:#00d4ff;text-shadow:0 0 10px #00d4ff;">🔷 GEOMETRICAL</span>'
         : h.isElder ? '<span class="lineage-badge" style="color:gold;text-shadow:0 0 8px gold;">ELDER</span>'
         : h.isAscendant ? '<span class="lineage-badge" style="color:#00ddaa;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>'
         : '';
       const tierClass = h.isSupremeKing ? ' history-item--supreme-king'
         : h.isEmperor ? ' history-item--emperor'
         : h.isTier2 ? ' history-item--tier2'
+        : h.isGeometrical ? ' history-item--geometrical'
         : h.isElder ? ' history-item--elder'
         : h.isAscendant ? ' history-item--ascendant'
         : '';
@@ -4042,6 +4050,17 @@ function submitAdminCode() {
   if (code === 'supreme') {
     closeAdminPanel();
     showElderCutscene({ ...SUPREME_KING_AURA, isSupremeKing: true });
+    return;
+  }
+
+  // "incarnatus" — grant a random Geometrical aura (same as Incarnatus potion)
+  if (code === 'incarnatus') {
+    const aura = GEOMETRICAL_AURAS[Math.floor(Math.random() * GEOMETRICAL_AURAS.length)];
+    if (grantItemById(aura.id)) {
+      closeAdminPanel();
+      renderResult({ ...aura, isGeometrical: true });
+      switchTab(document.querySelector('[data-tab="past"]'));
+    }
     return;
   }
 
