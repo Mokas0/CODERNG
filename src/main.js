@@ -57,11 +57,14 @@ function setScraps(n) {
   // THE HOARDER check happens after scraps settle; defer so getters are current
   setTimeout(() => { checkElderUnlock(); checkAscendantUnlock(); checkEmperorUnlock(); }, 0);
 }
+const GEAR_LUCK_CAP = 15_000;
+
 function getGearBonus() {
-  return Number(localStorage.getItem(STORAGE_KEYS.gearBonus) || 0);
+  return Math.min(Number(localStorage.getItem(STORAGE_KEYS.gearBonus) || 0), GEAR_LUCK_CAP);
 }
 function addGearBonus(amount) {
-  localStorage.setItem(STORAGE_KEYS.gearBonus, String(Math.max(0, getGearBonus() + amount)));
+  const newBonus = Math.min(Math.max(0, getGearBonus() + amount), GEAR_LUCK_CAP);
+  localStorage.setItem(STORAGE_KEYS.gearBonus, String(newBonus));
 }
 function getHistory() {
   try {
