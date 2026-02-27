@@ -2694,6 +2694,48 @@ async function bazaarLinkCasino() {
   renderBazaar();
 }
 
+async function sendLockedAuraToBazaar(lockedIndex) {
+  if (!authUser || !supabase) {
+    showBazaarBalanceMsg('Sign in to use Bazaar.', true);
+    return;
+  }
+  await refreshAuthProfile();
+  if (!authProfile?.casino_username) {
+    showBazaarBalanceMsg('Link your Casino vault in the Bazaar tab first.', true);
+    switchTab('bazaar');
+    return;
+  }
+  const locked = getLockedStorage();
+  if (lockedIndex < 0 || lockedIndex >= locked.length) return;
+  const item = locked[lockedIndex];
+  const itemJson = { text: item.text, font: item.font, color: item.color, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textShadow: item.textShadow, rarity: item.rarity };
+  const { data: depData, error: depErr } = await supabase.rpc('casino_deposit_aura', { p_username: authProfile.casino_username, p_item_json: itemJson });
+  const depResult = Array.isArray(depData) ? depData[0] : depData;
+  if (depErr || !depResult?.success) {
+    showBazaarBalanceMsg(depResult?.message || depErr?.message || 'Deposit to vault failed', true);
+    return;
+  }
+  const auraId = depResult?.aura_id;
+  if (!auraId) {
+    showBazaarBalanceMsg('Deposit succeeded but could not get aura ID.', true);
+    return;
+  }
+  locked.splice(lockedIndex, 1);
+  setLockedStorage(locked);
+  const { data: impData, error: impErr } = await supabase.rpc('bazaar_import_aura_from_casino', { p_aura_id: auraId });
+  const impResult = Array.isArray(impData) ? impData[0] : impData;
+  if (impErr || !impResult?.success) {
+    showBazaarBalanceMsg(impResult?.message || impErr?.message || 'Import to Bazaar failed', true);
+    return;
+  }
+  renderLockedStorage();
+  await loadCasinoAuraVault();
+  renderCasino();
+  renderBazaar();
+  switchTab('bazaar');
+  showBazaarBalanceMsg('Aura sent to Bazaar inventory. List it to sell.');
+}
+
 async function bazaarImportAura(auraId) {
   if (!authUser || !supabase) return;
   const { data, error } = await supabase.rpc('bazaar_import_aura_from_casino', { p_aura_id: auraId });
@@ -3174,6 +3216,7 @@ function renderLockedStorage() {
       return `<li class="history-item history-item--storage${tierClass}" data-locked-index="${idx}">
           ${lineage}
           <button type="button" class="unlock-btn" data-locked-index="${idx}" title="Unlock — send back to Past rolls">🔓 Unlock</button>
+          <button type="button" class="to-bazaar-btn" data-locked-index="${idx}" title="Send to Bazaar (deposit to vault + import)">🏪 To Bazaar</button>
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
         </li>`;
@@ -3186,6 +3229,9 @@ function renderLockedStorage() {
       renderHistory();
       renderLockedStorage();
     });
+  });
+  list.querySelectorAll('.to-bazaar-btn').forEach((btn) => {
+    btn.addEventListener('click', () => sendLockedAuraToBazaar(parseInt(btn.dataset.lockedIndex, 10)));
   });
 }
 
