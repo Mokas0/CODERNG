@@ -1195,4 +1195,36 @@ function buildItems() {
 
 export { classifyAuraType };
 
+// World 2: 20 items with insanely high rarities (1T to 100Q), log-spaced
+function buildWorld2Items() {
+  const n = 20;
+  const logLow = Math.log10(1e12);   // 1 trillion
+  const logHigh = Math.log10(1e17);  // 100 quadrillion
+  const items = [];
+  const w2Texts = [
+    'VOID EMPEROR', 'ETERNAL CROWN', 'PRIMORDIAL SHARD', 'INFINITE ECHO', 'COSMIC END',
+    'DIVINE SPARK', 'LAST STAR', 'FIRST LIGHT', 'REALITY TEAR', 'WORLD SEED',
+    'OMEGA PULSE', 'ALPHA WAVE', 'SACRED FLAME', 'PHANTOM HEART', 'SHADOW GOD',
+    'BLOOD MOON', 'CRYSTAL SOUL', 'LOST HEAVEN', 'DEAD STAR', 'LIVING VOID',
+  ];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const logR = logLow + t * (logHigh - logLow);
+    const rarity = Math.round(Math.pow(10, logR));
+    items.push({
+      id: 10000 + i,
+      text: w2Texts[i],
+      font: FONTS[i % FONTS.length],
+      color: COLORS[i % COLORS.length],
+      ...STYLES[i % STYLES.length],
+      rarity,
+      weight: 1 / rarity,
+    });
+  }
+  const totalWeight = items.reduce((s, x) => s + x.weight, 0);
+  items.forEach((x) => { x.probability = x.weight / totalWeight; });
+  return items;
+}
+
+export const WORLD2_ITEMS = buildWorld2Items();
 export const ITEMS = buildItems();

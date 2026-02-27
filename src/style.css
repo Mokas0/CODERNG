@@ -72,6 +72,26 @@ body {
   gap: 0.75rem;
 }
 
+.world-switcher {
+  margin-right: 0.25rem;
+}
+.world-switcher-link {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+.world-switcher-link:hover {
+  text-decoration: underline;
+}
+.world-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
 .hidden {
   display: none !important;
 }

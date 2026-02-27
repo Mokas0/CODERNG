@@ -1,36 +1,56 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, classifyAuraType } from './data/items.js';
+import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
+// World detection: data-world on <html> or <body>; default 1
+const WORLD_ID = Math.min(2, Math.max(1, parseInt(
+  document.documentElement.getAttribute('data-world') || document.body?.getAttribute('data-world') || '1',
+  10
+)));
+const STORAGE_PREFIX = WORLD_ID === 2 ? 'rng_w2_' : 'rng_';
 const STORAGE_KEYS = {
-  coins: 'rng_coins', history: 'rng_history', luck: 'rng_luck', locked: 'rng_locked', lockedStorage: 'rng_locked_storage',
-  shopRotationEnd: 'rng_shop_rotation_end', shopSeed: 'rng_shop_seed',
-  bennyNextAt: 'rng_benny_next_at',
-  patrickNextAt: 'rng_patrick_next_at',
-  scraps: 'rng_scraps', gearBonus: 'rng_gear_bonus',
-  snehoRotationEnd: 'rng_sneho_rotation_end', snehoSeed: 'rng_sneho_seed',
-  tycoonCpc: 'rng_tycoon_cpc', tycoonUpgrades: 'rng_tycoon_upgrades',
-  tycoonClicks: 'rng_tycoon_clicks', tycoonEarned: 'rng_tycoon_earned',
-  cutsceneThreshold: 'rng_settings_cutscene_threshold',
-  // Elder aura progress tracking
-  elderSnehoTotal: 'rng_elder_sneho_total',
-  elderRollTotal:  'rng_elder_roll_total',
-  elderCurseTotal: 'rng_elder_curse_total',
-  elderCoinsSpent: 'rng_elder_coins_spent',
-  elderReceived:   'rng_elder_received',
-  elderUnlocked:   'rng_elder_unlocked',
-  // Quest board
-  questDailyEnd:      'rng_quest_daily_end',
-  questDailySeed:     'rng_quest_daily_seed',
-  questWeeklyEnd:     'rng_quest_weekly_end',
-  questWeeklySeed:    'rng_quest_weekly_seed',
-  questDailyProg:     'rng_quest_daily_prog',
-  questDailyClaimed:  'rng_quest_daily_claimed',
-  questWeeklyProg:    'rng_quest_weekly_prog',
-  questWeeklyClaimed: 'rng_quest_weekly_claimed',
-  potionInventory:    'rng_potion_inventory',
-  competitionType:    'rng_competition_type', // suffix: _${seasonKey}
+  coins: STORAGE_PREFIX + 'coins',
+  history: STORAGE_PREFIX + 'history',
+  luck: STORAGE_PREFIX + 'luck',
+  locked: STORAGE_PREFIX + 'locked',
+  lockedStorage: STORAGE_PREFIX + 'locked_storage',
+  shopRotationEnd: STORAGE_PREFIX + 'shop_rotation_end',
+  shopSeed: STORAGE_PREFIX + 'shop_seed',
+  bennyNextAt: STORAGE_PREFIX + 'benny_next_at',
+  patrickNextAt: STORAGE_PREFIX + 'patrick_next_at',
+  scraps: STORAGE_PREFIX + 'scraps',
+  gearBonus: STORAGE_PREFIX + 'gear_bonus',
+  snehoRotationEnd: STORAGE_PREFIX + 'sneho_rotation_end',
+  snehoSeed: STORAGE_PREFIX + 'sneho_seed',
+  tycoonCpc: STORAGE_PREFIX + 'tycoon_cpc',
+  tycoonUpgrades: STORAGE_PREFIX + 'tycoon_upgrades',
+  tycoonClicks: STORAGE_PREFIX + 'tycoon_clicks',
+  tycoonEarned: STORAGE_PREFIX + 'tycoon_earned',
+  cutsceneThreshold: STORAGE_PREFIX + 'settings_cutscene_threshold',
+  elderSnehoTotal: STORAGE_PREFIX + 'elder_sneho_total',
+  elderRollTotal: STORAGE_PREFIX + 'elder_roll_total',
+  elderCurseTotal: STORAGE_PREFIX + 'elder_curse_total',
+  elderCoinsSpent: STORAGE_PREFIX + 'elder_coins_spent',
+  elderReceived: STORAGE_PREFIX + 'elder_received',
+  elderUnlocked: STORAGE_PREFIX + 'elder_unlocked',
+  questDailyEnd: STORAGE_PREFIX + 'quest_daily_end',
+  questDailySeed: STORAGE_PREFIX + 'quest_daily_seed',
+  questWeeklyEnd: STORAGE_PREFIX + 'quest_weekly_end',
+  questWeeklySeed: STORAGE_PREFIX + 'quest_weekly_seed',
+  questDailyProg: STORAGE_PREFIX + 'quest_daily_prog',
+  questDailyClaimed: STORAGE_PREFIX + 'quest_daily_claimed',
+  questWeeklyProg: STORAGE_PREFIX + 'quest_weekly_prog',
+  questWeeklyClaimed: STORAGE_PREFIX + 'quest_weekly_claimed',
+  potionInventory: STORAGE_PREFIX + 'potion_inventory',
+  competitionType: STORAGE_PREFIX + 'competition_type',
 };
+
+const WORLD_CONFIG = {
+  worldId: WORLD_ID,
+  items: WORLD_ID === 2 ? WORLD2_ITEMS : ITEMS,
+  luckCapEffective: WORLD_ID === 2 ? 30 : Infinity,
+};
+
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
 const BENNY_INTERVAL_MS = 60 * 60 * 1000;  // 60 minutes
@@ -133,16 +153,10 @@ const ELDER_ROLL_WEIGHT = 1 / 9_000_000_000_000_000;
 
 function weightedRandom(multiplier = 1, extraItems = []) {
   // Compress luck via power curve so potions feel impactful but can't fully
-  // flatten the rarity spectrum.  effectiveMult = luck^0.4:
-  //   luck=1    → 1     (no change — original weights)
-  //   luck=51   → 5.4   (Minor potion — 1M items only ~12× rarer than common)
-  //   luck=151  → 8.4   (Luck Potion — 1B items ~8× rarer)
-  //   luck=401  → 12    (Greater — 1T mythic ~16× rarer)
-  //   luck=1.2k → 19    (Supreme — 1T mythic ~5× rarer)
-  //   luck=3.5k → 30    (Mythic Brew — 1T mythic ~2.5× rarer)
-  //   luck=50k  → 96    (Ultraluck — nearly flat)
-  const effectiveMult = Math.pow(Math.max(multiplier, 1), 0.4);
-  const pool = [...ITEMS, ...extraItems];
+  // flatten the rarity spectrum.  effectiveMult = luck^0.4 (capped in World 2 at 30).
+  const rawEffective = Math.pow(Math.max(multiplier, 1), 0.4);
+  const effectiveMult = Math.min(rawEffective, WORLD_CONFIG.luckCapEffective);
+  const pool = [...WORLD_CONFIG.items, ...extraItems];
   const weights = pool.map((i) => Math.pow(i.weight, 1 / effectiveMult));
   const total = weights.reduce((s, w) => s + w, 0);
   let r = Math.random() * total;
@@ -540,14 +554,18 @@ function renderLuck() {
   const m = getLuckMultiplier();
   const gear = getGearBonus();
   const total = m + gear;
+  const effectiveRaw = Math.pow(Math.max(total, 1), 0.4);
+  const effectiveMult = Math.min(effectiveRaw, WORLD_CONFIG.luckCapEffective);
   const el = document.getElementById('luck-value');
   const btn = document.getElementById('luck-btn');
   if (el) {
     const fmt = (n) => Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 1 });
-    if (gear > 0) {
-      el.textContent = `${fmt(total)}× (${fmt(m)} + ${fmt(gear)} gear)`;
+    if (WORLD_CONFIG.luckCapEffective !== Infinity && effectiveRaw >= WORLD_CONFIG.luckCapEffective) {
+      el.textContent = `${fmt(effectiveMult)}× (capped)`;
+    } else if (gear > 0) {
+      el.textContent = `${fmt(effectiveMult)}× (${fmt(m)} + ${fmt(gear)} gear)`;
     } else {
-      el.textContent = m === 1 ? '1× (normal)' : `${fmt(m)}×`;
+      el.textContent = effectiveMult === 1 ? '1× (normal)' : `${fmt(effectiveMult)}×`;
     }
   }
   if (btn) {
@@ -2264,7 +2282,7 @@ function closeDevPanel() {
 }
 
 function grantItemById(id) {
-  const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
+  const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
   const item = all.find(a => a.id === id);
   if (!item) return false;
   const isElder = ELDER_AURAS.some(a => a.id === id);
@@ -3893,7 +3911,7 @@ async function roll() {
   renderRollCount();
 
   const mult = getLuckMultiplier() + getGearBonus();
-  const item = weightedRandom(mult, getUnlockedElderPool());
+  const item = weightedRandom(mult, WORLD_ID === 2 ? [] : getUnlockedElderPool());
 
   // Quest: track peak luck before it resets, and count the roll
   addQuestProgress('roll', 1);
@@ -4081,7 +4099,7 @@ function submitAdminCode() {
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
+    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
@@ -4406,6 +4424,25 @@ function renderStore() {
 
 function init() {
   migrateLockedToStorage();
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const worldSwitcher = document.getElementById('world-switcher');
+  if (worldSwitcher) {
+    if (WORLD_ID === 1) {
+      worldSwitcher.innerHTML = `<a href="${base}world2.html" class="world-switcher-link">World 2</a>`;
+    } else {
+      worldSwitcher.innerHTML = `<a href="${base === '/' ? '/' : base}" class="world-switcher-link">World 1</a>`;
+    }
+  }
+  const worldBadge = document.getElementById('world-badge');
+  if (worldBadge) {
+    if (WORLD_ID === 2) {
+      worldBadge.textContent = 'World 2';
+      worldBadge.classList.remove('hidden');
+    } else {
+      worldBadge.textContent = 'World 1';
+      worldBadge.classList.add('hidden');
+    }
+  }
   const rollBtn = document.getElementById('roll-btn');
   const luckBtn = document.getElementById('luck-btn');
   if (rollBtn) rollBtn.addEventListener('click', roll);
@@ -4636,7 +4673,7 @@ init();
 window.__rng = {
   /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) or __rng.cutscene(9200) */
   cutscene(id) {
-    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
+    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
     showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });

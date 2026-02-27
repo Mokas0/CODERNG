@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-world="2">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RNG Roller — Roll the 500</title>
+    <title>RNG Roller — World 2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel&family=Comfortaa&family=Cormorant+Garamond:ital,wght@0,400;1,700&family=Creepster&family=DM+Serif+Display&family=Fredoka:wght@400;600&family=Great+Vibes&family=Inter:wght@400;700;900&family=JetBrains+Mono&family=Lobster&family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poiret+One&family=Press+Start+2P&family=Quicksand:wght@400;700&family=Raleway:wght@400;700;900&family=Righteous&family=Rubik:wght@400;700;900&family=Space+Mono&family=Syne:wght@400;800&family=Unbounded:wght@400;700&display=swap" rel="stylesheet" />
@@ -14,7 +14,7 @@
   <body>
     <div id="app">
       <header class="header">
-        <h1 class="header-title">RNG Roller <span id="world-badge" class="world-badge hidden"></span></h1>
+        <h1 class="header-title">RNG Roller <span id="world-badge" class="world-badge">World 2</span></h1>
         <div class="meta">
           <span id="world-switcher" class="world-switcher"></span>
           <span class="coins-wrap">🪙 <span id="coins">0</span> coins</span>
@@ -354,7 +354,7 @@
       <div id="benny-overlay" class="admin-overlay hidden" aria-hidden="true">
         <div class="admin-panel benny-panel">
           <h2 class="admin-title">Benny</h2>
-          <p class="benny-dialogue">Hey, traveller. I don’t stick around long — you’ve got to catch me. Same potions, but my prices are a bit friendlier this time. Take a look.</p>
+          <p class="benny-dialogue">Hey, traveller. I don't stick around long — you've got to catch me. Same potions, but my prices are a bit friendlier this time. Take a look.</p>
           <div id="benny-shop-list" class="shop-list"></div>
           <button type="button" id="benny-close" class="admin-btn">Done</button>
         </div>
