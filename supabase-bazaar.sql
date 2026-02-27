@@ -597,18 +597,28 @@ begin
 end;
 $$;
 
--- RPC: update ticker price from volume stats
+-- RPC: update ticker price from volume stats with realistic volatility
+-- Fundamental value from activity; random walk + mean reversion for lifelike behavior
 create or replace function public.bazaar_stock_update_price(p_symbol text default 'BZX')
 returns void language plpgsql security definer set search_path = public as $$
 declare
   v_sales int;
   v_volume int;
+  v_fundamental numeric;
+  v_old_price numeric;
+  v_random_drift numeric;   -- ±3% random volatility per tick
   v_new_price numeric;
 begin
   select coalesce(sales_count, 0), coalesce(volume_coins, 0) into v_sales, v_volume
   from bazaar_volume_stats where id = 1;
-  v_new_price := 100 + (v_sales * 2) + (v_volume / 10000.0);
-  v_new_price := greatest(10, least(10000, v_new_price));
+  v_fundamental := 100 + (v_sales * 2) + (v_volume / 10000.0);
+  v_fundamental := greatest(50, least(5000, v_fundamental));
+  select coalesce(price, 100) into v_old_price from bazaar_stock_ticker where symbol = p_symbol;
+  -- Random walk: ±3% volatility per update (like real market noise)
+  v_random_drift := (random() - 0.5) * 0.06;
+  -- 80% momentum (old price + random shock), 20% mean reversion toward fundamental
+  v_new_price := v_old_price * (1 + v_random_drift) * 0.8 + v_fundamental * 0.2;
+  v_new_price := greatest(10, least(10000, round(v_new_price, 2)));
   update bazaar_stock_ticker set price = v_new_price, updated_at = now() where symbol = p_symbol;
 end;
 $$;
@@ -646,6 +656,9 @@ begin
   end if;
   update bazaar_wallets set coins_balance = coins_balance - v_cost, updated_at = now()
   where user_id = auth.uid();
+  -- Market impact: buying pushes price up slightly (realistic)
+  update bazaar_stock_ticker set price = least(10000, round(price * (1 + 0.002 * least(p_shares, 50)), 2)), updated_at = now()
+  where symbol = p_symbol;
   select coalesce(shares, 0), avg_buy_price into v_cur_shares, v_cur_avg
   from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol;
   v_cur_shares := coalesce(v_cur_shares, 0);
@@ -696,6 +709,9 @@ begin
   insert into bazaar_wallets (user_id, coins_balance)
   values (auth.uid(), v_proceeds)
   on conflict (user_id) do update set coins_balance = bazaar_wallets.coins_balance + v_proceeds, updated_at = now();
+  -- Market impact: selling pushes price down slightly (realistic)
+  update bazaar_stock_ticker set price = greatest(10, round(price * (1 - 0.002 * least(p_shares, 50)), 2)), updated_at = now()
+  where symbol = p_symbol;
   update bazaar_stock_holdings set shares = shares - p_shares
   where user_id = auth.uid() and symbol = p_symbol;
   delete from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol and shares <= 0;
