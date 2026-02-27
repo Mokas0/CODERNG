@@ -799,6 +799,43 @@ body {
   display: none;
 }
 
+.jia-popup-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 11rem;
+  z-index: 999;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #330066, #000);
+  border: 2px solid #6600aa;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(102, 0, 170, 0.4);
+}
+.jia-popup-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(102, 0, 170, 0.6);
+}
+.jia-popup-btn.hidden {
+  display: none;
+}
+.jia-panel .jia-balance {
+  margin: 0.5rem 0 1rem;
+  font-size: 1rem;
+}
+.jia-section-title {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.5rem;
+}
+.jia-sell-list .shop-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .patrick-panel .shop-list {
   margin-bottom: 1rem;
 }

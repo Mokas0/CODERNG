@@ -910,6 +910,30 @@ export const SUPREME_KING_AURA = {
   rarity: -1, isSupremeKing: true,
 };
 
+// Jia Void auras (World 2 only): Void Potion grants one of these; Supreme King-level cutscenes
+export const JIA_VOID_AURAS = [
+  { id: 10120, text: '♔ VOID SOVEREIGN ♔',
+    font: 'Cinzel', color: '#6600aa', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 30px #8800ff, 0 0 80px #6600aa, 0 0 140px #330055',
+    rarity: -1, isSupremeKing: true, isJiaVoid: true },
+  { id: 10121, text: '♔ THE NULL EMPEROR ♔',
+    font: 'Unbounded', color: '#222222', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 30px #444444, 0 0 80px #000000, 0 0 140px #111111',
+    rarity: -1, isSupremeKing: true, isJiaVoid: true },
+  { id: 10122, text: '♔ ETERNAL NULL ♔',
+    font: 'DM Serif Display', color: '#ffffff', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 25px #ffffff, 0 0 60px #888888, 0 0 100px #000000',
+    rarity: -1, isSupremeKing: true, isJiaVoid: true },
+];
+
+// Jia shop: unfathomably rare items (World 2 only, buy with NULL COINS)
+export const JIA_RARE_ITEMS = [
+  { id: 10130, text: 'NULL FRAGMENT', font: 'Space Mono', color: '#444444', fontWeight: '700', fontStyle: 'normal', textShadow: 'none', rarity: 1e15, costNullCoins: 80, emoji: '⬛' },
+  { id: 10131, text: 'VOID SHARD', font: 'Unbounded', color: '#6600aa', fontWeight: '900', fontStyle: 'normal', textShadow: '0 0 15px #8800ff', rarity: 5e15, costNullCoins: 200, emoji: '💜' },
+  { id: 10132, text: 'THE UNSPOKEN', font: 'Cinzel', color: '#ffffff', fontWeight: '900', fontStyle: 'normal', textShadow: '0 0 20px #fff', rarity: 2e16, costNullCoins: 450, emoji: '◇' },
+  { id: 10133, text: 'ABSOLUTE ZERO', font: 'JetBrains Mono', color: '#00aaff', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 18px #00ddff', rarity: 1e17, costNullCoins: 900, emoji: '❄' },
+];
+
 // Tier 2 Auras — only unlockable after receiving THE SUPREME KING. Post-Supreme tier.
 export const TIER2_AURAS = [
   { id: 9980, text: 'THE TRANSCENDENT',
@@ -1195,25 +1219,38 @@ function buildItems() {
 
 export { classifyAuraType };
 
-// World 2: 20 items with insanely high rarities (1T to 100Q), log-spaced
-function buildWorld2Items() {
-  const n = 20;
-  const logLow = Math.log10(1e12);   // 1 trillion
-  const logHigh = Math.log10(1e17);  // 100 quadrillion
+// World 2: many super common auras (1/2 to ~1/300) + 20 insanely rare (1T–100Q)
+const WORLD2_COMMON_TEXTS = [
+  'SPARK', 'GLOW', 'DUST', 'EMBER', 'BREEZE', 'SHARD', 'FLARE', 'PULSE', 'ECHO', 'BEAM',
+  'MIST', 'FROST', 'FLAME', 'STAR', 'MOON', 'DAWN', 'DUSK', 'VOID', 'CORE', 'EDGE',
+  'SIGN', 'MARK', 'SEAL', 'KEY', 'GATE', 'PATH', 'ROAD', 'DOOR', 'PORTAL', 'BRIDGE',
+  'CHARM', 'TOKEN', 'RUNES', 'SIGIL', 'WORD', 'NAME', 'TITLE', 'CROWN', 'ORB', 'BLADE',
+  'LUCK', 'FATE', 'HOPE', 'GRACE', 'ZEAL', 'WRATH', 'CALM', 'BOLD', 'PURE', 'TRUE',
+  'GOLD', 'SILVER', 'IRON', 'ICE', 'FIRE', 'WIND', 'WAVE', 'STONE', 'SOUL', 'MIND',
+  'RISE', 'FALL', 'SPIN', 'ROLL', 'DRAW', 'DEAL', 'PLAY', 'WIN', 'LOSE', 'TIE',
+  'ONE', 'TWO', 'THREE', 'FEW', 'MANY', 'MORE', 'LESS', 'SAME', 'NEW', 'OLD',
+  'LOST', 'FOUND', 'HIDDEN', 'SEEN', 'KNOWN', 'GIVEN', 'TAKEN', 'HELD', 'FREE', 'BOUND',
+  'LIGHT', 'DARK', 'WARM', 'COLD', 'SOFT', 'HARD', 'FAST', 'SLOW', 'HIGH', 'LOW',
+];
+const WORLD2_RARE_TEXTS = [
+  'VOID EMPEROR', 'ETERNAL CROWN', 'PRIMORDIAL SHARD', 'INFINITE ECHO', 'COSMIC END',
+  'DIVINE SPARK', 'LAST STAR', 'FIRST LIGHT', 'REALITY TEAR', 'WORLD SEED',
+  'OMEGA PULSE', 'ALPHA WAVE', 'SACRED FLAME', 'PHANTOM HEART', 'SHADOW GOD',
+  'BLOOD MOON', 'CRYSTAL SOUL', 'LOST HEAVEN', 'DEAD STAR', 'LIVING VOID',
+];
+
+function buildWorld2Commons() {
+  const n = 100;
+  const logLow = Math.log10(2);      // 1/2
+  const logHigh = Math.log10(300);   // 1/300
   const items = [];
-  const w2Texts = [
-    'VOID EMPEROR', 'ETERNAL CROWN', 'PRIMORDIAL SHARD', 'INFINITE ECHO', 'COSMIC END',
-    'DIVINE SPARK', 'LAST STAR', 'FIRST LIGHT', 'REALITY TEAR', 'WORLD SEED',
-    'OMEGA PULSE', 'ALPHA WAVE', 'SACRED FLAME', 'PHANTOM HEART', 'SHADOW GOD',
-    'BLOOD MOON', 'CRYSTAL SOUL', 'LOST HEAVEN', 'DEAD STAR', 'LIVING VOID',
-  ];
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
     const logR = logLow + t * (logHigh - logLow);
     const rarity = Math.round(Math.pow(10, logR));
     items.push({
-      id: 10000 + i,
-      text: w2Texts[i],
+      id: 10020 + i,
+      text: WORLD2_COMMON_TEXTS[i % WORLD2_COMMON_TEXTS.length],
       font: FONTS[i % FONTS.length],
       color: COLORS[i % COLORS.length],
       ...STYLES[i % STYLES.length],
@@ -1221,6 +1258,35 @@ function buildWorld2Items() {
       weight: 1 / rarity,
     });
   }
+  return items;
+}
+
+function buildWorld2Rares() {
+  const n = 20;
+  const logLow = Math.log10(1e12);
+  const logHigh = Math.log10(1e17);
+  const items = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const logR = logLow + t * (logHigh - logLow);
+    const rarity = Math.round(Math.pow(10, logR));
+    items.push({
+      id: 10000 + i,
+      text: WORLD2_RARE_TEXTS[i],
+      font: FONTS[i % FONTS.length],
+      color: COLORS[i % COLORS.length],
+      ...STYLES[i % STYLES.length],
+      rarity,
+      weight: 1 / rarity,
+    });
+  }
+  return items;
+}
+
+function buildWorld2Items() {
+  const commons = buildWorld2Commons();
+  const rares = buildWorld2Rares();
+  const items = [...commons, ...rares];
   const totalWeight = items.reduce((s, x) => s + x.weight, 0);
   items.forEach((x) => { x.probability = x.weight / totalWeight; });
   return items;

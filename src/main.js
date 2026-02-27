@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, classifyAuraType } from './data/items.js';
+import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
@@ -44,6 +44,7 @@ const STORAGE_KEYS = {
   questWeeklyClaimed: STORAGE_PREFIX + 'quest_weekly_claimed',
   potionInventory: STORAGE_PREFIX + 'potion_inventory',
   competitionType: STORAGE_PREFIX + 'competition_type',
+  nullCoins: STORAGE_PREFIX + 'null_coins',
 };
 
 const WORLD_CONFIG = {
@@ -51,11 +52,16 @@ const WORLD_CONFIG = {
   items: WORLD_ID === 2 ? WORLD2_ITEMS : ITEMS,
   luckCapEffective: WORLD_ID === 2 ? 30 : Infinity,
 };
+// World 2: max raw (luck + gear) so that effective = (luck+gear)^0.4 <= 30
+const MAX_RAW_LUCK_WORLD2 = Math.pow(30, 1 / 0.4);
 
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
 const BENNY_INTERVAL_MS = 60 * 60 * 1000;  // 60 minutes
 const PATRICK_INTERVAL_MS = 120 * 60 * 1000;  // 120 minutes (2× rarer than Benny)
+const JIA_SPAWN_CHANCE = 1 / 180;
+const JIA_MINUTE_MS = 60 * 1000;
+const JIA_VOID_POTION_COST = 1200;
 
 function getCoins() {
   return Number(localStorage.getItem(STORAGE_KEYS.coins) || 0);
@@ -100,10 +106,28 @@ function setHistory(arr) {
   localStorage.setItem(STORAGE_KEYS.history, JSON.stringify(kept));
 }
 function getLuckMultiplier() {
-  return Number(localStorage.getItem(STORAGE_KEYS.luck) || 1);
+  const raw = Number(localStorage.getItem(STORAGE_KEYS.luck) || 1);
+  if (WORLD_ID === 2) {
+    const maxBase = Math.max(1, Math.floor(MAX_RAW_LUCK_WORLD2 - getGearBonus()));
+    return Math.min(raw, maxBase);
+  }
+  return raw;
 }
 function setLuckMultiplier(m) {
-  localStorage.setItem(STORAGE_KEYS.luck, String(m));
+  if (WORLD_ID === 2) {
+    const maxBase = Math.max(1, Math.floor(MAX_RAW_LUCK_WORLD2 - getGearBonus()));
+    m = Math.min(m, maxBase);
+  }
+  localStorage.setItem(STORAGE_KEYS.luck, String(Math.max(1, m)));
+}
+
+function getNullCoins() {
+  if (WORLD_ID !== 2) return 0;
+  return Math.max(0, Number(localStorage.getItem(STORAGE_KEYS.nullCoins) || 0));
+}
+function setNullCoins(n) {
+  if (WORLD_ID !== 2) return;
+  localStorage.setItem(STORAGE_KEYS.nullCoins, String(Math.max(0, Math.floor(n))));
 }
 
 function getLockedStorage() {
@@ -488,6 +512,13 @@ function formatRarity(rarity) {
 function coinsForSalvage(rarity) {
   const base = Math.max(1, Math.floor(100 / Math.log10(rarity + 1)));
   return Math.min(10000, base);
+}
+
+function nullCoinsForSale(rarity) {
+  const r = Math.max(1, rarity);
+  const base = Math.min(2000, Math.max(1, Math.floor(Math.log10(r + 1) * 80)));
+  const variance = Math.floor(base * 0.5 * Math.random());
+  return base + variance;
 }
 
 function renderResult(item) {
@@ -1268,6 +1299,142 @@ function renderPatrickShop() {
   list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
     btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, false, true));
   });
+}
+
+// ——— Jia (World 2 only: 1/180 per minute; sell auras for NULL COINS, buy Void Potion / rare items) ———
+function showJiaButton() {
+  if (WORLD_ID !== 2) return;
+  const btn = document.getElementById('jia-popup-btn');
+  if (btn) {
+    btn.classList.remove('hidden');
+    btn.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function hideJiaButton() {
+  const btn = document.getElementById('jia-popup-btn');
+  if (btn) {
+    btn.classList.add('hidden');
+    btn.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function openJia() {
+  hideJiaButton();
+  const overlay = document.getElementById('jia-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    renderJiaPanel();
+  }
+}
+
+function closeJia() {
+  const overlay = document.getElementById('jia-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function sellAuraToJia(lockedIndex) {
+  const locked = getLockedStorage();
+  if (lockedIndex < 0 || lockedIndex >= locked.length) return;
+  const [sold] = locked.splice(lockedIndex, 1);
+  setLockedStorage(locked);
+  const amount = nullCoinsForSale(sold.rarity || 1);
+  setNullCoins(getNullCoins() + amount);
+  renderJiaPanel();
+  renderLockedStorage();
+  const el = document.getElementById('jia-null-coins');
+  if (el) el.textContent = getNullCoins().toLocaleString();
+}
+
+async function buyJiaVoidPotion() {
+  const nc = getNullCoins();
+  if (nc < JIA_VOID_POTION_COST) return;
+  setNullCoins(nc - JIA_VOID_POTION_COST);
+  const aura = JIA_VOID_AURAS[Math.floor(Math.random() * JIA_VOID_AURAS.length)];
+  const fullAura = { ...aura, isSupremeKing: true };
+  if (grantItemById(aura.id)) {
+    closeJia();
+    renderResult(fullAura);
+    switchTab('past');
+    await showElderCutscene(fullAura);
+    renderHistory();
+    renderLockedStorage();
+  }
+}
+
+function buyJiaRareItem(item) {
+  const nc = getNullCoins();
+  if (nc < item.costNullCoins) return;
+  setNullCoins(nc - item.costNullCoins);
+  if (grantItemById(item.id)) {
+    renderJiaPanel();
+    const balanceEl = document.getElementById('jia-null-coins');
+    if (balanceEl) balanceEl.textContent = getNullCoins().toLocaleString();
+  }
+}
+
+function renderJiaPanel() {
+  if (WORLD_ID !== 2) return;
+  const balanceEl = document.getElementById('jia-null-coins');
+  if (balanceEl) balanceEl.textContent = getNullCoins().toLocaleString();
+  const sellList = document.getElementById('jia-sell-list');
+  if (sellList) {
+    const locked = getLockedStorage();
+    if (locked.length === 0) {
+      sellList.innerHTML = '<p class="tab-desc">No locked auras. Lock auras from Past rolls first.</p>';
+    } else {
+      sellList.innerHTML = locked
+        .map((h, idx) => `<div class="shop-item jia-sell-item" data-locked-idx="${idx}">
+          <span class="history-text" style="font-family:'${h.font}';color:${h.color}">${h.text}</span>
+          <span class="history-rarity">${formatRarity(h.rarity)}</span>
+          <button type="button" class="shop-buy-btn jia-sell-btn" data-locked-idx="${idx}">Sell to Jia</button>
+        </div>`)
+        .join('');
+      sellList.querySelectorAll('.jia-sell-btn').forEach((btn) => {
+        btn.addEventListener('click', () => sellAuraToJia(parseInt(btn.dataset.lockedIdx, 10)));
+      });
+    }
+  }
+  const shopList = document.getElementById('jia-shop-list');
+  if (shopList) {
+    const nc = getNullCoins();
+    const voidCanBuy = nc >= JIA_VOID_POTION_COST;
+    const itemsHtml = JIA_RARE_ITEMS.map(
+      (item) => {
+        const canBuy = nc >= item.costNullCoins;
+        return `<div class="shop-item">
+          <span class="shop-item-emoji">${item.emoji}</span>
+          <div class="shop-item-info">
+            <span class="shop-item-name">${item.text}</span>
+            <span class="shop-item-effect">${item.costNullCoins} NULL COINS</span>
+          </div>
+          <button type="button" class="shop-buy-btn jia-buy-rare" data-item-id="${item.id}" ${!canBuy ? 'disabled' : ''}>Buy</button>
+        </div>`;
+      }
+    ).join('');
+    const voidHtml = `<div class="shop-item shop-item--void-potion">
+      <span class="shop-item-emoji">⬛</span>
+      <div class="shop-item-info">
+        <span class="shop-item-name">Void Potion</span>
+        <span class="shop-item-effect">One of three Supreme-level auras + extended cutscene. ${JIA_VOID_POTION_COST} NULL COINS.</span>
+      </div>
+      <button type="button" class="shop-buy-btn jia-buy-void" ${!voidCanBuy ? 'disabled' : ''}>Buy</button>
+    </div>`;
+    shopList.innerHTML = itemsHtml + voidHtml;
+    shopList.querySelectorAll('.jia-buy-rare').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const item = JIA_RARE_ITEMS.find((i) => i.id === parseInt(btn.dataset.itemId, 10));
+        if (item) buyJiaRareItem(item);
+      });
+    });
+    shopList.querySelectorAll('.jia-buy-void').forEach((btn) => {
+      btn.addEventListener('click', () => buyJiaVoidPotion());
+    });
+  }
 }
 
 // ——— Sneho (forbidden rotating shop, 10-min rotation) ———
@@ -2283,14 +2450,14 @@ function closeDevPanel() {
 }
 
 function grantItemById(id) {
-  const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+  const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
   const item = all.find(a => a.id === id);
   if (!item) return false;
   const isElder = ELDER_AURAS.some(a => a.id === id);
   const isAscendant = ASCENDANT_AURAS.some(a => a.id === id);
   const isEmperor = EMPEROR_AURAS.some(a => a.id === id);
   const isTier2 = TIER2_AURAS.some(a => a.id === id);
-  const isSupremeKing = id === 9999;
+  const isSupremeKing = id === 9999 || JIA_VOID_AURAS.some(a => a.id === id);
   const isGeometrical = GEOMETRICAL_AURAS.some(a => a.id === id);
   if (isElder || isAscendant || isEmperor || isTier2 || isSupremeKing) markElderReceived(id);
   const tierTag = isGeometrical ? 'geometrical' : isTier2 ? 'tier2' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
@@ -3053,6 +3220,12 @@ const WORLD2_CUTSCENES = {
   10019: { quote: 'The void is not empty. It is alive.',              bg: '#000000', accentA: '#ffffff', accentB: '#555555' },
 };
 
+const JIA_VOID_CUTSCENES = {
+  10120: { quote: 'The void has a sovereign. You met them.',   bg: '#0a0015', accentA: '#8800ff', accentB: '#330044' },
+  10121: { quote: 'Nothing rules. You bowed anyway.',          bg: '#050505', accentA: '#333333', accentB: '#000000' },
+  10122: { quote: 'Eternal is not a word. It is this.',        bg: '#080808', accentA: '#ffffff', accentB: '#666666' },
+};
+
 // ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
 const ELDER_STAGES = {
   9950: [
@@ -3313,6 +3486,30 @@ const ELDER_STAGES = {
     '♔ THE SUPREME KING has arrived. ♔',
   ],
 
+  // ─── Jia Void auras (World 2 — Void Potion from Jia) ─────────────────────────
+  10120: [
+    'You traded NULL COINS for a potion that does not exist.',
+    'It has no color. No taste. No weight.',
+    'You drink it anyway.',
+    'The void behind the world stirs.',
+    'Something that was never born opens its eyes.',
+    '♔ VOID SOVEREIGN ♔',
+  ],
+  10121: [
+    'Where there is no light, no sound, no law.',
+    'There is still rule.',
+    'You paid in NULL. You received the opposite of everything.',
+    'The throne of nothing has a name.',
+    '♔ THE NULL EMPEROR ♔',
+  ],
+  10122: [
+    'Time ends. Luck ends. The roll ends.',
+    'One thing was here before the first roll.',
+    'It will be here after the last.',
+    'You have touched it. It has touched you.',
+    '♔ ETERNAL NULL ♔',
+  ],
+
   // ─── Tier 2 Auras (post-Supreme King, Sol's RNG-style) ─────────────────────
   9980: ['You have surpassed the throne.', 'Light bends. Time folds.', 'THE TRANSCENDENT awakens.', 'Beyond Supreme. Beyond all.'],
   9981: ['The void looked up.', 'It saw something higher.', 'VOID ASCENSION.', 'From nothing. To everything.'],
@@ -3440,7 +3637,7 @@ async function showElderCutscene(aura) {
   const quoteEl  = document.getElementById('rarity-overlay-quote');
   const subEl    = overlay.querySelector('.rarity-overlay__sub');
 
-  const cfg    = MYTHIC_CUTSCENES[aura.id] || { bg: '#000', accentA: '#fff', accentB: '#888' };
+  const cfg    = MYTHIC_CUTSCENES[aura.id] || JIA_VOID_CUTSCENES[aura.id] || { bg: '#000', accentA: '#fff', accentB: '#888' };
   const stages = ELDER_STAGES[aura.id] || [];
 
   // Apply theme vars
@@ -4135,7 +4332,7 @@ function submitAdminCode() {
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
@@ -4532,6 +4729,18 @@ function init() {
     const msg = document.getElementById('dev-panel-msg');
     if (msg) { msg.textContent = 'Patrick summoned!'; msg.style.color = 'var(--roll)'; }
   });
+  const devSummonJia = document.getElementById('dev-summon-jia');
+  if (devSummonJia) {
+    devSummonJia.classList.toggle('hidden', WORLD_ID !== 2);
+    devSummonJia.addEventListener('click', () => {
+      if (WORLD_ID === 2) {
+        showJiaButton();
+        closeDevPanel();
+        const msg = document.getElementById('dev-panel-msg');
+        if (msg) { msg.textContent = 'Jia summoned!'; msg.style.color = 'var(--roll)'; }
+      }
+    });
+  }
   document.getElementById('dev-grant-item')?.addEventListener('click', () => {
     const input = document.getElementById('dev-item-id');
     const msg = document.getElementById('dev-panel-msg');
@@ -4582,6 +4791,11 @@ function init() {
     const next = getPatrickNextAt();
     if (next > 0 && Date.now() >= next) showPatrickButton();
   }, 1000);
+  if (WORLD_ID === 2) {
+    setInterval(() => {
+      if (Math.random() < JIA_SPAWN_CHANCE) showJiaButton();
+    }, JIA_MINUTE_MS);
+  }
   setInterval(updateShopCountdown, 1000);
   setInterval(updateSnehoCountdown, 1000);
 
@@ -4594,6 +4808,11 @@ function init() {
   document.getElementById('patrick-close')?.addEventListener('click', closePatrick);
   document.getElementById('patrick-overlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'patrick-overlay') closePatrick();
+  });
+  document.getElementById('jia-popup-btn')?.addEventListener('click', openJia);
+  document.getElementById('jia-close')?.addEventListener('click', closeJia);
+  document.getElementById('jia-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'jia-overlay') closeJia();
   });
 
   // Wire up username inputs — listeners only, UI state set by refreshUsernameUI()
@@ -4709,7 +4928,7 @@ init();
 window.__rng = {
   /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) or __rng.cutscene(9200) */
   cutscene(id) {
-    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
     showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });

@@ -368,6 +368,19 @@
           <button type="button" id="patrick-close" class="admin-btn">Done</button>
         </div>
       </div>
+      <button type="button" id="jia-popup-btn" class="jia-popup-btn hidden" aria-hidden="true">Jia is here... Talk to Jia</button>
+      <div id="jia-overlay" class="admin-overlay hidden" aria-hidden="true">
+        <div class="admin-panel jia-panel">
+          <h2 class="admin-title">Jia</h2>
+          <p class="admin-desc">I deal in NULL COINS. Sell me auras from your locked storage — I pay a random amount, more for rarer auras. Spend NULL COINS below on what cannot be rolled.</p>
+          <p class="jia-balance">NULL COINS: <strong id="jia-null-coins">0</strong></p>
+          <h3 class="jia-section-title">Sell locked auras</h3>
+          <div id="jia-sell-list" class="jia-sell-list shop-list"></div>
+          <h3 class="jia-section-title">Buy</h3>
+          <div id="jia-shop-list" class="shop-list"></div>
+          <button type="button" id="jia-close" class="admin-btn">Done</button>
+        </div>
+      </div>
       <div id="dev-panel-overlay" class="admin-overlay hidden" aria-hidden="true">
         <div class="admin-panel dev-panel">
           <h2 class="admin-title">🔧 Admin Panel</h2>
@@ -375,6 +388,7 @@
           <div class="admin-actions" style="flex-direction:column;align-items:stretch;gap:8px;">
             <button type="button" id="dev-summon-benny" class="admin-btn">Summon Benny</button>
             <button type="button" id="dev-summon-patrick" class="admin-btn">Summon Patrick</button>
+            <button type="button" id="dev-summon-jia" class="admin-btn" title="World 2 only">Summon Jia</button>
             <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
               <input type="number" id="dev-item-id" class="admin-input" placeholder="Item ID (e.g. 9999)" min="1" max="99999" style="flex:1;" />
               <button type="button" id="dev-grant-item" class="admin-btn">Get Item</button>
