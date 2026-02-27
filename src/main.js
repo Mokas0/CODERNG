@@ -44,6 +44,7 @@ const STORAGE_KEYS = {
   questWeeklyClaimed: STORAGE_PREFIX + 'quest_weekly_claimed',
   potionInventory: STORAGE_PREFIX + 'potion_inventory',
   competitionType: STORAGE_PREFIX + 'competition_type',
+  competitionQuests: STORAGE_PREFIX + 'competition_quests',
   nullCoins: STORAGE_PREFIX + 'null_coins',
   materials: STORAGE_PREFIX + 'materials',
 };
@@ -236,8 +237,17 @@ const AURA_TYPE_INFO = {
   dongsa:   { label: '동사 Dongsa',   tag: 'Verb',      color: '#ff55aa', perk: 'Raid +25% — sacrificed auras deal 1.25× damage' },
 };
 
-// ─── Competition of Types (Blobfish NPC) ─────────────────────────────────────
-const COMPETITION_TYPES = ['yoso', 'myeongsa', 'dongsa'];
+// ─── Competition of Colors (Blobfish NPC) — Individual quest-completion ───────
+const COMPETITION_COLORS = ['green', 'red', 'blue', 'black', 'white', 'orange', 'purple'];
+const COLOR_INFO = {
+  green:  { label: 'Green',  color: '#22c55e' },
+  red:    { label: 'Red',    color: '#ef4444' },
+  blue:   { label: 'Blue',   color: '#3b82f6' },
+  black:  { label: 'Black',  color: '#1f2937' },
+  white:  { label: 'White',  color: '#f8fafc' },
+  orange: { label: 'Orange', color: '#f97316' },
+  purple: { label: 'Purple', color: '#a855f7' },
+};
 const SEASON_MS = 30 * 24 * 60 * 60 * 1000; // ~30 days
 
 function getCompetitionSeasonKey() {
@@ -253,31 +263,36 @@ function getCompetitionSeasonEnd() {
   return d.getTime();
 }
 
-function getCompetitionAssignedType() {
+function getCompetitionAssignedColor() {
   const key = getCompetitionSeasonKey();
-  let type = localStorage.getItem(`${STORAGE_KEYS.competitionType}_${key}`);
-  if (!type || !COMPETITION_TYPES.includes(type)) {
-    type = COMPETITION_TYPES[Math.floor(Math.random() * COMPETITION_TYPES.length)];
-    localStorage.setItem(`${STORAGE_KEYS.competitionType}_${key}`, type);
+  let color = localStorage.getItem(`${STORAGE_KEYS.competitionType}_${key}`);
+  if (!color || !COMPETITION_COLORS.includes(color)) {
+    color = COMPETITION_COLORS[Math.floor(Math.random() * COMPETITION_COLORS.length)];
+    localStorage.setItem(`${STORAGE_KEYS.competitionType}_${key}`, color);
   }
-  return type;
+  return color;
 }
 
-function rarityToScore(r) {
-  if (r === -1) return 1e18;
-  if (r === 0) return 1e15;
-  return Math.max(1, r);
+function getCompetitionQuestsCompleted(seasonKey) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.competitionQuests) || '{}';
+    const obj = JSON.parse(raw);
+    return Number(obj[seasonKey]) || 0;
+  } catch { return 0; }
+}
+
+function incrementCompetitionQuestsCompleted() {
+  const key = getCompetitionSeasonKey();
+  const obj = {};
+  try {
+    Object.assign(obj, JSON.parse(localStorage.getItem(STORAGE_KEYS.competitionQuests) || '{}'));
+  } catch {}
+  obj[key] = (Number(obj[key]) || 0) + 1;
+  localStorage.setItem(STORAGE_KEYS.competitionQuests, JSON.stringify(obj));
 }
 
 function computeCompetitionScore() {
-  const assigned = getCompetitionAssignedType();
-  const locked = getLockedStorage();
-  let total = 0;
-  for (const h of locked) {
-    const at = h.auraType || classifyAuraType(h.text);
-    if (at === assigned) total += rarityToScore(h.rarity);
-  }
-  return total;
+  return getCompetitionQuestsCompleted(getCompetitionSeasonKey());
 }
 
 async function submitCompetitionScore() {
@@ -289,15 +304,13 @@ async function submitCompetitionScore() {
   }
   const score = computeCompetitionScore();
   const seasonKey = getCompetitionSeasonKey();
-  const assignedType = getCompetitionAssignedType();
+  const assignedColor = getCompetitionAssignedColor();
   const token = getDeviceToken();
-  const { data: existing } = await supabase.from('competition_entries').select('deposited').eq('season_key', seasonKey).eq('device_token', token).single();
-  const deposited = Number(existing?.deposited) || 0;
   await supabase.from('competition_entries').delete().eq('season_key', seasonKey).eq('device_token', token);
   const { error } = await supabase.from('competition_entries').insert(
-    { season_key: seasonKey, username, device_token: token, assigned_type: assignedType, score, deposited, updated_at: new Date().toISOString() }
+    { season_key: seasonKey, username, device_token: token, assigned_type: assignedColor, score, deposited: 0, updated_at: new Date().toISOString() }
   );
-  showCompetitionFeedback(error ? `Failed: ${error.message}` : `Score submitted: ${(score + deposited).toLocaleString()}`);
+  showCompetitionFeedback(error ? `Failed: ${error.message}` : `Score submitted: ${score.toLocaleString()} quests completed`);
   if (!error) renderCompetition();
 }
 
@@ -306,233 +319,72 @@ function showCompetitionFeedback(msg) {
   if (el) { el.textContent = msg; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 4000); }
 }
 
-async function fetchCompetitionLeaderboard(teamType) {
+async function fetchCompetitionLeaderboard() {
   if (!supabase) return [];
   const seasonKey = getCompetitionSeasonKey();
   const { data } = await supabase
     .from('competition_entries')
-    .select('username, score, deposited')
+    .select('username, score, assigned_type')
     .eq('season_key', seasonKey)
-    .eq('assigned_type', teamType)
     .order('score', { ascending: false })
-    .limit(20);
-  return (data || []).map(e => ({ ...e, totalScore: Number(e.score) + Number(e.deposited || 0) }));
-}
-
-async function fetchCompetitionTeamBanks() {
-  if (!supabase) return { yoso: 0, myeongsa: 0, dongsa: 0 };
-  const seasonKey = getCompetitionSeasonKey();
-  const { data } = await supabase.from('competition_team_banks').select('team_type, bank_balance').eq('season_key', seasonKey);
-  const out = { yoso: 0, myeongsa: 0, dongsa: 0 };
-  (data || []).forEach(r => { out[r.team_type] = Number(r.bank_balance) || 0; });
-  return out;
-}
-
-async function getCompetitionTeamSize(teamType) {
-  if (!supabase) return 1;
-  const seasonKey = getCompetitionSeasonKey();
-  const { count } = await supabase.from('competition_entries').select('*', { count: 'exact', head: true }).eq('season_key', seasonKey).eq('assigned_type', teamType);
-  return Math.max(1, count || 1);
-}
-
-async function ensureTeamBank(seasonKey, teamType) {
-  if (!supabase) return;
-  const { data } = await supabase.from('competition_team_banks').select('bank_balance').eq('season_key', seasonKey).eq('team_type', teamType).single();
-  if (!data) {
-    await supabase.from('competition_team_banks').insert({ season_key: seasonKey, team_type: teamType, bank_balance: 0 });
-  }
-}
-
-async function addToTeamBank(teamType, amount) {
-  if (!supabase || amount <= 0) return false;
-  const seasonKey = getCompetitionSeasonKey();
-  await ensureTeamBank(seasonKey, teamType);
-  const { data: row } = await supabase.from('competition_team_banks').select('bank_balance').eq('season_key', seasonKey).eq('team_type', teamType).single();
-  const newBal = (Number(row?.bank_balance) || 0) + amount;
-  const { error } = await supabase.from('competition_team_banks').update({ bank_balance: newBal }).eq('season_key', seasonKey).eq('team_type', teamType);
-  return !error;
-}
-
-async function subtractFromTeamBank(teamType, amount) {
-  if (!supabase || amount <= 0) return false;
-  const seasonKey = getCompetitionSeasonKey();
-  const { data: row } = await supabase.from('competition_team_banks').select('bank_balance').eq('season_key', seasonKey).eq('team_type', teamType).single();
-  const current = Number(row?.bank_balance) || 0;
-  const newBal = Math.max(0, current - amount);
-  const { error } = await supabase.from('competition_team_banks').update({ bank_balance: newBal }).eq('season_key', seasonKey).eq('team_type', teamType);
-  return !error;
+    .limit(50);
+  return (data || []).map(e => ({ ...e, score: Number(e.score) || 0 }));
 }
 
 async function ensureCompetitionEntry() {
   const username = getHubUsername();
   if (!username) return false;
   const seasonKey = getCompetitionSeasonKey();
-  const assignedType = getCompetitionAssignedType();
+  const assignedColor = getCompetitionAssignedColor();
   const token = getDeviceToken();
   const { data: existing } = await supabase.from('competition_entries').select('id').eq('season_key', seasonKey).eq('device_token', token).single();
   if (existing) return true;
   const score = computeCompetitionScore();
   await supabase.from('competition_entries').insert(
-    { season_key: seasonKey, username, device_token: token, assigned_type: assignedType, score, deposited: 0, updated_at: new Date().toISOString() }
+    { season_key: seasonKey, username, device_token: token, assigned_type: assignedColor, score, deposited: 0, updated_at: new Date().toISOString() }
   );
   return true;
-}
-
-async function competitionDeposit(amount) {
-  if (!supabase || !amount || amount <= 0) return;
-  const username = getHubUsername();
-  if (!username) { showCompetitionFeedback('Set a display name in the Hub first.'); return; }
-  const coins = getCoins();
-  if (amount > coins) { showCompetitionFeedback('Not enough coins.'); return; }
-  await ensureCompetitionEntry();
-  const assignedType = getCompetitionAssignedType();
-  setCoins(coins - amount);
-  const depositMultiplier = assignedType === 'yoso' ? 1.15 : 1;
-  const ok = await addToTeamBank(assignedType, Math.floor(amount * depositMultiplier));
-  if (!ok) { setCoins(coins); showCompetitionFeedback('Failed to update bank.'); return; }
-  const token = getDeviceToken();
-  const seasonKey = getCompetitionSeasonKey();
-  const { data: me } = await supabase.from('competition_entries').select('deposited').eq('season_key', seasonKey).eq('device_token', token).single();
-  const newDeposited = (Number(me?.deposited) || 0) + amount;
-  await supabase.from('competition_entries').update({ deposited: newDeposited, score: computeCompetitionScore() }).eq('season_key', seasonKey).eq('device_token', token);
-  showCompetitionFeedback(`Deposited ${amount.toLocaleString()} coins to team bank.`);
-  renderCoins();
-  renderCompetition();
-}
-
-async function competitionRaid(targetTeam, lockedIndices) {
-  if (!supabase || targetTeam === '' || lockedIndices.length === 0) return;
-  const username = getHubUsername();
-  if (!username) { showCompetitionFeedback('Set a display name in the Hub first.'); return; }
-  const assignedType = getCompetitionAssignedType();
-  if (targetTeam === assignedType) { showCompetitionFeedback('Cannot raid your own team.'); return; }
-  const locked = getLockedStorage();
-  let power = 0;
-  const toRemove = [];
-  for (const idx of lockedIndices.sort((a, b) => b - a)) {
-    if (idx < 0 || idx >= locked.length) continue;
-    power += rarityToScore(locked[idx].rarity);
-    toRemove.push(idx);
-  }
-  const raidMultiplier = assignedType === 'dongsa' ? 1.25 : 1;
-  power = Math.floor(power * raidMultiplier);
-  const victimShield = targetTeam === 'myeongsa' ? 0.9 : 1;
-  power = Math.floor(power * victimShield);
-  if (power <= 0) { showCompetitionFeedback('Select auras to sacrifice.'); return; }
-  for (const idx of toRemove) locked.splice(idx, 1);
-  setLockedStorage(locked);
-  const ok = await subtractFromTeamBank(targetTeam, power);
-  if (!ok) { showCompetitionFeedback('Raid failed.'); return; }
-  showCompetitionFeedback(`Raid dealt ${power.toLocaleString()} damage to ${AURA_TYPE_INFO[targetTeam]?.tag || targetTeam}!`);
-  renderLockedStorage();
-  renderCompetition();
 }
 
 function renderCompetition() {
   const seasonKey = getCompetitionSeasonKey();
   const endMs = getCompetitionSeasonEnd();
-  const assignedType = getCompetitionAssignedType();
+  const assignedColor = getCompetitionAssignedColor();
   const score = computeCompetitionScore();
-  const info = AURA_TYPE_INFO[assignedType];
-  const locked = getLockedStorage();
+  const info = COLOR_INFO[assignedColor];
 
   const seasonEl = document.getElementById('competition-season-label');
   const endsEl = document.getElementById('competition-ends');
   const typeEl = document.getElementById('competition-type-label');
   const scoreEl = document.getElementById('competition-score');
-  const depositedEl = document.getElementById('competition-deposited');
 
   if (seasonEl) seasonEl.textContent = seasonKey;
   if (endsEl) endsEl.textContent = new Date(endMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   if (typeEl) {
-    typeEl.textContent = info ? `${info.label} (${info.tag})` : assignedType;
+    typeEl.textContent = info ? info.label : assignedColor;
     if (info) typeEl.style.color = info.color;
   }
   const perkEl = document.getElementById('competition-perk-label');
-  if (perkEl && info?.perk) {
-    perkEl.textContent = `Perk: ${info.perk}`;
-    perkEl.style.display = '';
-  } else if (perkEl) perkEl.style.display = 'none';
+  if (perkEl) perkEl.style.display = 'none';
 
-  Promise.all([
-    fetchCompetitionLeaderboard('yoso'),
-    fetchCompetitionLeaderboard('myeongsa'),
-    fetchCompetitionLeaderboard('dongsa'),
-    fetchCompetitionTeamBanks(),
-  ]).then(async ([yosoEntries, myeongEntries, dongEntries, banks]) => {
-      const token = getDeviceToken();
-    const seasonKey = getCompetitionSeasonKey();
-    let myDeposited = 0;
-    if (supabase) {
-      const { data: me } = await supabase.from('competition_entries').select('deposited').eq('season_key', seasonKey).eq('device_token', token).single();
-      myDeposited = Number(me?.deposited) || 0;
-    }
+  if (scoreEl) scoreEl.textContent = score.toLocaleString();
 
-    if (scoreEl) scoreEl.textContent = score.toLocaleString();
-    if (depositedEl) depositedEl.textContent = myDeposited.toLocaleString();
-
-    const banksGrid = document.getElementById('competition-banks-grid');
-    if (banksGrid) {
-      banksGrid.innerHTML = COMPETITION_TYPES.map(t => {
-        const inf = AURA_TYPE_INFO[t];
-        const bal = banks[t] || 0;
-        const isYours = t === assignedType;
-        return `<div class="competition-bank-card ${isYours ? 'competition-bank-card--yours' : ''}">
-          <span class="competition-bank-name" style="color:${inf?.color || '#888'}">${inf?.tag || t}</span>
-          <span class="competition-bank-balance">${bal.toLocaleString()}</span>
-        </div>`;
-      }).join('');
-    }
-
+  fetchCompetitionLeaderboard().then(entries => {
     const allBoards = document.getElementById('competition-all-leaderboards');
     if (allBoards) {
-      const teams = [
-        { type: 'yoso', entries: yosoEntries, info: AURA_TYPE_INFO.yoso },
-        { type: 'myeongsa', entries: myeongEntries, info: AURA_TYPE_INFO.myeongsa },
-        { type: 'dongsa', entries: dongEntries, info: AURA_TYPE_INFO.dongsa },
-      ];
-      allBoards.innerHTML = teams.map(({ type, entries, info }) => `
+      allBoards.innerHTML = `
         <div class="competition-leaderboard-block">
-          <h5 class="competition-leaderboard-block-title" style="color:${info?.color || '#888'}">${info?.tag || type}</h5>
+          <h5 class="competition-leaderboard-block-title">Quests completed</h5>
           <ol class="competition-leaderboard-list">
-            ${entries.length === 0 ? '<li class="competition-empty">No entries</li>' : entries.map((e, i) =>
-              `<li class="competition-entry"><span class="competition-rank">${i + 1}.</span>${escapeHtml(e.username)} — ${(e.totalScore || (Number(e.score) + Number(e.deposited || 0))).toLocaleString()}</li>`
-            ).join('')}
+            ${entries.length === 0 ? '<li class="competition-empty">No entries</li>' : entries.map((e, i) => {
+              const colorInfo = COLOR_INFO[e.assigned_type] || {};
+              return `<li class="competition-entry"><span class="competition-rank">${i + 1}.</span><span style="color:${colorInfo.color || '#888'}">●</span> ${escapeHtml(e.username)} — ${e.score.toLocaleString()} quests</li>`;
+            }).join('')}
           </ol>
         </div>
-      `).join('');
-    }
-
-    const raidTarget = document.getElementById('competition-raid-target');
-    if (raidTarget) {
-      raidTarget.innerHTML = '<option value="">Select team to raid</option>' + COMPETITION_TYPES.filter(t => t !== assignedType).map(t => {
-        const inf = AURA_TYPE_INFO[t];
-        return `<option value="${t}">${inf?.tag || t}</option>`;
-      }).join('');
-    }
-
-    const raidList = document.getElementById('competition-raid-list');
-    if (raidList) {
-      raidList.innerHTML = locked.length === 0 ? '<p class="competition-empty">No locked auras to sacrifice.</p>' : locked.map((h, i) => `
-        <label class="competition-deposit-item">
-          <input type="checkbox" data-locked-idx="${i}" class="competition-raid-cb" />
-          <span style="font-family:'${h.font}';color:${h.color}">${escapeHtml(h.text)}</span> — ${formatRarity(h.rarity)}
-        </label>
-      `).join('');
-      document.getElementById('competition-raid-btn').disabled = true;
-      raidList.querySelectorAll('.competition-raid-cb').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const any = raidList.querySelectorAll('.competition-raid-cb:checked').length > 0;
-          document.getElementById('competition-raid-btn').disabled = !any || !raidTarget?.value;
-        });
-      });
-      raidTarget?.addEventListener('change', () => {
-        const any = raidList?.querySelectorAll('.competition-raid-cb:checked').length > 0;
-        document.getElementById('competition-raid-btn').disabled = !any || !raidTarget?.value;
-      });
+      `;
     }
   });
-
 }
 
 function formatRarity(rarity) {
@@ -883,9 +735,11 @@ function claimQuest(questId, period) {
   if (claimed.includes(questId) || (prog[questId] || 0) < quest.target) return;
   claimed.push(questId);
   localStorage.setItem(isDaily ? STORAGE_KEYS.questDailyClaimed : STORAGE_KEYS.questWeeklyClaimed, JSON.stringify(claimed));
+  incrementCompetitionQuestsCompleted();
   setCoins(getCoins() + quest.reward);
   renderCoins();
   renderQuestBoard();
+  renderCompetition();
 }
 
 function questTimeLeft(end) {
@@ -5090,16 +4944,6 @@ function init() {
   }
   document.getElementById('hub-chat-send')?.addEventListener('click', sendHubMessage);
   document.getElementById('competition-submit-btn')?.addEventListener('click', submitCompetitionScore);
-  document.getElementById('competition-deposit-btn')?.addEventListener('click', () => {
-    const amt = parseInt(document.getElementById('competition-deposit-amount')?.value || '0', 10);
-    competitionDeposit(amt);
-  });
-  document.getElementById('competition-raid-btn')?.addEventListener('click', () => {
-    const target = document.getElementById('competition-raid-target')?.value || '';
-    const list = document.getElementById('competition-raid-list');
-    const indices = [...(list?.querySelectorAll('.competition-raid-cb:checked') || [])].map(cb => parseInt(cb.dataset.lockedIdx, 10));
-    competitionRaid(target, indices);
-  });
   document.getElementById('hub-chat-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendHubMessage(); });
   document.getElementById('hub-trade-post')?.addEventListener('click', postHubTrade);
 
