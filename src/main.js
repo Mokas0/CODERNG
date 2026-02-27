@@ -1450,7 +1450,7 @@ const HUB_USERNAME_KEY = 'rng_hub_username';
 const HUB_USERNAME_SET_AT_KEY = 'rng_hub_username_set_at';
 const DEVICE_TOKEN_KEY = 'rng_device_token';
 const USERNAME_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
-const ADMIN_EMAIL = 'nicholas.mj.choe@gmail.com'; // bypasses username cooldown
+const ADMIN_EMAIL = 'nicholas.mj.choe@gmail.com'; // admin panel + bypasses username cooldown
 let hubChatSubscription = null;
 let hubTradesSubscription = null;
 let activeTab = 'past';
@@ -2231,6 +2231,8 @@ function updateAuthUI() {
     }
     if (guestEl) guestEl.classList.add('hidden');
     if (authedEl) authedEl.classList.remove('hidden');
+    const devBtn = document.getElementById('dev-panel-btn');
+    if (devBtn) devBtn.classList.toggle('hidden', !isAdminUser());
   } else {
     if (signupBtn) signupBtn.classList.remove('hidden');
     if (signinBtn) signinBtn.classList.remove('hidden');
@@ -2238,7 +2240,56 @@ function updateAuthUI() {
     if (userLabel) userLabel.classList.add('hidden');
     if (guestEl) guestEl.classList.remove('hidden');
     if (authedEl) authedEl.classList.add('hidden');
+    const devBtn = document.getElementById('dev-panel-btn');
+    if (devBtn) devBtn.classList.add('hidden');
   }
+}
+
+function openDevPanel() {
+  if (!isAdminUser()) return;
+  const overlay = document.getElementById('dev-panel-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    const msg = document.getElementById('dev-panel-msg');
+    if (msg) msg.textContent = '';
+  }
+}
+function closeDevPanel() {
+  const overlay = document.getElementById('dev-panel-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function grantItemById(id) {
+  const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
+  const item = all.find(a => a.id === id);
+  if (!item) return false;
+  const isElder = ELDER_AURAS.some(a => a.id === id);
+  const isAscendant = ASCENDANT_AURAS.some(a => a.id === id);
+  const isEmperor = EMPEROR_AURAS.some(a => a.id === id);
+  const isTier2 = TIER2_AURAS.some(a => a.id === id);
+  const isSupremeKing = id === 9999;
+  if (isElder || isAscendant || isEmperor || isTier2 || isSupremeKing) markElderReceived(id);
+  const tierTag = isTier2 ? 'tier2' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
+  const history = getHistory();
+  history.push({
+    historyId: `${Date.now()}-${tierTag}-${id}`,
+    id: item.id, text: item.text, font: item.font,
+    color: item.color, fontWeight: item.fontWeight || '400',
+    fontStyle: item.fontStyle || 'normal', textShadow: item.textShadow || '',
+    rarity: item.rarity ?? 0,
+    isElder: isElder || false,
+    isAscendant: isAscendant || false,
+    isEmperor: isEmperor || false,
+    isTier2: isTier2 || false,
+    isSupremeKing: isSupremeKing || false,
+  });
+  setHistory(history);
+  renderHistory();
+  return true;
 }
 
 function openAuthOverlay(tab = 'signin') {
@@ -4367,6 +4418,42 @@ function init() {
   });
   document.getElementById('admin-overlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'admin-overlay') closeAdminPanel();
+  });
+
+  // Dev panel (nicholas.mj.choe only)
+  document.getElementById('dev-panel-btn')?.addEventListener('click', () => {
+    if (isAdminUser()) openDevPanel();
+  });
+  document.getElementById('dev-panel-close')?.addEventListener('click', closeDevPanel);
+  document.getElementById('dev-panel-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'dev-panel-overlay') closeDevPanel();
+  });
+  document.getElementById('dev-summon-benny')?.addEventListener('click', () => {
+    setBennyNextAt(1);
+    showBennyButton();
+    const msg = document.getElementById('dev-panel-msg');
+    if (msg) { msg.textContent = 'Benny summoned!'; msg.style.color = 'var(--roll)'; }
+  });
+  document.getElementById('dev-summon-patrick')?.addEventListener('click', () => {
+    setPatrickNextAt(1);
+    showPatrickButton();
+    const msg = document.getElementById('dev-panel-msg');
+    if (msg) { msg.textContent = 'Patrick summoned!'; msg.style.color = 'var(--roll)'; }
+  });
+  document.getElementById('dev-grant-item')?.addEventListener('click', () => {
+    const input = document.getElementById('dev-item-id');
+    const msg = document.getElementById('dev-panel-msg');
+    const id = parseInt(input?.value || '0', 10);
+    if (!id) {
+      if (msg) { msg.textContent = 'Enter a valid item ID.'; msg.style.color = 'var(--danger)'; }
+      return;
+    }
+    if (grantItemById(id)) {
+      if (msg) { msg.textContent = `Granted item ${id}!`; msg.style.color = 'var(--roll)'; }
+      if (input) input.value = '';
+    } else {
+      if (msg) { msg.textContent = `No item with ID ${id}.`; msg.style.color = 'var(--danger)'; }
+    }
   });
 
   renderPotionInventory();

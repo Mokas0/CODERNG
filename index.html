@@ -21,6 +21,7 @@
           <span class="luck-wrap">Luck: <span id="luck-value">1× (normal)</span></span>
           <button type="button" id="luck-btn" class="luck-btn">Boost luck (50 coins)</button>
           <button type="button" id="settings-btn" class="settings-btn" title="Settings">⚙️</button>
+          <button type="button" id="dev-panel-btn" class="dev-panel-btn hidden" title="Admin panel">🔧</button>
           <div class="auth-bar">
             <span id="auth-user-label" class="auth-user-label hidden"></span>
             <button type="button" id="auth-signup-btn" class="auth-btn">Sign up</button>
@@ -364,6 +365,22 @@
           <p class="patrick-dialogue">You've got coin. I've got power. Big luck doesn't come cheap — but when it does, it's worth every last one.</p>
           <div id="patrick-shop-list" class="shop-list"></div>
           <button type="button" id="patrick-close" class="admin-btn">Done</button>
+        </div>
+      </div>
+      <div id="dev-panel-overlay" class="admin-overlay hidden" aria-hidden="true">
+        <div class="admin-panel dev-panel">
+          <h2 class="admin-title">🔧 Admin Panel</h2>
+          <p class="admin-desc">Summon NPCs or grant items by ID.</p>
+          <div class="admin-actions" style="flex-direction:column;align-items:stretch;gap:8px;">
+            <button type="button" id="dev-summon-benny" class="admin-btn">Summon Benny</button>
+            <button type="button" id="dev-summon-patrick" class="admin-btn">Summon Patrick</button>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+              <input type="number" id="dev-item-id" class="admin-input" placeholder="Item ID (e.g. 9999)" min="1" max="99999" style="flex:1;" />
+              <button type="button" id="dev-grant-item" class="admin-btn">Get Item</button>
+            </div>
+            <p id="dev-panel-msg" class="admin-message"></p>
+          </div>
+          <button type="button" id="dev-panel-close" class="admin-btn admin-btn--secondary" style="margin-top:12px;">Close</button>
         </div>
       </div>
       <div id="admin-overlay" class="admin-overlay hidden" aria-hidden="true">
