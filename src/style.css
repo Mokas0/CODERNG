@@ -2217,13 +2217,15 @@ body {
 
 /* ── MYTHIC tier — CSS variable-driven, per-aura theming ── */
 
-.rarity-overlay--mythic {
+.rarity-overlay--mythic,
+.rarity-overlay--world2 {
   background: radial-gradient(ellipse at center,
     var(--mythic-bg, #000) 0%,
     color-mix(in srgb, var(--mythic-bg, #000) 60%, #000) 100%
   );
 }
-.rarity-overlay--mythic .rarity-overlay__beams::before {
+.rarity-overlay--mythic .rarity-overlay__beams::before,
+.rarity-overlay--world2 .rarity-overlay__beams::before {
   background: conic-gradient(
     transparent 0deg,
     color-mix(in srgb, var(--mythic-a, #fff) 35%, transparent) 15deg,
@@ -2241,7 +2243,8 @@ body {
   );
   animation: beams-spin 5s linear infinite;
 }
-.rarity-overlay--mythic .rarity-overlay__beams::after {
+.rarity-overlay--mythic .rarity-overlay__beams::after,
+.rarity-overlay--world2 .rarity-overlay__beams::after {
   background: conic-gradient(
     transparent 0deg,
     color-mix(in srgb, var(--mythic-b, #888) 20%, transparent) 30deg,
@@ -2257,7 +2260,8 @@ body {
   );
   animation: beams-spin 8s linear infinite reverse;
 }
-.rarity-overlay--mythic .rarity-overlay__particles::before {
+.rarity-overlay--mythic .rarity-overlay__particles::before,
+.rarity-overlay--world2 .rarity-overlay__particles::before {
   width: 5px; height: 5px;
   background: var(--mythic-a, #fff);
   top: 15%; left: 20%;
@@ -2278,7 +2282,8 @@ body {
     -360px -60px 3px var(--mythic-a, #fff);
   animation-duration: 2.5s;
 }
-.rarity-overlay--mythic .rarity-overlay__particles::after {
+.rarity-overlay--mythic .rarity-overlay__particles::after,
+.rarity-overlay--world2 .rarity-overlay__particles::after {
   width: 3px; height: 3px;
   background: var(--mythic-b, #888);
   top: 70%; left: 60%;
@@ -2294,20 +2299,24 @@ body {
   animation-duration: 1.8s;
   animation-delay: 0.5s;
 }
-.rarity-overlay--mythic .rarity-overlay__tier {
+.rarity-overlay--mythic .rarity-overlay__tier,
+.rarity-overlay--world2 .rarity-overlay__tier {
   color: var(--mythic-a, #fff);
   letter-spacing: 0.5em;
   animation: mythic-tier-pulse 1s ease-in-out infinite alternate;
 }
-.rarity-overlay--mythic .rarity-overlay__label {
+.rarity-overlay--mythic .rarity-overlay__label,
+.rarity-overlay--world2 .rarity-overlay__label {
   text-shadow: 0 0 30px var(--mythic-a, #fff), 0 0 60px var(--mythic-b, #888), 0 0 100px var(--mythic-a, #fff);
   animation: mythic-label-pulse 0.9s ease-in-out infinite alternate;
 }
-.rarity-overlay--mythic .rarity-overlay__rarity {
+.rarity-overlay--mythic .rarity-overlay__rarity,
+.rarity-overlay--world2 .rarity-overlay__rarity {
   color: color-mix(in srgb, var(--mythic-a, #fff) 80%, white);
   opacity: 0.85;
 }
-.rarity-overlay--mythic .rarity-overlay__sub {
+.rarity-overlay--mythic .rarity-overlay__sub,
+.rarity-overlay--world2 .rarity-overlay__sub {
   color: color-mix(in srgb, var(--mythic-b, #888) 70%, white);
 }
 

@@ -3,10 +3,11 @@ import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
-const WORLD_ID = Math.min(2, Math.max(1, parseInt(
+const _worldRaw = parseInt(
   document.documentElement.getAttribute('data-world') || document.body?.getAttribute('data-world') || '1',
   10
-)));
+);
+const WORLD_ID = (_worldRaw === 1 || _worldRaw === 2) ? _worldRaw : 1;
 const STORAGE_PREFIX = WORLD_ID === 2 ? 'rng_w2_' : 'rng_';
 const STORAGE_KEYS = {
   coins: STORAGE_PREFIX + 'coins',
@@ -3028,6 +3029,30 @@ const MYTHIC_CUTSCENES = {
   9989: { quote: 'The last word. The last aura.',     bg: '#050505', accentA: '#e8e8e8', accentB: '#ffd700' },
 };
 
+// World 2 exclusive: 20 auras (ids 10000–10019), each with cutscene
+const WORLD2_CUTSCENES = {
+  10000: { quote: 'The void has a ruler. You found them.',           bg: '#050010', accentA: '#9900ff', accentB: '#330044' },
+  10001: { quote: 'Eternal is not a word. It is this.',              bg: '#0a0500', accentA: '#ffcc00', accentB: '#ff4400' },
+  10002: { quote: 'Before the first law, there was this shard.',      bg: '#000508', accentA: '#aaccff', accentB: '#ffffff' },
+  10003: { quote: 'Every echo leads here. Every echo ends here.',     bg: '#000f0a', accentA: '#00ffcc', accentB: '#00aa88' },
+  10004: { quote: 'The cosmos does not end. It surrenders.',          bg: '#0f0008', accentA: '#ff00aa', accentB: '#ff66dd' },
+  10005: { quote: 'A spark that outlived every star.',               bg: '#080500', accentA: '#d4af37', accentB: '#ffeeaa' },
+  10006: { quote: 'The last star did not fade. It became this.',      bg: '#000008', accentA: '#8888ff', accentB: '#e8e8ff' },
+  10007: { quote: 'Before the first light, there was one.',           bg: '#000a02', accentA: '#00ff44', accentB: '#00cc33' },
+  10008: { quote: 'Reality tore. You stepped through.',               bg: '#000000', accentA: '#ff00ff', accentB: '#ffff00' },
+  10009: { quote: 'The seed from which every world grew.',            bg: '#0a0000', accentA: '#ff2200', accentB: '#880000' },
+  10010: { quote: 'The final pulse. The last frequency.',             bg: '#070707', accentA: '#e8e8e8', accentB: '#888888' },
+  10011: { quote: 'The first wave. It never stopped.',                bg: '#060008', accentA: '#bb00ff', accentB: '#440055' },
+  10012: { quote: 'A flame that does not consume. It transforms.',  bg: '#000208', accentA: '#ffd700', accentB: '#003399' },
+  10013: { quote: 'A heart that outlived every body.',                bg: '#000a04', accentA: '#00ff88', accentB: '#004422' },
+  10014: { quote: 'Where light dies, a god remains.',                 bg: '#000308', accentA: '#c0e8ff', accentB: '#002244' },
+  10015: { quote: 'The moon that was never meant to rise.',           bg: '#080100', accentA: '#ff4400', accentB: '#550000' },
+  10016: { quote: 'Soul is not enough. This is beyond soul.',          bg: '#000008', accentA: '#4488ff', accentB: '#d4af37' },
+  10017: { quote: 'Heaven was lost. You found what replaced it.',      bg: '#030003', accentA: '#ff00ff', accentB: '#ffff00' },
+  10018: { quote: 'The star that died. The star that stayed.',         bg: '#050505', accentA: '#aaaaaa', accentB: '#333333' },
+  10019: { quote: 'The void is not empty. It is alive.',              bg: '#000000', accentA: '#ffffff', accentB: '#555555' },
+};
+
 // ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
 const ELDER_STAGES = {
   9950: [
@@ -3663,7 +3688,9 @@ function showRarityAnimation(item, tier) {
     if (!overlay) { resolve(); return; }
 
     // Set tier label
-    if (tier === 'secret') {
+    if (tier === 'world2') {
+      tierEl.textContent = '◆ World 2 Aura ◆';
+    } else if (tier === 'secret') {
       tierEl.textContent = '⚠ Secret Aura ⚠';
     } else if (tier === 'biome') {
       const biomeCfg = activeBiome ? (BIOME_CONFIG[activeBiome.biome_type] || {}) : {};
@@ -3683,15 +3710,21 @@ function showRarityAnimation(item, tier) {
 
     rarityEl.textContent = formatRarity(item.rarity);
 
-    // Set quote (mythic + secret)
+    // Set quote (mythic + secret + world2)
     if (quoteEl) {
-      const cfg = MYTHIC_CUTSCENES[item.id];
+      const cfg = tier === 'world2' ? WORLD2_CUTSCENES[item.id] : MYTHIC_CUTSCENES[item.id];
       quoteEl.textContent = cfg ? cfg.quote : '';
       quoteEl.style.display = cfg ? '' : 'none';
     }
 
-    // Apply CSS custom properties for mythic/secret/biome theming
-    if (tier === 'mythic' || tier === 'secret' || tier === 'biome') {
+    // Apply CSS custom properties for mythic/secret/biome/world2 theming
+    if (tier === 'world2') {
+      const cfg = WORLD2_CUTSCENES[item.id] || { bg: '#000', accentA: '#fff', accentB: '#888' };
+      overlay.style.setProperty('--mythic-bg', cfg.bg);
+      overlay.style.setProperty('--mythic-a', cfg.accentA);
+      overlay.style.setProperty('--mythic-b', cfg.accentB);
+      labelEl.style.color = item.color;
+    } else if (tier === 'mythic' || tier === 'secret' || tier === 'biome') {
       const cfg = MYTHIC_CUTSCENES[item.id] || { bg: '#000', accentA: '#fff', accentB: '#888' };
       overlay.style.setProperty('--mythic-bg', cfg.bg);
       overlay.style.setProperty('--mythic-a', cfg.accentA);
@@ -3704,7 +3737,7 @@ function showRarityAnimation(item, tier) {
     }
 
     // Apply tier class
-    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome');
+    overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome', 'rarity-overlay--world2');
     overlay.classList.add(`rarity-overlay--${tier}`);
     overlay.setAttribute('aria-hidden', 'false');
 
@@ -3713,12 +3746,12 @@ function showRarityAnimation(item, tier) {
       overlay.removeEventListener('click', dismiss);
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
-      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome');
+      overlay.classList.remove('rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome', 'rarity-overlay--world2');
       resolve();
     };
 
-    const duration  = tier === 'secret' ? 10000 : tier === 'biome' ? 8000 : tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
-    const minView   = tier === 'secret' ? 8000  : tier === 'biome' ? 6500 : tier === 'mythic' ? 6000 : tier === 'universal' ? 4000 : 2500;
+    const duration  = tier === 'world2' ? 7000 : tier === 'secret' ? 10000 : tier === 'biome' ? 8000 : tier === 'mythic' ? 7000 : tier === 'universal' ? 5000 : 3000;
+    const minView   = tier === 'world2' ? 6000 : tier === 'secret' ? 8000  : tier === 'biome' ? 6500 : tier === 'mythic' ? 6000 : tier === 'universal' ? 4000 : 2500;
     const timer = setTimeout(dismiss, duration);
     // Only allow click-to-dismiss after the minimum mandatory view time
     setTimeout(() => overlay.addEventListener('click', dismiss, { once: true }), minView);
@@ -3971,11 +4004,14 @@ async function roll() {
   history.push(histEntry);
   setHistory(history);
 
+  const isWorld2Aura = WORLD_ID === 2 && item.id >= 10000 && item.id < 10020;
   const cutsceneSetting = getCutsceneThreshold();
   const cutsceneMin = cutsceneSetting === 'never' ? Infinity : Number(cutsceneSetting);
-  if (item.rarity >= GLOBAL_THRESHOLD && item.rarity >= cutsceneMin) {
+  const showCutscene = isWorld2Aura || (item.rarity >= GLOBAL_THRESHOLD && item.rarity >= cutsceneMin);
+  if (showCutscene) {
     let tier = 'global';
-    if (item.rarity >= MYTHIC_THRESHOLD) tier = 'mythic';
+    if (isWorld2Aura) tier = 'world2';
+    else if (item.rarity >= MYTHIC_THRESHOLD) tier = 'mythic';
     else if (item.rarity >= UNIVERSAL_THRESHOLD) tier = 'universal';
     isAnimating = true;
     await showRarityAnimation(item, tier);
