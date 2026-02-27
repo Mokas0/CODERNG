@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   coins: 'rng_coins', history: 'rng_history', luck: 'rng_luck', locked: 'rng_locked', lockedStorage: 'rng_locked_storage',
   shopRotationEnd: 'rng_shop_rotation_end', shopSeed: 'rng_shop_seed',
   bennyNextAt: 'rng_benny_next_at',
+  patrickNextAt: 'rng_patrick_next_at',
   scraps: 'rng_scraps', gearBonus: 'rng_gear_bonus',
   snehoRotationEnd: 'rng_sneho_rotation_end', snehoSeed: 'rng_sneho_seed',
   tycoonCpc: 'rng_tycoon_cpc', tycoonUpgrades: 'rng_tycoon_upgrades',
@@ -33,6 +34,7 @@ const STORAGE_KEYS = {
 const SHOP_ROTATION_MS  = 5  * 60 * 1000;  // 5 minutes
 const SNEHO_ROTATION_MS = 10 * 60 * 1000;  // 10 minutes
 const BENNY_INTERVAL_MS = 60 * 60 * 1000;  // 60 minutes
+const PATRICK_INTERVAL_MS = 120 * 60 * 1000;  // 120 minutes (2× rarer than Benny)
 
 function getCoins() {
   return Number(localStorage.getItem(STORAGE_KEYS.coins) || 0);
@@ -598,6 +600,13 @@ const BENNY_EXCLUSIVE_POTIONS = [
   { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 50000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable." },
 ];
 
+// Patrick-exclusive potions — huge luck, hefty price. Patrick appears 2× rarer than Benny.
+const PATRICK_EXCLUSIVE_POTIONS = [
+  { id: 'potionPatrickMega',     name: "Patrick's Mega Brew",   cost: 50000,  luckBonus: 500_000,   emoji: '🌟', desc: 'Massive luck. Massive price.' },
+  { id: 'potionPatrickTitan',    name: "Patrick's Titan Elixir", cost: 250_000, luckBonus: 2_500_000, emoji: '💫', desc: 'For those who spare no expense.' },
+  { id: 'potionPatrickColossus', name: "Patrick's Colossus",    cost: 1_000_000, luckBonus: 15_000_000, emoji: '🔮', desc: 'The big one. You know what you\'re paying for.' },
+];
+
 // Supreme Luck Potion — 1/100 chance to appear in Benny's shop per visit
 const SUPREME_LUCK_POTION = {
   id: 'potionSupremeLuck', name: 'Supreme Luck Potion', cost: 150000,
@@ -607,7 +616,7 @@ const SUPREME_POTION_APPEAR_CHANCE = 1 / 100;
 const SUPREME_KING_SPAWN_CHANCE = 1 / 10_000;
 
 const ALL_POTIONS_BY_ID = {};
-[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION].forEach(p => {
+[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION].forEach(p => {
   ALL_POTIONS_BY_ID[p.id] = p;
 });
 
@@ -902,10 +911,12 @@ function updateShopCountdown() {
   el.textContent = `Resets in ${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-function buyPotion(potionId, fromBenny = false) {
-  const pool = fromBenny
-    ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS, ...(bennyHasSupremeThisVisit ? [SUPREME_LUCK_POTION] : [])]
-    : getCurrentShopOffers();
+function buyPotion(potionId, fromBenny = false, fromPatrick = false) {
+  const pool = fromPatrick
+    ? PATRICK_EXCLUSIVE_POTIONS
+    : fromBenny
+      ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS, ...(bennyHasSupremeThisVisit ? [SUPREME_LUCK_POTION] : [])]
+      : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
   if (!potion || getCoins() < potion.cost) return;
   setCoins(getCoins() - potion.cost);
@@ -918,10 +929,13 @@ function buyPotion(potionId, fromBenny = false) {
   renderShop();
   renderPotionInventory();
   if (fromBenny) renderBennyShop();
+  if (fromPatrick) renderPatrickShop();
 }
 
-function buyPotionMax(potionId, fromBenny = false) {
-  const pool = fromBenny
+function buyPotionMax(potionId, fromBenny = false, fromPatrick = false) {
+  const pool = fromPatrick
+    ? PATRICK_EXCLUSIVE_POTIONS
+    : fromBenny
     ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS, ...(bennyHasSupremeThisVisit ? [SUPREME_LUCK_POTION] : [])]
     : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
@@ -939,6 +953,7 @@ function buyPotionMax(potionId, fromBenny = false) {
   renderShop();
   renderPotionInventory();
   if (fromBenny) renderBennyShop();
+  if (fromPatrick) renderPatrickShop();
 }
 
 function usePotion(potionId) {
@@ -1143,6 +1158,91 @@ function renderBennyShop() {
   });
   list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
     btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, true));
+  });
+}
+
+// ——— Patrick (appears once every 120 min — 2× rarer than Benny; huge luck, hefty price) ———
+function getPatrickNextAt() {
+  return Number(localStorage.getItem(STORAGE_KEYS.patrickNextAt) || 0);
+}
+function setPatrickNextAt(ts) {
+  localStorage.setItem(STORAGE_KEYS.patrickNextAt, String(ts));
+}
+
+function initPatrickSchedule() {
+  const next = getPatrickNextAt();
+  if (next === 0) {
+    setPatrickNextAt(Date.now() + Math.random() * PATRICK_INTERVAL_MS);
+  }
+}
+
+function showPatrickButton() {
+  const btn = document.getElementById('patrick-popup-btn');
+  if (btn) {
+    btn.classList.remove('hidden');
+    btn.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function hidePatrickButton() {
+  const btn = document.getElementById('patrick-popup-btn');
+  if (btn) {
+    btn.classList.add('hidden');
+    btn.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function openPatrick() {
+  hidePatrickButton();
+  const overlay = document.getElementById('patrick-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    renderPatrickShop();
+  }
+}
+
+function closePatrick() {
+  const overlay = document.getElementById('patrick-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+  setPatrickNextAt(Date.now() + PATRICK_INTERVAL_MS);
+}
+
+function renderPatrickShop() {
+  const list = document.getElementById('patrick-shop-list');
+  if (!list) return;
+  const coins = getCoins();
+  list.innerHTML = PATRICK_EXCLUSIVE_POTIONS.map(
+    (p) => {
+      const canBuy = coins >= p.cost;
+      const maxCount = Math.floor(coins / p.cost);
+      const canBuyMax = maxCount >= 1;
+      return `<div class="shop-item patrick-item">
+        <span class="shop-item-emoji">${p.emoji}</span>
+        <div class="shop-item-info">
+          <span class="shop-item-name">${p.name}</span>
+          <span class="shop-item-effect">+${p.luckBonus.toLocaleString()}× luck (Patrick's price)</span>
+          <span class="shop-item-desc">${p.desc}</span>
+        </div>
+        <div class="shop-item-actions">
+          <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-patrick="true" ${!canBuy ? 'disabled' : ''}>
+            ${p.cost.toLocaleString()} coins
+          </button>
+          <button type="button" class="shop-buy-max-btn" data-potion="${p.id}" data-patrick="true" ${!canBuyMax ? 'disabled' : ''} title="${canBuyMax ? `Buy ${maxCount}` : ''}">
+            Buy max${canBuyMax ? ` (${maxCount})` : ''}
+          </button>
+        </div>
+      </div>`;
+    }
+  ).join('');
+  list.querySelectorAll('.shop-buy-btn').forEach((btn) => {
+    btn.addEventListener('click', () => buyPotion(btn.dataset.potion, false, true));
+  });
+  list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
+    btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, false, true));
   });
 }
 
@@ -4149,9 +4249,14 @@ function init() {
   });
 
   initBennySchedule();
+  initPatrickSchedule();
   setInterval(() => {
     const next = getBennyNextAt();
     if (next > 0 && Date.now() >= next) showBennyButton();
+  }, 1000);
+  setInterval(() => {
+    const next = getPatrickNextAt();
+    if (next > 0 && Date.now() >= next) showPatrickButton();
   }, 1000);
   setInterval(updateShopCountdown, 1000);
   setInterval(updateSnehoCountdown, 1000);
@@ -4160,6 +4265,11 @@ function init() {
   document.getElementById('benny-close')?.addEventListener('click', closeBenny);
   document.getElementById('benny-overlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'benny-overlay') closeBenny();
+  });
+  document.getElementById('patrick-popup-btn')?.addEventListener('click', openPatrick);
+  document.getElementById('patrick-close')?.addEventListener('click', closePatrick);
+  document.getElementById('patrick-overlay')?.addEventListener('click', (e) => {
+    if (e.target.id === 'patrick-overlay') closePatrick();
   });
 
   // Wire up username inputs — listeners only, UI state set by refreshUsernameUI()

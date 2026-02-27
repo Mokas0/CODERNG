@@ -755,6 +755,37 @@ body {
   display: none;
 }
 
+.patrick-popup-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 5.5rem;
+  z-index: 999;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.5);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.patrick-popup-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.6);
+}
+.patrick-popup-btn.hidden {
+  display: none;
+}
+
+.patrick-panel .shop-list {
+  margin-bottom: 1rem;
+}
+.patrick-item .shop-item-effect {
+  color: var(--roll);
+}
+
 .benny-panel .shop-list {
   margin-bottom: 1rem;
 }
