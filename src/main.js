@@ -4041,11 +4041,11 @@ function renderTycoon() {
 
 // ——— Store (PayPal in-app purchases) ———
 const STORE_PRODUCTS = [
-  { id: 'coin_s', name: 'Coin Pack S',   price: '$0.49', emoji: '🪙', reward: '5,000 coins',    type: 'coins',  amount: 5_000 },
-  { id: 'coin_m', name: 'Coin Pack M',   price: '$2.49', emoji: '💰', reward: '30,000 coins',   type: 'coins',  amount: 30_000 },
-  { id: 'coin_l', name: 'Coin Pack L',   price: '$4.99', emoji: '💎', reward: '75,000 coins',   type: 'coins',  amount: 75_000 },
-  { id: 'luck_s', name: 'Luck Boost S',  price: '$0.99', emoji: '🍀', reward: 'x100 luck',      type: 'luck',   amount: 100 },
-  { id: 'luck_l', name: 'Luck Boost L',  price: '$2.49', emoji: '⚡', reward: 'x1,000 luck',    type: 'luck',   amount: 1_000 },
+  { id: 'coin_s', name: 'Coin Pack S',   price: '$0.49', emoji: '🪙', reward: '500M coins',    type: 'coins',  amount: 500_000_000 },
+  { id: 'coin_m', name: 'Coin Pack M',   price: '$2.49', emoji: '💰', reward: '3B coins',      type: 'coins',  amount: 3_000_000_000 },
+  { id: 'coin_l', name: 'Coin Pack L',   price: '$4.99', emoji: '💎', reward: '7.5B coins',    type: 'coins',  amount: 7_500_000_000 },
+  { id: 'luck_s', name: 'Luck Boost S',  price: '$0.99', emoji: '🍀', reward: 'x10M luck',     type: 'luck',   amount: 10_000_000 },
+  { id: 'luck_l', name: 'Luck Boost L',  price: '$2.49', emoji: '⚡', reward: 'x100M luck',    type: 'luck',   amount: 100_000_000 },
 ];
 
 let _paypalReady = false;

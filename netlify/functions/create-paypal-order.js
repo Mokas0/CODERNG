@@ -10,11 +10,11 @@ const PAYPAL_BASE = process.env.PAYPAL_ENV === "live"
 
 // Product catalogue — keep in sync with STORE_PRODUCTS in src/main.js
 const PRODUCTS = {
-  coin_s:   { amount: "0.99",  description: "Coin Pack S — 5,000 coins" },
-  coin_m:   { amount: "4.99",  description: "Coin Pack M — 30,000 coins" },
-  coin_l:   { amount: "9.99",  description: "Coin Pack L — 75,000 coins" },
-  luck_s:   { amount: "1.99",  description: "Luck Boost S — x100 luck" },
-  luck_l:   { amount: "4.99",  description: "Luck Boost L — x1,000 luck" },
+  coin_s:   { amount: "0.99",  description: "Coin Pack S — 500M coins" },
+  coin_m:   { amount: "4.99",  description: "Coin Pack M — 3B coins" },
+  coin_l:   { amount: "9.99",  description: "Coin Pack L — 7.5B coins" },
+  luck_s:   { amount: "1.99",  description: "Luck Boost S — x10M luck" },
+  luck_l:   { amount: "4.99",  description: "Luck Boost L — x100M luck" },
 };
 
 async function getAccessToken() {
