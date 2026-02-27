@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, SUPREME_KING_AURA, classifyAuraType } from './data/items.js';
+import { ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 const STORAGE_KEYS = {
@@ -499,6 +499,7 @@ function renderResult(item) {
   label.className = 'rarity-label';
   if (catEl) {
     const cat = item.isSupremeKing ? '♔ UNOBTAINABLE ♔'
+      : item.isTier2 ? '✦ Tier 2 Aura'
       : item.isEmperor ? '♛ Emperor Aura ♛'
       : item.isAscendant ? '⬡ Ascendant Aura'
       : item.isElder ? '⬡ Elder Aura'
@@ -509,6 +510,7 @@ function renderResult(item) {
       : '';
     catEl.textContent = cat;
     catEl.style.color = item.isSupremeKing ? '#ffd700'
+      : item.isTier2 ? '#ffd700'
       : item.isEmperor ? '#ffd700'
       : item.isAscendant ? '#00ddaa'
       : item.isElder ? 'gold'
@@ -2600,6 +2602,7 @@ function renderHistory() {
       const isElder     = h.isElder     || false;
       const isAscendant = h.isAscendant || false;
       const isEmperor   = h.isEmperor   || false;
+      const isTier2     = h.isTier2     || false;
       const isSupremeKing = h.isSupremeKing || false;
       const isMutation  = h.isMutation  || false;
       const isNull      = h.isNull      || false;
@@ -2607,12 +2610,13 @@ function renderHistory() {
         : isSecret ? ' history-item--secret'
         : isBiome     ? ' history-item--biome'
         : isEmperor   ? ' history-item--emperor'
+        : isTier2     ? ' history-item--tier2'
         : isElder     ? ' history-item--elder'
         : isAscendant ? ' history-item--ascendant'
         : isMutation  ? ' history-item--mutation'
         : isNull      ? ' history-item--null'
         : '';
-      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isNull || isSupremeKing;
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isTier2 || isNull || isSupremeKing;
       const categoryBadge = isSupremeKing
         ? `<span class="supreme-king-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>`
         : isSecret
@@ -2621,10 +2625,12 @@ function renderHistory() {
           ? `<span class="biome-badge">🌍 BIOME</span>`
           : isEmperor
             ? `<span class="emperor-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>`
-            : isElder
-              ? `<span class="elder-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
-              : isAscendant
-                ? `<span class="ascendant-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
+            : isTier2
+              ? `<span class="tier2-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.9;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>`
+              : isElder
+                ? `<span class="elder-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:gold;opacity:.85;text-shadow:0 0 8px gold;">ELDER</span>`
+                : isAscendant
+                  ? `<span class="ascendant-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00ddaa;opacity:.9;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>`
                 : isMutation
                   ? `<span class="mutation-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.12em;color:#ff88ff;opacity:.9;text-shadow:0 0 8px #ff88ff;">⟁ ${h.subtitle || 'MUTATED'}</span>`
                   : isNull
@@ -2696,11 +2702,13 @@ function renderLockedStorage() {
       const idx = locked.length - 1 - i;
       const lineage = h.isSupremeKing ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>'
         : h.isEmperor ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>'
+        : h.isTier2 ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>'
         : h.isElder ? '<span class="lineage-badge" style="color:gold;text-shadow:0 0 8px gold;">ELDER</span>'
         : h.isAscendant ? '<span class="lineage-badge" style="color:#00ddaa;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>'
         : '';
       const tierClass = h.isSupremeKing ? ' history-item--supreme-king'
         : h.isEmperor ? ' history-item--emperor'
+        : h.isTier2 ? ' history-item--tier2'
         : h.isElder ? ' history-item--elder'
         : h.isAscendant ? ' history-item--ascendant'
         : '';
@@ -2926,6 +2934,18 @@ const MYTHIC_CUTSCENES = {
 
   // ─── Supreme King (potion-triggered, unobtainable, 15s cutscene) ────────────
   9999: { bg: '#000000', accentA: '#ffd700', accentB: '#ff4400' },
+
+  // ─── Tier 2 Auras (post-Supreme King, Sol's RNG-style cutscenes) ────────────
+  9980: { quote: 'Beyond the throne. Beyond the crown.',  bg: '#0a0500', accentA: '#ffd700', accentB: '#ff6600' },
+  9981: { quote: 'The void ascended. The void became.', bg: '#080008', accentA: '#aa00ff', accentB: '#550088' },
+  9982: { quote: 'A crown that never ends.',           bg: '#080808', accentA: '#ffffff', accentB: '#ffd700' },
+  9983: { quote: 'The pulse that shapes reality.',     bg: '#000a0a', accentA: '#00ffff', accentB: '#003333' },
+  9984: { quote: 'There is nothing left to become.',   bg: '#0a0000', accentA: '#ff4444', accentB: '#880000' },
+  9985: { quote: 'The dawn that never sets.',         bg: '#0a0800', accentA: '#ffaa00', accentB: '#cc6600' },
+  9986: { quote: 'Reality ends. This begins.',        bg: '#080008', accentA: '#ff00ff', accentB: '#550055' },
+  9987: { quote: 'The final form of fortune.',        bg: '#000a04', accentA: '#00ff88', accentB: '#004422' },
+  9988: { quote: 'Supreme was only the beginning.',   bg: '#0a0800', accentA: '#ffd700', accentB: '#ff4400' },
+  9989: { quote: 'The last word. The last aura.',     bg: '#050505', accentA: '#e8e8e8', accentB: '#ffd700' },
 };
 
 // ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
@@ -3187,7 +3207,108 @@ const ELDER_STAGES = {
     'And upon it sits something older than luck itself.',
     '♔ THE SUPREME KING has arrived. ♔',
   ],
+
+  // ─── Tier 2 Auras (post-Supreme King, Sol's RNG-style) ─────────────────────
+  9980: ['You have surpassed the throne.', 'Light bends. Time folds.', 'THE TRANSCENDENT awakens.', 'Beyond Supreme. Beyond all.'],
+  9981: ['The void looked up.', 'It saw something higher.', 'VOID ASCENSION.', 'From nothing. To everything.'],
+  9982: ['Every crown before this was a shadow.', 'This one never fades.', 'ETERNAL CROWN.', 'Worn by the one who outlasted fate.'],
+  9983: ['A single beat.', 'The universe echoes.', 'OMEGA PULSE.', 'The rhythm that shapes reality.'],
+  9984: ['There was nothing left to become.', 'Until now.', 'THE FINAL FORM.', 'The end of evolution.'],
+  9985: ['The sun never sets here.', 'Because there is no night.', 'INFINITE DAWN.', 'The light that never ends.'],
+  9986: ['Reality reached its limit.', 'You did not.', "REALITY'S END.", 'Where the rules stop. You continue.'],
+  9987: ['Fortune has a final shape.', 'You have found it.', 'THE ULTIMATE.', 'The last word in luck.'],
+  9988: ['Supreme was the door.', 'You walked through.', 'BEYOND SUPREME.', 'What lies beyond the throne.'],
+  9989: ['Every aura before this was a draft.', 'This is the final.', 'THE LAST AURA.', 'There will be no other.'],
 };
+
+// ─── Tier 2 cutscene effects (Sol's RNG-style: particles, flashing symbols) ───
+const TIER2_SYMBOLS = ['★', '♔', '♦', '✦', '✧', '♛', '◆', '●', '▲', '■', '♥', '♠', '♣', '∞', '⚡', '🔥', '💎', '🌟'];
+function startTier2CutsceneEffects(overlay, cfg) {
+  const canvas = document.getElementById('rarity-overlay-tier2-canvas');
+  const symbolsEl = document.getElementById('rarity-overlay-tier2-symbols');
+  if (!canvas || !symbolsEl) return () => {};
+
+  const accentA = cfg.accentA || '#ffd700';
+  const accentB = cfg.accentB || '#ff4400';
+  const w = overlay.offsetWidth || window.innerWidth;
+  const h = overlay.offsetHeight || window.innerHeight;
+  canvas.width = w;
+  canvas.height = h;
+  canvas.style.display = 'block';
+  canvas.style.pointerEvents = 'none';
+  symbolsEl.style.display = 'block';
+  symbolsEl.innerHTML = '';
+
+  const particles = [];
+  for (let i = 0; i < 80; i++) {
+    particles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: (Math.random() - 0.5) * 1.2 - 0.3,
+      r: 1 + Math.random() * 2,
+      opacity: 0.2 + Math.random() * 0.5,
+      life: 0.5 + Math.random() * 1,
+    });
+  }
+
+  let animId = 0;
+  let symbolInterval = 0;
+  const ctx = canvas.getContext('2d');
+
+  function drawParticles() {
+    if (!ctx || !canvas.width) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      if (p.y < 0) p.y = 0;
+      p.life -= 0.008;
+      if (p.life <= 0) {
+        p.x = Math.random() * canvas.width;
+        p.y = canvas.height;
+        p.life = 0.5 + Math.random() * 1;
+      }
+      const alpha = Math.max(0.1, p.opacity * p.life);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, `rgba(255, 215, 0, ${alpha * 0.8})`);
+      g.addColorStop(1, `rgba(255, 68, 0, ${alpha * 0.2})`);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+    animId = requestAnimationFrame(drawParticles);
+  }
+
+  function spawnFlashingSymbol() {
+    const sym = TIER2_SYMBOLS[Math.floor(Math.random() * TIER2_SYMBOLS.length)];
+    const el = document.createElement('span');
+    el.className = 'tier2-flash-symbol';
+    el.textContent = sym;
+    el.style.left = `${10 + Math.random() * 80}%`;
+    el.style.top = `${10 + Math.random() * 80}%`;
+    el.style.fontSize = `${20 + Math.random() * 40}px`;
+    el.style.color = Math.random() > 0.5 ? accentA : accentB;
+    el.style.opacity = '0';
+    el.style.animation = 'tier2-symbol-flash 0.8s ease-out forwards';
+    symbolsEl.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  drawParticles();
+  symbolInterval = setInterval(spawnFlashingSymbol, 120);
+
+  return () => {
+    cancelAnimationFrame(animId);
+    clearInterval(symbolInterval);
+    canvas.style.display = 'none';
+    symbolsEl.style.display = 'none';
+    symbolsEl.innerHTML = '';
+  };
+}
 
 // ─── Elder Aura helpers ──────────────────────────────────────────────────────
 function elderSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -3222,13 +3343,15 @@ async function showElderCutscene(aura) {
   overlay.style.setProperty('--mythic-a',  cfg.accentA);
   overlay.style.setProperty('--mythic-b',  cfg.accentB);
 
-  // Strip other tier classes, add elder
+  // Strip other tier classes, add elder (and tier2 if applicable)
   overlay.classList.remove(
     'hidden',
     'rarity-overlay--global', 'rarity-overlay--universal',
-    'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome'
+    'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome',
+    'rarity-overlay--tier2'
   );
   overlay.classList.add('rarity-overlay--elder');
+  if (aura.isTier2) overlay.classList.add('rarity-overlay--tier2');
   overlay.style.opacity = '1';
   overlay.setAttribute('aria-hidden', 'false');
 
@@ -3241,6 +3364,12 @@ async function showElderCutscene(aura) {
   }
   if (subEl) subEl.style.display = 'none';
 
+  // Tier 2: start particle canvas and flashing symbols
+  let tier2Cleanup = null;
+  if (aura.isTier2) {
+    tier2Cleanup = startTier2CutsceneEffects(overlay, cfg);
+  }
+
   // --- Stage text sequence ---
   for (let i = 0; i < stages.length; i++) {
     if (!quoteEl) break;
@@ -3252,8 +3381,11 @@ async function showElderCutscene(aura) {
     await elderSleep(250);
   }
 
+  if (tier2Cleanup) tier2Cleanup();
+
   // --- Final aura reveal ---
   const tierLabel = aura.isSupremeKing ? '♔ UNOBTAINABLE ♔'
+    : aura.isTier2 ? '✦ Tier 2 Aura ✦'
     : aura.isEmperor ? '♛ Emperor Aura ♛'
     : aura.isAscendant ? '⬡ Ascendant Aura ⬡'
     : aura.isSecret ? '⚠ Secret Aura ⚠'
@@ -3290,7 +3422,7 @@ async function showElderCutscene(aura) {
 
   // Clean up
   overlay.classList.add('hidden');
-  overlay.classList.remove('rarity-overlay--elder');
+  overlay.classList.remove('rarity-overlay--elder', 'rarity-overlay--tier2');
   overlay.style.opacity = '';
   overlay.style.removeProperty('--mythic-bg');
   overlay.style.removeProperty('--mythic-a');
@@ -3335,11 +3467,13 @@ function getElderRollTotal()  { return Number(localStorage.getItem(STORAGE_KEYS.
 function getElderCurseTotal() { return Number(localStorage.getItem(STORAGE_KEYS.elderCurseTotal) || 0); }
 function getElderCoinsSpent() { return Number(localStorage.getItem(STORAGE_KEYS.elderCoinsSpent) || 0); }
 
-// Returns the live pool of unlocked-but-not-yet-rolled elders/ascendants
+// Returns the live pool of unlocked-but-not-yet-rolled elders/ascendants/emperors/tier2
 // injected into weightedRandom on every roll.
+// Tier 2 auras only appear after Supreme King (9999) has been received.
 function getUnlockedElderPool() {
   const received = getElderReceived();
   const unlocked = getElderUnlocked();
+  const hasSupremeKing = received.includes(9999);
   const elderItems = ELDER_AURAS
     .filter(a => unlocked.includes(a.id) && !received.includes(a.id))
     .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isElder: true }));
@@ -3349,7 +3483,12 @@ function getUnlockedElderPool() {
   const emperorItems = EMPEROR_AURAS
     .filter(a => unlocked.includes(a.id) && !received.includes(a.id))
     .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isEmperor: true }));
-  return [...elderItems, ...ascendantItems, ...emperorItems];
+  const tier2Items = hasSupremeKing
+    ? TIER2_AURAS
+        .filter(a => !received.includes(a.id))
+        .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isTier2: true }))
+    : [];
+  return [...elderItems, ...ascendantItems, ...emperorItems, ...tier2Items];
 }
 
 // Check elder conditions — adds to unlocked pool (does NOT auto-grant)
@@ -3657,6 +3796,7 @@ async function reportRareRoll(item) {
   const tierLabel = item.aura_rarity_label
     || (item.isSupremeKing ? 'UNOBTAINABLE'
       : item.isEmperor ? 'EMPEROR'
+      : item.isTier2 ? 'TIER2'
       : item.isAscendant ? 'ASCENDANT'
       : item.isElder ? 'ELDER'
       : item.isSecret || item.rarity === 0 ? 'SECRET'
@@ -3699,10 +3839,10 @@ async function roll() {
 
   if (mult > 1) setLuckMultiplier(1);
 
-  // ── Elder / Ascendant / Emperor rolled ──────────────────────────────────────
-  if (item.isElder || item.isAscendant || item.isEmperor) {
+  // ── Elder / Ascendant / Emperor / Tier 2 rolled ──────────────────────────────
+  if (item.isElder || item.isAscendant || item.isEmperor || item.isTier2) {
     markElderReceived(item.id);
-    const tierTag = item.isEmperor ? 'emperor' : item.isAscendant ? 'ascendant' : 'elder';
+    const tierTag = item.isTier2 ? 'tier2' : item.isEmperor ? 'emperor' : item.isAscendant ? 'ascendant' : 'elder';
     const histE = getHistory();
     histE.push({
       historyId: `${Date.now()}-${tierTag}-${item.id}`,
@@ -3713,6 +3853,7 @@ async function roll() {
       isElder: item.isElder || false,
       isAscendant: item.isAscendant || false,
       isEmperor: item.isEmperor || false,
+      isTier2: item.isTier2 || false,
     });
     setHistory(histE);
     renderResult(item);
@@ -3866,7 +4007,7 @@ function submitAdminCode() {
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
+    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
@@ -4385,7 +4526,7 @@ init();
 window.__rng = {
   /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) or __rng.cutscene(9200) */
   cutscene(id) {
-    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
+    const all = [SUPREME_KING_AURA, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...ITEMS];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
     showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });
@@ -4397,6 +4538,6 @@ window.__rng = {
   },
   /** List all elder, ascendant & emperor IDs. */
   list() {
-    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS, ...EMPEROR_AURAS].map(a => ({ id: a.id, text: a.text })));
+    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS, ...EMPEROR_AURAS, ...TIER2_AURAS].map(a => ({ id: a.id, text: a.text })));
   },
 };

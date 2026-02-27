@@ -910,6 +910,50 @@ export const SUPREME_KING_AURA = {
   rarity: -1, isSupremeKing: true,
 };
 
+// Tier 2 Auras — only unlockable after receiving THE SUPREME KING. Post-Supreme tier.
+export const TIER2_AURAS = [
+  { id: 9980, text: 'THE TRANSCENDENT',
+    font: 'Cinzel', color: '#ffd700', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 25px #ffd700, 0 0 60px #ffaa00, 0 0 100px #ff6600',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9981, text: 'VOID ASCENSION',
+    font: 'Unbounded', color: '#aa00ff', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 22px #aa00ff, 0 0 55px #6600aa, 0 0 90px #330055',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9982, text: 'ETERNAL CROWN',
+    font: 'DM Serif Display', color: '#ffffff', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 20px #ffffff, 0 0 50px #ffd700, 0 0 80px #ffaa00',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9983, text: 'OMEGA PULSE',
+    font: 'Bebas Neue', color: '#00ffff', fontWeight: '400', fontStyle: 'normal',
+    textShadow: '0 0 25px #00ffff, 0 0 60px #00aa88, 0 0 100px #004433',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9984, text: 'THE FINAL FORM',
+    font: 'Syne', color: '#ff4444', fontWeight: '800', fontStyle: 'normal',
+    textShadow: '0 0 22px #ff4444, 0 0 55px #cc0000, 0 0 90px #660000',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9985, text: 'INFINITE DAWN',
+    font: 'Raleway', color: '#ffaa00', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 20px #ffaa00, 0 0 50px #ff6600, 0 0 80px #cc3300',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9986, text: "REALITY'S END",
+    font: 'Space Mono', color: '#ff00ff', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 22px #ff00ff, 0 0 55px #aa00aa, 0 0 90px #550055',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9987, text: 'THE ULTIMATE',
+    font: 'Cinzel', color: '#00ff88', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 25px #00ff88, 0 0 60px #00aa55, 0 0 100px #004422',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9988, text: 'BEYOND SUPREME',
+    font: 'Oswald', color: '#ffd700', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 20px #ffd700, 0 0 50px #ff8800, 0 0 80px #ff4400',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+  { id: 9989, text: 'THE LAST AURA',
+    font: 'Cormorant Garamond', color: '#e8e8e8', fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 22px #ffffff, 0 0 55px #ffd700, 0 0 90px #ffaa00',
+    rarity: 9_000_000_000_000_000, isTier2: true },
+];
+
 // Elder Auras – not in the normal roll pool; granted when secret conditions are met.
 // Rarity is 9Q (9_000_000_000_000_000) for display only.
 export const ELDER_AURAS = [

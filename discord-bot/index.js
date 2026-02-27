@@ -73,6 +73,10 @@ const TIER_CONFIG = {
     desc: (player, name) => `${player} has unlocked **${name}** — an Elder Aura.\n\n*Hidden behind ancient conditions. Discovered by the devoted.*`,
     rarityText: null,
     footer: "Nico's RNG • nicos-rng.netlify.app • The elders acknowledge you." },
+  TIER2: { title: '✦ TIER 2 AURA UNLOCKED', color: 0xFFD700, emoji: '✦',
+    desc: (player, name) => `${player} has unlocked **${name}** — a Tier 2 Aura.\n\n*Beyond the Supreme King. What lies after the throne.*`,
+    rarityText: null,
+    footer: "Nico's RNG • nicos-rng.netlify.app • Beyond Supreme." },
 };
 
 async function fetchChannel() {
