@@ -12,7 +12,7 @@ const STORAGE_PREFIX = WORLD_ID === 2 ? 'rng_w2_' : 'rng_';
 const STORAGE_KEYS = {
   coins: STORAGE_PREFIX + 'coins',
   history: STORAGE_PREFIX + 'history',
-  luck: STORAGE_PREFIX + 'luck',
+  luck: 'rng_luck', // shared across worlds
   locked: STORAGE_PREFIX + 'locked',
   lockedStorage: STORAGE_PREFIX + 'locked_storage',
   shopRotationEnd: STORAGE_PREFIX + 'shop_rotation_end',
@@ -2631,6 +2631,23 @@ function showBazaarBalanceMsg(text, isError = false) {
   if (el) { el.textContent = text; el.style.color = isError ? 'var(--danger)' : 'var(--roll)'; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 4000); }
 }
 
+async function bazaarDepositAllCoins() {
+  if (!authUser || !supabase) return;
+  const amount = getCoins();
+  if (amount <= 0) { showBazaarBalanceMsg('No coins to deposit.', true); return; }
+  document.getElementById('bazaar-deposit-amount').value = String(amount);
+  await bazaarDepositCoins();
+}
+
+async function bazaarWithdrawAllCoins() {
+  if (!authUser || !supabase) return;
+  await bazaarFetchBalance();
+  const amount = bazaarCoinBalance;
+  if (amount <= 0) { showBazaarBalanceMsg('No Bazaar coins to withdraw.', true); return; }
+  document.getElementById('bazaar-deposit-amount').value = String(amount);
+  await bazaarWithdrawCoins();
+}
+
 async function bazaarDepositCoins() {
   const amount = Math.floor(Number(document.getElementById('bazaar-deposit-amount')?.value || 0));
   if (!authUser || !supabase || amount <= 0) { showBazaarBalanceMsg('Enter a valid amount.', true); return; }
@@ -2729,6 +2746,27 @@ async function bazaarWithdrawAuraToCasino(inventoryId) {
   await loadCasinoAuraVault();
   renderCasino();
   renderBazaar();
+}
+
+async function bazaarStockBuyMax() {
+  if (!authUser || !supabase) return;
+  await bazaarFetchBalance();
+  const priceEl = document.getElementById('bazaar-stock-price');
+  const price = parseInt(priceEl?.textContent?.replace(/,/g, '') || '0', 10);
+  if (price < 1) { showBazaarBalanceMsg('Price not loaded yet.', true); return; }
+  const maxShares = Math.floor(bazaarCoinBalance / price);
+  if (maxShares < 1) { showBazaarBalanceMsg('Not enough Bazaar balance.', true); return; }
+  document.getElementById('bazaar-stock-buy-shares').value = String(maxShares);
+  await bazaarStockBuy();
+}
+
+async function bazaarStockSellAll() {
+  const holdingsEl = document.getElementById('bazaar-stock-holdings');
+  const match = holdingsEl?.textContent?.match(/(\d[\d,]*)\s+shares/);
+  const shares = match ? parseInt(match[1].replace(/,/g, ''), 10) : 0;
+  if (shares < 1) { showBazaarBalanceMsg('No shares to sell.', true); return; }
+  document.getElementById('bazaar-stock-sell-shares').value = String(shares);
+  await bazaarStockSell();
 }
 
 async function bazaarStockBuy() {
@@ -5109,11 +5147,27 @@ function init() {
   document.getElementById('auth-signup-submit')?.addEventListener('click', authSignUp);
   document.getElementById('auth-overlay-close')?.addEventListener('click', closeAuthOverlay);
   document.getElementById('auth-overlay')?.addEventListener('click', (e) => { if (e.target.id === 'auth-overlay') closeAuthOverlay(); });
+  document.getElementById('bazaar-quick-btn')?.addEventListener('click', () => switchTab('bazaar'));
   document.getElementById('bazaar-deposit-btn')?.addEventListener('click', bazaarDepositCoins);
+  document.getElementById('bazaar-deposit-all-btn')?.addEventListener('click', bazaarDepositAllCoins);
   document.getElementById('bazaar-withdraw-btn')?.addEventListener('click', bazaarWithdrawCoins);
+  document.getElementById('bazaar-withdraw-all-btn')?.addEventListener('click', bazaarWithdrawAllCoins);
   document.getElementById('bazaar-link-btn')?.addEventListener('click', bazaarLinkCasino);
   document.getElementById('bazaar-stock-buy-btn')?.addEventListener('click', bazaarStockBuy);
+  document.getElementById('bazaar-stock-buy-max-btn')?.addEventListener('click', bazaarStockBuyMax);
   document.getElementById('bazaar-stock-sell-btn')?.addEventListener('click', bazaarStockSell);
+  document.getElementById('bazaar-stock-sell-all-btn')?.addEventListener('click', bazaarStockSellAll);
+  document.querySelectorAll('.bazaar-jump-link').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.scrollTo;
+      if (!id) return;
+      switchTab('bazaar');
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    });
+  });
 
   if (supabase) {
     supabase.auth.getSession().then(({ data: { session } }) => {

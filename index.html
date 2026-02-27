@@ -21,6 +21,7 @@
           <span class="rolls-wrap">🎲 <span id="roll-count">0</span> rolls</span>
           <span class="luck-wrap">Luck: <span id="luck-value">1× (normal)</span></span>
           <button type="button" id="luck-btn" class="luck-btn">Boost luck (50 coins)</button>
+          <button type="button" id="bazaar-quick-btn" class="bazaar-quick-btn" title="Open Bazaar">🏪 Bazaar</button>
           <button type="button" id="settings-btn" class="settings-btn" title="Settings">⚙️</button>
           <button type="button" id="dev-panel-btn" class="dev-panel-btn hidden" title="Admin panel">🔧</button>
           <div class="auth-bar">
@@ -190,17 +191,25 @@
               <p>Sign in or sign up to use the Bazaar.</p>
             </div>
             <div id="bazaar-authed" class="bazaar-authed hidden">
+              <nav class="bazaar-jump-nav">
+                <button type="button" class="bazaar-jump-link" data-scroll-to="bazaar-stocks-anchor">Stocks</button>
+                <button type="button" class="bazaar-jump-link" data-scroll-to="bazaar-invest-anchor">Invest</button>
+                <button type="button" class="bazaar-jump-link" data-scroll-to="bazaar-listings-anchor">Listings</button>
+                <button type="button" class="bazaar-jump-link" data-scroll-to="bazaar-myshop-anchor">My shop</button>
+              </nav>
               <div class="bazaar-balance">
                 <span>Bazaar balance: <strong id="bazaar-coins">0</strong> coins</span>
                 <div class="casino-balance-actions">
-                  <input type="number" id="bazaar-deposit-amount" class="casino-amount-input" placeholder="Amount" min="1" />
+                  <input type="number" id="bazaar-deposit-amount" class="casino-amount-input" placeholder="Deposit/Withdraw amount" min="1" />
                   <button type="button" id="bazaar-deposit-btn" class="hub-btn">Deposit</button>
+                  <button type="button" id="bazaar-deposit-all-btn" class="hub-btn hub-btn--small" title="Deposit all local coins">All</button>
                   <button type="button" id="bazaar-withdraw-btn" class="hub-btn hub-btn--secondary">Withdraw</button>
+                  <button type="button" id="bazaar-withdraw-all-btn" class="hub-btn hub-btn--secondary hub-btn--small" title="Withdraw all Bazaar coins">All</button>
                 </div>
                 <p id="bazaar-balance-msg" class="hub-status"></p>
               </div>
               <div class="bazaar-sections">
-                <div class="casino-section">
+                <div id="bazaar-stocks-anchor" class="casino-section bazaar-section-anchor">
                   <h3 class="hub-heading">Stocks — BZX</h3>
                   <p class="bazaar-stock-desc">Bazaar Index tracks marketplace activity. Price rises with sales.</p>
                   <div id="bazaar-stocks-panel" class="bazaar-stocks-panel">
@@ -208,24 +217,26 @@
                     <div class="bazaar-stock-actions">
                       <input type="number" id="bazaar-stock-buy-shares" class="casino-amount-input" placeholder="Shares" min="1" />
                       <button type="button" id="bazaar-stock-buy-btn" class="hub-btn">Buy</button>
+                      <button type="button" id="bazaar-stock-buy-max-btn" class="hub-btn hub-btn--small" title="Buy max shares">Max</button>
                       <input type="number" id="bazaar-stock-sell-shares" class="casino-amount-input" placeholder="Shares" min="1" />
                       <button type="button" id="bazaar-stock-sell-btn" class="hub-btn hub-btn--secondary">Sell</button>
+                      <button type="button" id="bazaar-stock-sell-all-btn" class="hub-btn hub-btn--secondary hub-btn--small" title="Sell all shares">All</button>
                     </div>
                     <p id="bazaar-stock-holdings" class="bazaar-stock-holdings">My BZX: 0 shares</p>
                   </div>
                 </div>
-                <div class="casino-section">
+                <div id="bazaar-invest-anchor" class="casino-section bazaar-section-anchor">
                   <h3 class="hub-heading">Invest in sellers</h3>
                   <p class="bazaar-stock-desc">Invest Bazaar coins in other players' businesses. Support top sellers.</p>
                   <div id="bazaar-invest-list" class="casino-list"></div>
                   <h4 class="bazaar-subheading">My investments</h4>
                   <div id="bazaar-my-investments" class="casino-list"></div>
                 </div>
-                <div class="casino-section">
+                <div id="bazaar-listings-anchor" class="casino-section bazaar-section-anchor">
                   <h3 class="hub-heading">Browse listings</h3>
                   <div id="bazaar-listings" class="casino-list"></div>
                 </div>
-                <div class="casino-section">
+                <div id="bazaar-myshop-anchor" class="casino-section bazaar-section-anchor">
                   <h3 class="hub-heading">My shop</h3>
                   <div class="bazaar-link-casino">
                     <p id="bazaar-link-status" class="hub-status"></p>
