@@ -1074,7 +1074,7 @@ function usePotion(potionId) {
   setPotionInventory(inv);
   setLuckMultiplier(getLuckMultiplier() + (potion.luckBonus || 0));
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
-  if (potion.id === 'potionBennyUltraluck') triggerSecretAura().catch(console.error);
+  if (potion.id === 'potionBennyUltraluck') triggerSecretAura(1).catch(console.error);
   if (potion.id === 'potionSupremeLuck') triggerSupremeKing().catch(console.error);
   renderLuck();
   renderPotionInventory();
@@ -1083,14 +1083,14 @@ function usePotion(potionId) {
 function useAllPotions() {
   const inv = getPotionInventory();
   let totalLuck = 0;
-  let hasUltraluck = false;
+  let ultraluckCount = 0;
   let hasSupreme = false;
   for (const [id, count] of Object.entries(inv)) {
     if (id === 'potionDestruction') continue; // Use individually in World 2 only
     const potion = ALL_POTIONS_BY_ID[id];
     if (!potion || count < 1) continue;
     totalLuck += (potion.luckBonus || 0) * count;
-    if (id === 'potionBennyUltraluck') hasUltraluck = true;
+    if (id === 'potionBennyUltraluck') ultraluckCount += count;
     if (id === 'potionSupremeLuck') hasSupreme = true;
   }
   if (totalLuck === 0) return;
@@ -1100,7 +1100,7 @@ function useAllPotions() {
   setPotionInventory(newInv);
   setLuckMultiplier(getLuckMultiplier() + totalLuck);
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
-  if (hasUltraluck) triggerSecretAura().catch(console.error);
+  if (ultraluckCount > 0) triggerSecretAura(ultraluckCount).catch(console.error);
   if (hasSupreme) triggerSupremeKing().catch(console.error);
   renderLuck();
   renderPotionInventory();
@@ -4267,11 +4267,12 @@ function tryBiomeRoll(biomeType) {
 }
 
 // ─── Secret Aura Trigger ───────────────────────────────────────────────────
-// 1 in 5,000,000 flat chance per Ultraluck Potion use. Luck is NOT factored in.
+// 1 in 5,000,000 flat chance per Ultraluck Potion use. Multiple Ultraluck potions stack: chance = 1 - (1 - p)^count.
 const SECRET_SPAWN_CHANCE = 1 / 5_000_000;
 
-async function triggerSecretAura() {
-  if (Math.random() >= SECRET_SPAWN_CHANCE) return;
+async function triggerSecretAura(count = 1) {
+  const stackedChance = 1 - Math.pow(1 - SECRET_SPAWN_CHANCE, Math.max(1, count));
+  if (Math.random() >= stackedChance) return;
   while (isAnimating) await new Promise(r => setTimeout(r, 200));
   const aura = SECRET_AURAS[Math.floor(Math.random() * SECRET_AURAS.length)];
   const secretAura = { ...aura, isSecret: true };
