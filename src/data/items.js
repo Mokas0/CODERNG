@@ -934,6 +934,14 @@ export const VOID_QUEEN_AURA = {
   rarity: -1, isVoidQueen: true,
 };
 
+// Book of Power: only from Void Potion, super rarely after obtaining Void Queen AND Supreme King
+export const BOOK_OF_POWER_AURA = {
+  id: 10150, text: '📖 BOOK OF POWER 📖',
+  font: 'Cinzel', color: '#ffd700', fontWeight: '900', fontStyle: 'normal',
+  textShadow: '0 0 30px #ffd700, 0 0 60px #ffaa00, 0 0 100px #ff6600',
+  rarity: -1, isBookOfPower: true,
+};
+
 // Jia shop: unfathomably rare items (World 2 only, buy with NULL COINS)
 export const JIA_RARE_ITEMS = [
   { id: 10130, text: 'NULL FRAGMENT', font: 'Space Mono', color: '#444444', fontWeight: '700', fontStyle: 'normal', textShadow: 'none', rarity: 1e15, costNullCoins: 80, emoji: '⬛' },
