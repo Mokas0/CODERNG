@@ -389,6 +389,17 @@
       <canvas id="rarity-overlay-tier2-canvas" class="rarity-overlay__tier2-canvas" aria-hidden="true"></canvas>
       <div id="rarity-overlay-tier2-symbols" class="rarity-overlay__tier2-symbols" aria-hidden="true"></div>
       <div class="rarity-overlay__content">
+        <div class="rarity-overlay__center-star" id="rarity-overlay-star" aria-hidden="true">
+          <svg viewBox="0 0 100 100" class="star-8-svg">
+            <defs>
+              <linearGradient id="star-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:var(--mythic-a,#ffd700)"/>
+                <stop offset="100%" style="stop-color:var(--mythic-b,#ff4400)"/>
+              </linearGradient>
+            </defs>
+            <polygon points="50,5 67,33 95,50 67,67 50,95 33,67 5,50 33,33" fill="url(#star-gradient)" opacity="0.55"/>
+          </svg>
+        </div>
         <p class="rarity-overlay__tier" id="rarity-overlay-tier"></p>
         <p class="rarity-overlay__label" id="rarity-overlay-label"></p>
         <p class="rarity-overlay__rarity" id="rarity-overlay-rarity"></p>

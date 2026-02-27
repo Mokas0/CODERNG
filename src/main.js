@@ -3343,15 +3343,16 @@ async function showElderCutscene(aura) {
   overlay.style.setProperty('--mythic-a',  cfg.accentA);
   overlay.style.setProperty('--mythic-b',  cfg.accentB);
 
-  // Strip other tier classes, add elder (and tier2 if applicable)
+  // Strip other tier classes, add elder (and tier2/has-star if applicable)
   overlay.classList.remove(
     'hidden',
     'rarity-overlay--global', 'rarity-overlay--universal',
     'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome',
-    'rarity-overlay--tier2'
+    'rarity-overlay--tier2', 'rarity-overlay--has-star'
   );
   overlay.classList.add('rarity-overlay--elder');
   if (aura.isTier2) overlay.classList.add('rarity-overlay--tier2');
+  if (aura.isSupremeKing || aura.isTier2) overlay.classList.add('rarity-overlay--has-star');
   overlay.style.opacity = '1';
   overlay.setAttribute('aria-hidden', 'false');
 
@@ -3422,7 +3423,7 @@ async function showElderCutscene(aura) {
 
   // Clean up
   overlay.classList.add('hidden');
-  overlay.classList.remove('rarity-overlay--elder', 'rarity-overlay--tier2');
+  overlay.classList.remove('rarity-overlay--elder', 'rarity-overlay--tier2', 'rarity-overlay--has-star');
   overlay.style.opacity = '';
   overlay.style.removeProperty('--mythic-bg');
   overlay.style.removeProperty('--mythic-a');

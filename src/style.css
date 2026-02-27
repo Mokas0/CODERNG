@@ -2664,6 +2664,32 @@ body {
   50%       { opacity: 0.85; transform: scale(1.15); }
 }
 
+/* ─── Spinning 8-pointed star (Supreme King & Tier 2) ───────────────────────── */
+.rarity-overlay__center-star {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(80px, 15vw, 140px);
+  height: clamp(80px, 15vw, 140px);
+  z-index: 1;
+  pointer-events: none;
+}
+.rarity-overlay__center-star .star-8-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 20px var(--mythic-a, #ffd700)) drop-shadow(0 0 40px var(--mythic-b, #ff4400));
+}
+.rarity-overlay--has-star .rarity-overlay__center-star {
+  display: block;
+  animation: tier2-star-spin 8s linear infinite;
+}
+@keyframes tier2-star-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
 /* ─── Tier 2 Aura Overlay (Sol's RNG-style: particles, flashing symbols) ────── */
 .rarity-overlay__tier2-canvas {
   position: absolute;
