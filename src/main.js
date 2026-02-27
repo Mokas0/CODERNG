@@ -615,7 +615,7 @@ const SUPREME_LUCK_POTION = {
   luckBonus: 15_000_000, emoji: '👑✨', desc: 'The rarest potion in existence. Benny found it once. He may never find another.',
 };
 const SUPREME_POTION_APPEAR_CHANCE = 1 / 100;
-const SUPREME_KING_SPAWN_CHANCE = 1 / 10_000;
+const SUPREME_KING_SPAWN_CHANCE = 1 / 1_000;
 
 const ALL_POTIONS_BY_ID = {};
 [...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION].forEach(p => {
@@ -1142,7 +1142,7 @@ function renderBennyShop() {
         <span class="shop-item-emoji">${p.emoji}</span>
         <div class="shop-item-info">
           <span class="shop-item-name">${p.name}</span>
-          <span class="shop-item-effect">+${p.luckBonus.toLocaleString()}× luck${isSupreme ? ' — 1/10,000 chance to summon THE SUPREME KING' : ' (Benny\'s price)'}</span>
+          <span class="shop-item-effect">+${p.luckBonus.toLocaleString()}× luck${isSupreme ? ' — 1/1,000 chance to summon THE SUPREME KING' : ' (Benny\'s price)'}</span>
         </div>
         <div class="shop-item-actions">
           <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="true" ${!canBuy ? 'disabled' : ''}>

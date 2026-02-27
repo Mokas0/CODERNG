@@ -59,7 +59,7 @@ function rarityColor(rarity) {
 const TIER_CONFIG = {
   UNOBTAINABLE: { title: '♔ UNOBTAINABLE AURA SUMMONED', color: 0xFFD700, emoji: '♔',
     desc: (player, name) => `${player} has summoned **${name}** — an aura that should not exist.\n\n*It was never meant to be obtained. Yet here it is.*`,
-    rarityText: '**UNOBTAINABLE** *(1 in 10,000 per Supreme Luck Potion)*',
+    rarityText: '**UNOBTAINABLE** *(1 in 1,000 per Supreme Luck Potion)*',
     footer: "Nico's RNG • nicos-rng.netlify.app • The impossible happened." },
   EMPEROR: { title: '♛ EMPEROR AURA UNLOCKED', color: 0xFFD700, emoji: '♛',
     desc: (player, name) => `${player} has unlocked **${name}** — a legendary Emperor Aura.\n\n*Only those who have conquered the impossible may claim this crown.*`,

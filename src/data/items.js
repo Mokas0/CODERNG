@@ -902,7 +902,7 @@ export const EMPEROR_AURAS = [
     rarity: 9_000_000_000_000_000 },
 ];
 
-// Supreme King — triggered exclusively by the Supreme Luck Potion (1/10,000 chance). Not rollable.
+// Supreme King — triggered exclusively by the Supreme Luck Potion (1/1,000 chance). Not rollable.
 export const SUPREME_KING_AURA = {
   id: 9999, text: '♔ THE SUPREME KING ♔',
   font: 'Cinzel', color: '#ffd700', fontWeight: '900', fontStyle: 'normal',
