@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, classifyAuraType } from './data/items.js';
+import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, ACCOMPLISHMENT_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
@@ -28,6 +28,7 @@ const STORAGE_KEYS = {
   tycoonClicks: STORAGE_PREFIX + 'tycoon_clicks',
   tycoonEarned: STORAGE_PREFIX + 'tycoon_earned',
   cutsceneThreshold: STORAGE_PREFIX + 'settings_cutscene_threshold',
+  visitedWorld2: 'rng_visited_world2', // shared across worlds
   elderSnehoTotal: STORAGE_PREFIX + 'elder_sneho_total',
   elderRollTotal: STORAGE_PREFIX + 'elder_roll_total',
   elderCurseTotal: STORAGE_PREFIX + 'elder_curse_total',
@@ -2525,7 +2526,7 @@ function closeDevPanel() {
 }
 
 function grantItemById(id) {
-  const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+  const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...ACCOMPLISHMENT_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
   const item = all.find(a => a.id === id);
   if (!item) return false;
   const isElder = ELDER_AURAS.some(a => a.id === id);
@@ -2533,12 +2534,13 @@ function grantItemById(id) {
   const isEmperor = EMPEROR_AURAS.some(a => a.id === id);
   const is100Q = AURAS_100Q.some(a => a.id === id);
   const isTier2 = TIER2_AURAS.some(a => a.id === id);
+  const isAccomplishment = ACCOMPLISHMENT_AURAS.some(a => a.id === id);
   const isSupremeKing = id === 9999 || JIA_VOID_AURAS.some(a => a.id === id);
   const isVoidQueen = id === VOID_QUEEN_AURA.id;
   const isBookOfPower = id === BOOK_OF_POWER_AURA.id;
   const isGeometrical = GEOMETRICAL_AURAS.some(a => a.id === id);
-  if (isElder || isAscendant || isEmperor || is100Q || isTier2 || isSupremeKing || isVoidQueen || isBookOfPower) markElderReceived(id);
-  const tierTag = isGeometrical ? 'geometrical' : isBookOfPower ? 'bookofpower' : isVoidQueen ? 'voidqueen' : isTier2 ? 'tier2' : is100Q ? '100q' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
+  if (isElder || isAscendant || isEmperor || is100Q || isTier2 || isAccomplishment || isSupremeKing || isVoidQueen || isBookOfPower) markElderReceived(id);
+  const tierTag = isGeometrical ? 'geometrical' : isBookOfPower ? 'bookofpower' : isVoidQueen ? 'voidqueen' : isAccomplishment ? 'accomplishment' : isTier2 ? 'tier2' : is100Q ? '100q' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
   const history = getHistory();
   history.push({
     historyId: `${Date.now()}-${tierTag}-${id}`,
@@ -2551,6 +2553,7 @@ function grantItemById(id) {
     isEmperor: isEmperor || false,
     is100Q: is100Q || false,
     isTier2: isTier2 || false,
+    isAccomplishment: isAccomplishment || false,
     isSupremeKing: isSupremeKing || false,
     isVoidQueen: isVoidQueen || false,
     isBookOfPower: isBookOfPower || false,
@@ -3127,10 +3130,12 @@ function renderBazaar() {
     }
     const investSellerIds = [...new Set((listings || []).map((l) => l.seller_id))].filter((id) => id !== authUser.id);
     let businessStats = {};
-    if (investSellerIds.length) {
-      const { data: statsRows } = await supabase.from('bazaar_business_stats').select('user_id, total_invested, investor_count, sales_count').in('user_id', investSellerIds);
-      (statsRows || []).forEach((r) => { businessStats[r.user_id] = r; });
-    }
+    const idsToFetch = investSellerIds.length ? [...investSellerIds, authUser.id] : [authUser.id];
+    const { data: statsRows } = await supabase.from('bazaar_business_stats').select('user_id, total_invested, investor_count, sales_count').in('user_id', idsToFetch);
+    (statsRows || []).forEach((r) => { businessStats[r.user_id] = r; });
+    const myStats = businessStats[authUser.id] || {};
+    const mySales = myStats.sales_count || 0;
+    checkAccomplishmentsBazaar(mySales);
     const investListEl = document.getElementById('bazaar-invest-list');
     if (investListEl) {
       const investRows = investSellerIds.map((ownerId) => {
@@ -3336,12 +3341,14 @@ function renderHistory() {
       const isSupremeKing = h.isSupremeKing || false;
       const isVoidQueen   = h.isVoidQueen   || false;
       const isBookOfPower = h.isBookOfPower || false;
+      const isAccomplishment = h.isAccomplishment || false;
       const isGeometrical = h.isGeometrical || false;
       const isMutation  = h.isMutation  || false;
       const isNull      = h.isNull      || false;
       const specialClass = isSupremeKing ? ' history-item--supreme-king'
         : isVoidQueen ? ' history-item--void-queen'
         : isBookOfPower ? ' history-item--book-of-power'
+        : isAccomplishment ? ' history-item--accomplishment'
         : isSecret ? ' history-item--secret'
         : isBiome     ? ' history-item--biome'
         : isEmperor   ? ' history-item--emperor'
@@ -3353,13 +3360,15 @@ function renderHistory() {
         : isMutation  ? ' history-item--mutation'
         : isNull      ? ' history-item--null'
         : '';
-      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || is100Q || isTier2 || isGeometrical || isNull || isSupremeKing || isVoidQueen || isBookOfPower;
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || is100Q || isTier2 || isAccomplishment || isGeometrical || isNull || isSupremeKing || isVoidQueen || isBookOfPower;
       const categoryBadge = isSupremeKing
         ? `<span class="supreme-king-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>`
         : isVoidQueen
         ? `<span class="void-queen-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#aa00ff;opacity:.95;text-shadow:0 0 12px #aa00ff, 0 0 24px #6600aa;">♔ VOID QUEEN</span>`
         : isBookOfPower
         ? `<span class="book-of-power-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 12px #ffd700, 0 0 24px #ffaa00;">📖 BOOK OF POWER</span>`
+        : isAccomplishment
+        ? `<span class="accomplishment-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.12em;color:#ffd700;opacity:.9;text-shadow:0 0 10px #ffd700, 0 0 20px #ff8800;">✦ ACCOMPLISHMENT</span>`
         : isSecret
         ? '<span class="secret-badge">⚠ SECRET</span>'
         : isBiome
@@ -3448,6 +3457,7 @@ function renderLockedStorage() {
       const lineage = h.isSupremeKing ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>'
         : h.isVoidQueen ? '<span class="lineage-badge" style="color:#aa00ff;text-shadow:0 0 12px #aa00ff, 0 0 24px #6600aa;">♔ VOID QUEEN</span>'
         : h.isBookOfPower ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 12px #ffd700, 0 0 24px #ffaa00;">📖 BOOK OF POWER</span>'
+        : h.isAccomplishment ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff8800;">✦ ACCOMPLISHMENT</span>'
         : h.isEmperor ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>'
         : h.is100Q ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ 100Q</span>'
         : h.isTier2 ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>'
@@ -3458,6 +3468,7 @@ function renderLockedStorage() {
       const tierClass = h.isSupremeKing ? ' history-item--supreme-king'
         : h.isVoidQueen ? ' history-item--void-queen'
         : h.isBookOfPower ? ' history-item--book-of-power'
+        : h.isAccomplishment ? ' history-item--accomplishment'
         : h.isEmperor ? ' history-item--emperor'
         : h.is100Q ? ' history-item--100q'
         : h.isTier2 ? ' history-item--tier2'
@@ -3710,6 +3721,15 @@ const MYTHIC_CUTSCENES = {
   9987: { quote: 'The final form of fortune.',        bg: '#000a04', accentA: '#00ff88', accentB: '#004422' },
   9988: { quote: 'Supreme was only the beginning.',   bg: '#0a0800', accentA: '#ffd700', accentB: '#ff4400' },
   9989: { quote: 'The last word. The last aura.',     bg: '#050505', accentA: '#e8e8e8', accentB: '#ffd700' },
+
+  // ─── Accomplishment Auras (milestone-granted, Emperor-level cutscene) ───────
+  10151: { quote: 'Twenty auras. One scholar.',           bg: '#0a0800', accentA: '#d4af37', accentB: '#886600' },
+  10152: { quote: 'Supreme met quadrillion. The bridge holds.', bg: '#0f0a00', accentA: '#ffd700', accentB: '#ff8800' },
+  10153: { quote: 'Fifty thousand rolls. Patience rewarded.', bg: '#080a0d', accentA: '#aabbcc', accentB: '#668899' },
+  10154: { quote: 'Seven legends. Seven lights.',         bg: '#0a0800', accentA: '#ffaa00', accentB: '#cc6600' },
+  10155: { quote: 'One hundred curses. You endured.',    bg: '#0a0008', accentA: '#9900dd', accentB: '#550099' },
+  10156: { quote: 'Ten sales. The Tycoon awakens.',       bg: '#0a0800', accentA: '#ffd700', accentB: '#cc9900' },
+  10157: { quote: 'World 1 to World 2. The Pilgrim\'s path.', bg: '#000508', accentA: '#88ccff', accentB: '#4488cc' },
 };
 
 // World 2 exclusive: 20 auras (ids 10000–10019), each with cutscene
@@ -4056,6 +4076,15 @@ const ELDER_STAGES = {
   9987: ['Fortune has a final shape.', 'You have found it.', 'THE ULTIMATE.', 'The last word in luck.'],
   9988: ['Supreme was the door.', 'You walked through.', 'BEYOND SUPREME.', 'What lies beyond the throne.'],
   9989: ['Every aura before this was a draft.', 'This is the final.', 'THE LAST AURA.', 'There will be no other.'],
+
+  // ─── Accomplishment Auras (milestone-granted) ──────────────────────────────────
+  10151: ['Twenty auras. One scholar.', 'You have learned all there was to learn.', '📚 THE SCHOLAR 📚'],
+  10152: ['Supreme met quadrillion.', 'The bridge holds.', '🌉 THE BRIDGE 🌉'],
+  10153: ['Fifty thousand rolls.', 'Patience rewarded.', '⏳ THE PATIENT ⏳'],
+  10154: ['Seven legends. Seven lights.', 'Fortune favors the persistent.', '7️⃣ THE LUCKY SEVEN 7️⃣'],
+  10155: ['One hundred curses.', 'You endured.', '☠ THE CURSED CHAMPION ☠'],
+  10156: ['Ten sales.', 'The Tycoon awakens.', '💰 THE TYCOON 💰'],
+  10157: ['World 1 to World 2.', 'The Pilgrim\'s path.', '🚶 THE PILGRIM 🚶'],
 };
 
 // ─── Tier 2 cutscene effects (Sol's RNG-style: particles, flashing symbols) ───
@@ -4189,8 +4218,8 @@ async function showElderCutscene(aura) {
   );
   overlay.classList.add('rarity-overlay--elder');
   if (aura.isTier2) overlay.classList.add('rarity-overlay--tier2');
-  if (aura.isSupremeKing || aura.isVoidQueen || aura.isBookOfPower || aura.isTier2) overlay.classList.add('rarity-overlay--has-star');
-  if (aura.isBookOfPower) overlay.classList.add('rarity-overlay--tier2');
+  if (aura.isSupremeKing || aura.isVoidQueen || aura.isBookOfPower || aura.isTier2 || aura.isAccomplishment) overlay.classList.add('rarity-overlay--has-star');
+  if (aura.isBookOfPower || aura.isAccomplishment) overlay.classList.add('rarity-overlay--tier2');
   overlay.style.opacity = '1';
   overlay.setAttribute('aria-hidden', 'false');
 
@@ -4203,9 +4232,9 @@ async function showElderCutscene(aura) {
   }
   if (subEl) subEl.style.display = 'none';
 
-  // Tier 2 / Book of Power: start particle canvas and flashing symbols
+  // Tier 2 / Book of Power / Accomplishment: start particle canvas and flashing symbols
   let tier2Cleanup = null;
-  if (aura.isTier2 || aura.isBookOfPower) {
+  if (aura.isTier2 || aura.isBookOfPower || aura.isAccomplishment) {
     tier2Cleanup = startTier2CutsceneEffects(overlay, cfg);
   }
 
@@ -4226,6 +4255,7 @@ async function showElderCutscene(aura) {
   const tierLabel = aura.isSupremeKing ? '♔ UNOBTAINABLE ♔'
     : aura.isVoidQueen ? '♔ THE VOID QUEEN ♔'
     : aura.isBookOfPower ? '📖 BOOK OF POWER 📖'
+    : aura.isAccomplishment ? '✦ Accomplishment Aura ✦'
     : aura.isTier2 ? '✦ Tier 2 Aura ✦'
     : aura.is100Q ? '✦ 100Q Aura ✦'
     : aura.isEmperor ? '♛ Emperor Aura ♛'
@@ -4414,6 +4444,88 @@ function checkEmperorUnlock() {
     if (aura.id === 9973 && curses >= 500 && sneho >= 10_000 && spent >= 50_000_000) meets = true; // ☠ THE RUINBORN ☠
     if (aura.id === 9974 && hasAllOtherEmperors)                                    meets = true; // ✦♛✦ THE INFINITE ✦♛✦
     if (meets) markElderUnlocked(aura.id);
+  }
+}
+
+// Accomplishment auras — auto-granted when milestones are met
+const SCHOLAR_IDS = [...ELDER_AURAS.map(a => a.id), ...ASCENDANT_AURAS.map(a => a.id), ...EMPEROR_AURAS.map(a => a.id), ...AURAS_100Q.map(a => a.id)];
+const LEGENDARY_IDS = [...EMPEROR_AURAS.map(a => a.id), ...AURAS_100Q.map(a => a.id), ...TIER2_AURAS.map(a => a.id)];
+
+async function grantAccomplishmentAura(aura) {
+  markElderReceived(aura.id);
+  const hist = getHistory();
+  hist.push({
+    historyId: `${Date.now()}-accomplishment-${aura.id}`,
+    id: aura.id, text: aura.text, font: aura.font, color: aura.color,
+    fontWeight: aura.fontWeight, fontStyle: aura.fontStyle, textShadow: aura.textShadow,
+    rarity: aura.rarity, isAccomplishment: true,
+  });
+  setHistory(hist);
+  renderHistory();
+  renderCoins();
+  await showElderCutscene({ ...aura, isAccomplishment: true });
+}
+
+async function checkAccomplishments(opts = {}) {
+  if (WORLD_ID !== 1) return; // Accomplishments only in World 1 (except Tycoon/Pilgrim which run elsewhere)
+  const received = getElderReceived();
+  const rolls = getElderRollTotal();
+  const curses = getElderCurseTotal();
+
+  // Scholar: all 20 Elders + Ascendants + Emperors + 100Qs
+  const scholarAura = ACCOMPLISHMENT_AURAS.find(a => a.accomplishmentType === 'scholar');
+  if (scholarAura && !received.includes(scholarAura.id) && SCHOLAR_IDS.every(id => received.includes(id))) {
+    await grantAccomplishmentAura(scholarAura);
+    return;
+  }
+
+  // Bridge: 100Q rolled after Supreme King
+  const bridgeAura = ACCOMPLISHMENT_AURAS.find(a => a.accomplishmentType === 'bridge');
+  if (bridgeAura && !received.includes(bridgeAura.id) && received.includes(9999) && AURAS_100Q.some(a => received.includes(a.id))) {
+    await grantAccomplishmentAura(bridgeAura);
+    return;
+  }
+
+  // Patient: 50K rolls + at least 1 100Q
+  const patientAura = ACCOMPLISHMENT_AURAS.find(a => a.accomplishmentType === 'patient');
+  if (patientAura && !received.includes(patientAura.id) && rolls >= 50_000 && AURAS_100Q.some(a => received.includes(a.id))) {
+    await grantAccomplishmentAura(patientAura);
+    return;
+  }
+
+  // Lucky Seven: 7+ from Emperor + 100Q + Tier2
+  const luckyAura = ACCOMPLISHMENT_AURAS.find(a => a.accomplishmentType === 'luckySeven');
+  const legendaryCount = LEGENDARY_IDS.filter(id => received.includes(id)).length;
+  if (luckyAura && !received.includes(luckyAura.id) && legendaryCount >= 7) {
+    await grantAccomplishmentAura(luckyAura);
+    return;
+  }
+
+  // Cursed Champion: 100 curses + at least 1 100Q
+  const cursedAura = ACCOMPLISHMENT_AURAS.find(a => a.accomplishmentType === 'cursedChampion');
+  if (cursedAura && !received.includes(cursedAura.id) && curses >= 100 && AURAS_100Q.some(a => received.includes(a.id))) {
+    await grantAccomplishmentAura(cursedAura);
+    return;
+  }
+}
+
+async function checkAccomplishmentsBazaar(bazaarSales) {
+  const received = getElderReceived();
+  const tycoonAura = ACCOMPLISHMENT_AURAS.find(a => a.accomplishmentType === 'tycoon');
+  if (tycoonAura && !received.includes(tycoonAura.id) && bazaarSales >= 10) {
+    await grantAccomplishmentAura(tycoonAura);
+  }
+}
+
+async function checkAccomplishmentsPilgrim() {
+  const received = getElderReceived();
+  const w1ElderReceived = (() => { try { return JSON.parse(localStorage.getItem('rng_elder_received') || '[]'); } catch { return []; } })();
+  const hasElderInW1 = ELDER_AURAS.some(a => w1ElderReceived.includes(a.id));
+  const hasVisitedW2 = localStorage.getItem(STORAGE_KEYS.visitedWorld2) === '1';
+  if (WORLD_ID === 2) localStorage.setItem(STORAGE_KEYS.visitedWorld2, '1');
+  const pilgrimAura = ACCOMPLISHMENT_AURAS.find(a => a.accomplishmentType === 'pilgrim');
+  if (pilgrimAura && !received.includes(pilgrimAura.id) && (hasVisitedW2 || WORLD_ID === 2) && hasElderInW1) {
+    await grantAccomplishmentAura(pilgrimAura);
   }
 }
 
@@ -4675,6 +4787,7 @@ async function reportRareRoll(item) {
     || (item.isSupremeKing ? 'UNOBTAINABLE'
       : item.isVoidQueen ? 'VOID_QUEEN'
       : item.isBookOfPower ? 'BOOK_OF_POWER'
+      : item.isAccomplishment ? 'ACCOMPLISHMENT'
       : item.isEmperor ? 'EMPEROR'
       : item.is100Q ? '100Q'
       : item.isTier2 ? 'TIER2'
@@ -4748,6 +4861,7 @@ async function roll() {
     checkAscendantUnlock();
     checkEmperorUnlock();
     await showElderCutscene(item);
+    await checkAccomplishments();
     return;
   }
   // ── Normal roll ───────────────────────────────────────────────────────────
@@ -4903,7 +5017,7 @@ function submitAdminCode() {
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...ACCOMPLISHMENT_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
@@ -5367,6 +5481,7 @@ function init() {
       if (Math.random() < JIA_SPAWN_CHANCE) showJiaButton();
     }, JIA_MINUTE_MS);
   }
+  checkAccomplishmentsPilgrim();
   setInterval(updateShopCountdown, 1000);
   setInterval(updateSnehoCountdown, 1000);
 
@@ -5584,7 +5699,7 @@ init();
 window.__rng = {
   /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) or __rng.cutscene(9200) */
   cutscene(id) {
-    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...ACCOMPLISHMENT_AURAS, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
     showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });
@@ -5596,6 +5711,6 @@ window.__rng = {
   },
   /** List all elder, ascendant & emperor IDs. */
   list() {
-    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS, ...EMPEROR_AURAS, ...AURAS_100Q, ...TIER2_AURAS].map(a => ({ id: a.id, text: a.text })));
+    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ACCOMPLISHMENT_AURAS, ...TIER2_AURAS].map(a => ({ id: a.id, text: a.text })));
   },
 };

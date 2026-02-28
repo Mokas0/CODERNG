@@ -967,6 +967,38 @@ export const BOOK_OF_POWER_AURA = {
   rarity: -1, isBookOfPower: true,
 };
 
+// Accomplishment Auras — auto-granted when milestones are met (mid-game, between 100Q and Book of Power)
+export const ACCOMPLISHMENT_AURAS = [
+  { id: 10151, text: '📚 THE SCHOLAR 📚',
+    font: 'Cinzel', color: '#d4af37', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 22px #d4af37, 0 0 60px #886600, 0 0 100px #554400',
+    rarity: -1, isAccomplishment: true, accomplishmentType: 'scholar' },
+  { id: 10152, text: '🌉 THE BRIDGE 🌉',
+    font: 'Cormorant Garamond', color: '#ffd700', fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 20px #ffd700, 0 0 55px #ff8800, 0 0 90px #aa5500',
+    rarity: -1, isAccomplishment: true, accomplishmentType: 'bridge' },
+  { id: 10153, text: '⏳ THE PATIENT ⏳',
+    font: 'DM Serif Display', color: '#aabbcc', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 18px #aabbcc, 0 0 50px #668899, 0 0 85px #445566',
+    rarity: -1, isAccomplishment: true, accomplishmentType: 'patient' },
+  { id: 10154, text: '7️⃣ THE LUCKY SEVEN 7️⃣',
+    font: 'Unbounded', color: '#ffaa00', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 22px #ffaa00, 0 0 58px #ff6600, 0 0 95px #cc4400',
+    rarity: -1, isAccomplishment: true, accomplishmentType: 'luckySeven' },
+  { id: 10155, text: '☠ THE CURSED CHAMPION ☠',
+    font: 'Space Mono', color: '#9900dd', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 20px #9900dd, 0 0 55px #550099, 0 0 90px #330066',
+    rarity: -1, isAccomplishment: true, accomplishmentType: 'cursedChampion' },
+  { id: 10156, text: '💰 THE TYCOON 💰',
+    font: 'Oswald', color: '#ffd700', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 20px #ffd700, 0 0 50px #cc9900, 0 0 85px #886600',
+    rarity: -1, isAccomplishment: true, accomplishmentType: 'tycoon' },
+  { id: 10157, text: '🚶 THE PILGRIM 🚶',
+    font: 'Syne', color: '#88ccff', fontWeight: '800', fontStyle: 'normal',
+    textShadow: '0 0 18px #88ccff, 0 0 50px #4488cc, 0 0 85px #2266aa',
+    rarity: -1, isAccomplishment: true, accomplishmentType: 'pilgrim' },
+];
+
 // Jia shop: unfathomably rare items (World 2 only, buy with NULL COINS)
 export const JIA_RARE_ITEMS = [
   { id: 10130, text: 'NULL FRAGMENT', font: 'Space Mono', color: '#444444', fontWeight: '700', fontStyle: 'normal', textShadow: 'none', rarity: 1e15, costNullCoins: 80, emoji: '⬛' },
