@@ -902,6 +902,31 @@ export const EMPEROR_AURAS = [
     rarity: 9_000_000_000_000_000 },
 ];
 
+// 100Q Auras — rarity 100 quadrillion for display only; actual weight = ELDER_ROLL_WEIGHT.
+// Emperor-level cutscene, always rollable until received.
+export const AURAS_100Q = [
+  { id: 9975, text: '✦ THE CENTENARY ✦',
+    font: 'Cinzel', color: '#ffd700', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 22px #ffd700, 0 0 65px #aa8800, 0 0 110px #664400',
+    rarity: 100_000_000_000_000_000 },
+  { id: 9976, text: '⚜ THE ETERNAL SHARD ⚜',
+    font: 'Cormorant Garamond', color: '#e0e0ff', fontWeight: '700', fontStyle: 'italic',
+    textShadow: '0 0 20px #e0e0ff, 0 0 58px #8888ff, 0 0 95px #4444aa',
+    rarity: 100_000_000_000_000_000 },
+  { id: 9977, text: '✧ THE TRANSCENDENT ✧',
+    font: 'DM Serif Display', color: '#ff44ff', fontWeight: '400', fontStyle: 'italic',
+    textShadow: '0 0 20px #ff44ff, 0 0 58px #aa00aa, 0 0 95px #550055',
+    rarity: 100_000_000_000_000_000 },
+  { id: 9978, text: '☠ THE APEX ☠',
+    font: 'Unbounded', color: '#ff2222', fontWeight: '700', fontStyle: 'normal',
+    textShadow: '0 0 22px #ff2222, 0 0 65px #aa0000, 0 0 110px #550000',
+    rarity: 100_000_000_000_000_000 },
+  { id: 9979, text: '✦♛✦ THE ULTIMATE FORM ✦♛✦',
+    font: 'Syne', color: '#ffffff', fontWeight: '900', fontStyle: 'normal',
+    textShadow: '0 0 28px #ffffff, 0 0 75px #ffd700, 0 0 125px #ff6600',
+    rarity: 100_000_000_000_000_000 },
+];
+
 // Supreme King — triggered exclusively by the Supreme Luck Potion (1/1,000 chance). Not rollable.
 export const SUPREME_KING_AURA = {
   id: 9999, text: '♔ THE SUPREME KING ♔',

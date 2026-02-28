@@ -705,11 +705,13 @@ returns table(success boolean, message text)
 language plpgsql security definer set search_path = public as $$
 declare
   v_price numeric;
+  v_exec_price numeric;  -- price after market impact (buyer pays this)
   v_cost numeric;
   v_bal int;
   v_cur_shares int;
   v_cur_avg numeric;
   v_new_avg numeric;
+  v_impact numeric;
 begin
   if auth.uid() is null then
     return query select false, 'Not signed in'::text;
@@ -724,7 +726,10 @@ begin
     return query select false, 'Unknown ticker'::text;
     return;
   end if;
-  v_cost := v_price * p_shares;
+  -- Market impact: buyer pays the post-impact price (can't profit from own trade)
+  v_impact := 0.002 * least(p_shares, 50);
+  v_exec_price := least(10000, round(v_price * (1 + v_impact), 2));
+  v_cost := v_exec_price * p_shares;
   select coalesce(coins_balance, 0) into v_bal from bazaar_wallets where user_id = auth.uid();
   if v_bal < v_cost then
     return query select false, 'Not enough Bazaar balance'::text;
@@ -732,18 +737,16 @@ begin
   end if;
   update bazaar_wallets set coins_balance = coins_balance - v_cost, updated_at = now()
   where user_id = auth.uid();
-  -- Market impact: buying pushes price up slightly (realistic)
-  update bazaar_stock_ticker set price = least(10000, round(price * (1 + 0.002 * least(p_shares, 50)), 2)), updated_at = now()
-  where symbol = p_symbol;
+  update bazaar_stock_ticker set price = v_exec_price, updated_at = now() where symbol = p_symbol;
   select coalesce(shares, 0), avg_buy_price into v_cur_shares, v_cur_avg
   from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol;
   v_cur_shares := coalesce(v_cur_shares, 0);
   v_new_avg := case
-    when v_cur_shares = 0 then v_price
-    else ((v_cur_avg * v_cur_shares) + (v_price * p_shares)) / (v_cur_shares + p_shares)
+    when v_cur_shares = 0 then v_exec_price
+    else ((v_cur_avg * v_cur_shares) + (v_exec_price * p_shares)) / (v_cur_shares + p_shares)
   end;
   insert into bazaar_stock_holdings (user_id, symbol, shares, avg_buy_price)
-  values (auth.uid(), p_symbol, p_shares, v_price)
+  values (auth.uid(), p_symbol, p_shares, v_exec_price)
   on conflict (user_id, symbol) do update set
     shares = bazaar_stock_holdings.shares + p_shares,
     avg_buy_price = v_new_avg;
@@ -759,8 +762,10 @@ returns table(success boolean, message text)
 language plpgsql security definer set search_path = public as $$
 declare
   v_price numeric;
+  v_exec_price numeric;  -- price after market impact (seller receives this)
   v_proceeds numeric;
   v_cur_shares int;
+  v_impact numeric;
 begin
   if auth.uid() is null then
     return query select false, 'Not signed in'::text;
@@ -781,13 +786,14 @@ begin
     return query select false, 'Not enough shares'::text;
     return;
   end if;
-  v_proceeds := v_price * p_shares;
+  -- Market impact: seller receives the post-impact price (can't profit from own trade)
+  v_impact := 0.002 * least(p_shares, 50);
+  v_exec_price := greatest(10, round(v_price * (1 - v_impact), 2));
+  v_proceeds := v_exec_price * p_shares;
   insert into bazaar_wallets (user_id, coins_balance)
   values (auth.uid(), v_proceeds)
   on conflict (user_id) do update set coins_balance = bazaar_wallets.coins_balance + v_proceeds, updated_at = now();
-  -- Market impact: selling pushes price down slightly (realistic)
-  update bazaar_stock_ticker set price = greatest(10, round(price * (1 - 0.002 * least(p_shares, 50)), 2)), updated_at = now()
-  where symbol = p_symbol;
+  update bazaar_stock_ticker set price = v_exec_price, updated_at = now() where symbol = p_symbol;
   update bazaar_stock_holdings set shares = shares - p_shares
   where user_id = auth.uid() and symbol = p_symbol;
   delete from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol and shares <= 0;

@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, classifyAuraType } from './data/items.js';
+import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
@@ -440,6 +440,7 @@ function renderResult(item) {
     const cat = item.isSupremeKing ? '♔ UNOBTAINABLE ♔'
       : item.isTier2 ? '✦ Tier 2 Aura'
       : item.isEmperor ? '♛ Emperor Aura ♛'
+      : item.is100Q ? '✦ 100Q Aura ✦'
       : item.isAscendant ? '⬡ Ascendant Aura'
       : item.isElder ? '⬡ Elder Aura'
       : item.isSecret || item.rarity === 0 ? '⚠ Secret Aura'
@@ -451,6 +452,7 @@ function renderResult(item) {
     catEl.style.color = item.isSupremeKing ? '#ffd700'
       : item.isTier2 ? '#ffd700'
       : item.isEmperor ? '#ffd700'
+      : item.is100Q ? '#ffd700'
       : item.isAscendant ? '#00ddaa'
       : item.isElder ? 'gold'
       : item.isSecret || item.rarity === 0 ? '#ff4444'
@@ -2523,19 +2525,20 @@ function closeDevPanel() {
 }
 
 function grantItemById(id) {
-  const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+  const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
   const item = all.find(a => a.id === id);
   if (!item) return false;
   const isElder = ELDER_AURAS.some(a => a.id === id);
   const isAscendant = ASCENDANT_AURAS.some(a => a.id === id);
   const isEmperor = EMPEROR_AURAS.some(a => a.id === id);
+  const is100Q = AURAS_100Q.some(a => a.id === id);
   const isTier2 = TIER2_AURAS.some(a => a.id === id);
   const isSupremeKing = id === 9999 || JIA_VOID_AURAS.some(a => a.id === id);
   const isVoidQueen = id === VOID_QUEEN_AURA.id;
   const isBookOfPower = id === BOOK_OF_POWER_AURA.id;
   const isGeometrical = GEOMETRICAL_AURAS.some(a => a.id === id);
-  if (isElder || isAscendant || isEmperor || isTier2 || isSupremeKing || isVoidQueen || isBookOfPower) markElderReceived(id);
-  const tierTag = isGeometrical ? 'geometrical' : isBookOfPower ? 'bookofpower' : isVoidQueen ? 'voidqueen' : isTier2 ? 'tier2' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
+  if (isElder || isAscendant || isEmperor || is100Q || isTier2 || isSupremeKing || isVoidQueen || isBookOfPower) markElderReceived(id);
+  const tierTag = isGeometrical ? 'geometrical' : isBookOfPower ? 'bookofpower' : isVoidQueen ? 'voidqueen' : isTier2 ? 'tier2' : is100Q ? '100q' : isEmperor ? 'emperor' : isAscendant ? 'ascendant' : isElder ? 'elder' : 'grant';
   const history = getHistory();
   history.push({
     historyId: `${Date.now()}-${tierTag}-${id}`,
@@ -2546,6 +2549,7 @@ function grantItemById(id) {
     isElder: isElder || false,
     isAscendant: isAscendant || false,
     isEmperor: isEmperor || false,
+    is100Q: is100Q || false,
     isTier2: isTier2 || false,
     isSupremeKing: isSupremeKing || false,
     isVoidQueen: isVoidQueen || false,
@@ -3327,6 +3331,7 @@ function renderHistory() {
       const isElder     = h.isElder     || false;
       const isAscendant = h.isAscendant || false;
       const isEmperor   = h.isEmperor   || false;
+      const is100Q      = h.is100Q      || false;
       const isTier2     = h.isTier2     || false;
       const isSupremeKing = h.isSupremeKing || false;
       const isVoidQueen   = h.isVoidQueen   || false;
@@ -3340,6 +3345,7 @@ function renderHistory() {
         : isSecret ? ' history-item--secret'
         : isBiome     ? ' history-item--biome'
         : isEmperor   ? ' history-item--emperor'
+        : is100Q      ? ' history-item--100q'
         : isTier2     ? ' history-item--tier2'
         : isGeometrical ? ' history-item--geometrical'
         : isElder     ? ' history-item--elder'
@@ -3347,7 +3353,7 @@ function renderHistory() {
         : isMutation  ? ' history-item--mutation'
         : isNull      ? ' history-item--null'
         : '';
-      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || isTier2 || isGeometrical || isNull || isSupremeKing || isVoidQueen || isBookOfPower;
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || is100Q || isTier2 || isGeometrical || isNull || isSupremeKing || isVoidQueen || isBookOfPower;
       const categoryBadge = isSupremeKing
         ? `<span class="supreme-king-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>`
         : isVoidQueen
@@ -3360,7 +3366,9 @@ function renderHistory() {
           ? `<span class="biome-badge">🌍 BIOME</span>`
           : isEmperor
             ? `<span class="emperor-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>`
-            : isTier2
+            : is100Q
+              ? `<span class="100q-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.9;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ 100Q</span>`
+              : isTier2
               ? `<span class="tier2-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.9;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>`
               : isGeometrical
                 ? `<span class="geometrical-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#00d4ff;opacity:.9;text-shadow:0 0 10px #00d4ff;">🔷 GEOMETRICAL</span>`
@@ -3441,6 +3449,7 @@ function renderLockedStorage() {
         : h.isVoidQueen ? '<span class="lineage-badge" style="color:#aa00ff;text-shadow:0 0 12px #aa00ff, 0 0 24px #6600aa;">♔ VOID QUEEN</span>'
         : h.isBookOfPower ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 12px #ffd700, 0 0 24px #ffaa00;">📖 BOOK OF POWER</span>'
         : h.isEmperor ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">♛ EMPEROR</span>'
+        : h.is100Q ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ 100Q</span>'
         : h.isTier2 ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>'
         : h.isGeometrical ? '<span class="lineage-badge" style="color:#00d4ff;text-shadow:0 0 10px #00d4ff;">🔷 GEOMETRICAL</span>'
         : h.isElder ? '<span class="lineage-badge" style="color:gold;text-shadow:0 0 8px gold;">ELDER</span>'
@@ -3450,6 +3459,7 @@ function renderLockedStorage() {
         : h.isVoidQueen ? ' history-item--void-queen'
         : h.isBookOfPower ? ' history-item--book-of-power'
         : h.isEmperor ? ' history-item--emperor'
+        : h.is100Q ? ' history-item--100q'
         : h.isTier2 ? ' history-item--tier2'
         : h.isGeometrical ? ' history-item--geometrical'
         : h.isElder ? ' history-item--elder'
@@ -3678,6 +3688,13 @@ const MYTHIC_CUTSCENES = {
   9972: { bg: '#120012', accentA: '#ff44ff', accentB: '#aa00aa' },
   9973: { bg: '#0f0000', accentA: '#ff2222', accentB: '#aa0000' },
   9974: { bg: '#0a0a0a', accentA: '#ffffff', accentB: '#ffd700' },
+
+  // ─── 100Q Auras (Emperor-level cutscene) ────────────────────────────────────
+  9975: { bg: '#0f0a00', accentA: '#ffd700', accentB: '#aa8800' },
+  9976: { bg: '#060618', accentA: '#e0e0ff', accentB: '#8888ff' },
+  9977: { bg: '#120012', accentA: '#ff44ff', accentB: '#aa00aa' },
+  9978: { bg: '#0f0000', accentA: '#ff2222', accentB: '#aa0000' },
+  9979: { bg: '#0a0a0a', accentA: '#ffffff', accentB: '#ffd700' },
 
   // ─── Supreme King (potion-triggered, unobtainable, 15s cutscene) ────────────
   9999: { bg: '#000000', accentA: '#ffd700', accentB: '#ff4400' },
@@ -4210,6 +4227,7 @@ async function showElderCutscene(aura) {
     : aura.isVoidQueen ? '♔ THE VOID QUEEN ♔'
     : aura.isBookOfPower ? '📖 BOOK OF POWER 📖'
     : aura.isTier2 ? '✦ Tier 2 Aura ✦'
+    : aura.is100Q ? '✦ 100Q Aura ✦'
     : aura.isEmperor ? '♛ Emperor Aura ♛'
     : aura.isAscendant ? '⬡ Ascendant Aura ⬡'
     : aura.isSecret ? '⚠ Secret Aura ⚠'
@@ -4307,12 +4325,15 @@ function getUnlockedElderPool() {
   const emperorItems = EMPEROR_AURAS
     .filter(a => unlocked.includes(a.id) && !received.includes(a.id))
     .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isEmperor: true }));
+  const hundredQItems = AURAS_100Q
+    .filter(a => !received.includes(a.id))
+    .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, is100Q: true }));
   const tier2Items = hasSupremeKing
     ? TIER2_AURAS
         .filter(a => !received.includes(a.id))
         .map(a => ({ ...a, weight: ELDER_ROLL_WEIGHT, isTier2: true }))
     : [];
-  return [...elderItems, ...ascendantItems, ...emperorItems, ...tier2Items];
+  return [...elderItems, ...ascendantItems, ...emperorItems, ...hundredQItems, ...tier2Items];
 }
 
 // Check elder conditions — adds to unlocked pool (does NOT auto-grant)
@@ -4655,6 +4676,7 @@ async function reportRareRoll(item) {
       : item.isVoidQueen ? 'VOID_QUEEN'
       : item.isBookOfPower ? 'BOOK_OF_POWER'
       : item.isEmperor ? 'EMPEROR'
+      : item.is100Q ? '100Q'
       : item.isTier2 ? 'TIER2'
       : item.isAscendant ? 'ASCENDANT'
       : item.isElder ? 'ELDER'
@@ -4698,10 +4720,10 @@ async function roll() {
 
   if (mult > 1) setLuckMultiplier(1);
 
-  // ── Elder / Ascendant / Emperor / Tier 2 rolled ──────────────────────────────
-  if (item.isElder || item.isAscendant || item.isEmperor || item.isTier2) {
+  // ── Elder / Ascendant / Emperor / 100Q / Tier 2 rolled ────────────────────────
+  if (item.isElder || item.isAscendant || item.isEmperor || item.is100Q || item.isTier2) {
     markElderReceived(item.id);
-    const tierTag = item.isTier2 ? 'tier2' : item.isEmperor ? 'emperor' : item.isAscendant ? 'ascendant' : 'elder';
+    const tierTag = item.isTier2 ? 'tier2' : item.is100Q ? '100q' : item.isEmperor ? 'emperor' : item.isAscendant ? 'ascendant' : 'elder';
     const histE = getHistory();
     histE.push({
       historyId: `${Date.now()}-${tierTag}-${item.id}`,
@@ -4712,6 +4734,7 @@ async function roll() {
       isElder: item.isElder || false,
       isAscendant: item.isAscendant || false,
       isEmperor: item.isEmperor || false,
+      is100Q: item.is100Q || false,
       isTier2: item.isTier2 || false,
     });
     setHistory(histE);
@@ -4880,7 +4903,7 @@ function submitAdminCode() {
   // "test <id>" — fire any aura's cutscene for preview
   if (code.startsWith('test ')) {
     const id = parseInt(code.slice(5).trim(), 10);
-    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (aura) {
       closeAdminPanel();
@@ -5561,7 +5584,7 @@ init();
 window.__rng = {
   /** Fire any aura's cutscene by ID.  e.g. __rng.cutscene(9970) or __rng.cutscene(9200) */
   cutscene(id) {
-    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
+    const all = [SUPREME_KING_AURA, ...JIA_VOID_AURAS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, ...JIA_RARE_ITEMS, ...EMPEROR_AURAS, ...AURAS_100Q, ...ELDER_AURAS, ...ASCENDANT_AURAS, ...TIER2_AURAS, ...BIOME_AURAS, ...SECRET_AURAS, ...GEOMETRICAL_AURAS, ...WORLD_CONFIG.items];
     const aura = all.find(a => a.id === id);
     if (!aura) { console.warn(`[__rng] No aura with id ${id}`); return; }
     showElderCutscene({ ...aura, isSupremeKing: aura.isSupremeKing || false });
@@ -5573,6 +5596,6 @@ window.__rng = {
   },
   /** List all elder, ascendant & emperor IDs. */
   list() {
-    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS, ...EMPEROR_AURAS, ...TIER2_AURAS].map(a => ({ id: a.id, text: a.text })));
+    console.table([...ELDER_AURAS, ...ASCENDANT_AURAS, ...EMPEROR_AURAS, ...AURAS_100Q, ...TIER2_AURAS].map(a => ({ id: a.id, text: a.text })));
   },
 };
