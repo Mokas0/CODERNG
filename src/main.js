@@ -2824,20 +2824,23 @@ async function sendLockedAuraToBazaar(lockedIndex) {
   renderLockedStorage();
   await loadCasinoAuraVault();
   renderCasino();
-  renderBazaar();
+  await renderBazaar();
   switchTab('bazaar');
-  showBazaarBalanceMsg('Aura sent to Bazaar inventory. List it to sell.');
+  showBazaarBalanceMsg('Aura in My inventory. Enter a price and click List for sale.');
+  setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
 }
 
 async function bazaarImportAura(auraId) {
   if (!authUser || !supabase) return;
   const { data, error } = await supabase.rpc('bazaar_import_aura_from_casino', { p_aura_id: auraId });
   const result = Array.isArray(data) ? data[0] : data;
-  if (error) { alert('Import failed: ' + error.message); return; }
-  if (!result?.success) { alert('Import failed: ' + (result?.message || 'Unknown error')); return; }
+  if (error) { showBazaarBalanceMsg('Import failed: ' + error.message, true); return; }
+  if (!result?.success) { showBazaarBalanceMsg(result?.message || 'Import failed', true); return; }
   await loadCasinoAuraVault();
   renderCasino();
-  renderBazaar();
+  await renderBazaar();
+  showBazaarBalanceMsg('Aura imported. Enter a price and click List for sale in My inventory.');
+  setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
 async function bazaarImportAllFromCasino() {
@@ -2852,8 +2855,9 @@ async function bazaarImportAllFromCasino() {
   const n = result?.imported_count ?? 0;
   await loadCasinoAuraVault();
   renderCasino();
-  renderBazaar();
-  showBazaarBalanceMsg(n > 0 ? `Imported ${n} aura${n !== 1 ? 's' : ''} to Bazaar.` : 'No auras to import (none in vault or all staked).');
+  await renderBazaar();
+  showBazaarBalanceMsg(n > 0 ? `Imported ${n} aura${n !== 1 ? 's' : ''}. Enter prices and click List for sale.` : 'No auras to import (none in vault or all staked).');
+  if (n > 0) setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
 async function bazaarCreateListing(inventoryId, price) {
@@ -2985,7 +2989,7 @@ function renderBazaar() {
   if (guestEl) guestEl.classList.add('hidden');
   if (authedEl) authedEl.classList.remove('hidden');
   if (!supabase) return;
-  (async () => {
+  return (async () => {
     try {
     await bazaarFetchBalance();
     if (coinsEl) coinsEl.textContent = bazaarCoinBalance.toLocaleString();
@@ -3099,13 +3103,17 @@ function renderBazaar() {
     const invEl = document.getElementById('bazaar-inventory');
     if (invEl) {
       invEl.innerHTML = invList.length
-        ? invList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><input type="number" class="casino-amount-input bazaar-price-input" placeholder="Price" min="1" data-id="${a.id}" /><button type="button" class="hub-btn bazaar-list-btn" data-id="${a.id}">List for sale</button><button type="button" class="hub-btn hub-btn--secondary bazaar-withdraw-aura-btn" data-id="${a.id}">To Casino</button></div>`).join('')
+        ? invList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><input type="number" class="casino-amount-input bazaar-price-input" placeholder="Price (coins)" min="1" data-id="${a.id}" /><button type="button" class="hub-btn bazaar-list-btn" data-id="${a.id}">List for sale</button><button type="button" class="hub-btn hub-btn--secondary bazaar-withdraw-aura-btn" data-id="${a.id}">To Casino</button></div>`).join('')
         : '<p class="casino-empty">No auras in Bazaar inventory. Import from Casino vault above.</p>';
       invEl.querySelectorAll('.bazaar-list-btn').forEach((btn) => {
         const id = Number(btn.dataset.id);
         const row = btn.closest('.casino-aura-row');
         const priceInput = row?.querySelector('.bazaar-price-input');
-        btn.addEventListener('click', () => { const p = Math.floor(Number(priceInput?.value || 0)); if (p >= 1) bazaarCreateListing(id, p); });
+        btn.addEventListener('click', () => {
+          const p = Math.floor(Number(priceInput?.value || 0));
+          if (p >= 1) bazaarCreateListing(id, p);
+          else showBazaarBalanceMsg('Enter a price (1 or more) first.', true);
+        });
       });
       invEl.querySelectorAll('.bazaar-withdraw-aura-btn').forEach((btn) => btn.addEventListener('click', () => bazaarWithdrawAuraToCasino(Number(btn.dataset.id))));
     }

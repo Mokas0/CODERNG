@@ -2091,6 +2091,11 @@ body {
   margin: 0 0 0.5rem;
   max-width: 42rem;
 }
+.bazaar-inventory-hint {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin: 0 0 0.5rem;
+}
 .bazaar-import-all-btn,
 .casino-import-all-to-bazaar-btn {
   margin-bottom: 0.5rem;
