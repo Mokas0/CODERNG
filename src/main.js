@@ -1596,6 +1596,7 @@ function buySnehoItem(itemId) {
   checkElderUnlock();
   checkAscendantUnlock();
   checkEmperorUnlock();
+  void checkAccomplishments();
 }
 
 function renderSneho() {
@@ -4958,6 +4959,7 @@ async function roll() {
   checkElderUnlock();
   checkAscendantUnlock();
   checkEmperorUnlock();
+  void checkAccomplishments();
 }
 
 function buyLuck() {
@@ -5498,6 +5500,8 @@ function init() {
     }, JIA_MINUTE_MS);
   }
   checkAccomplishmentsPilgrim();
+  // Check accomplishments on load (e.g. already have all 20 for Scholar, or 50K rolls + 100Q for Patient)
+  if (WORLD_ID === 1) setTimeout(() => void checkAccomplishments(), 800);
   setInterval(updateShopCountdown, 1000);
   setInterval(updateSnehoCountdown, 1000);
 
