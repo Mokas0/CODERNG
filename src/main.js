@@ -2830,6 +2830,49 @@ async function sendLockedAuraToBazaar(lockedIndex) {
   setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
 }
 
+async function bazaarImportFromLocked(lockedIndex) {
+  if (!authUser || !supabase) return;
+  const locked = getLockedStorage();
+  if (lockedIndex < 0 || lockedIndex >= locked.length) return;
+  const item = locked[lockedIndex];
+  const itemJson = { text: item.text, font: item.font, color: item.color, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textShadow: item.textShadow, rarity: item.rarity };
+  const { data, error } = await supabase.rpc('bazaar_import_aura_from_client', { p_item_json: itemJson });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error) { showBazaarBalanceMsg('Import failed: ' + error.message, true); return; }
+  if (!result?.success) { showBazaarBalanceMsg(result?.message || 'Import failed', true); return; }
+  locked.splice(lockedIndex, 1);
+  setLockedStorage(locked);
+  renderLockedStorage();
+  await renderBazaar();
+  showBazaarBalanceMsg('Imported. Enter a price and click List for sale.');
+  setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
+async function bazaarImportAllFromLocked() {
+  if (!authUser || !supabase) return;
+  const locked = getLockedStorage();
+  if (!locked.length) { showBazaarBalanceMsg('No locked auras.', true); return; }
+  const btn = document.getElementById('bazaar-import-all-locked-btn');
+  if (btn) btn.disabled = true;
+  let imported = 0;
+  for (let i = locked.length - 1; i >= 0; i--) {
+    const item = locked[i];
+    const itemJson = { text: item.text, font: item.font, color: item.color, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textShadow: item.textShadow, rarity: item.rarity };
+    const { data, error } = await supabase.rpc('bazaar_import_aura_from_client', { p_item_json: itemJson });
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!error && result?.success) {
+      locked.splice(i, 1);
+      imported++;
+    }
+  }
+  setLockedStorage(locked);
+  if (btn) btn.disabled = false;
+  renderLockedStorage();
+  await renderBazaar();
+  showBazaarBalanceMsg(`Imported ${imported} aura${imported !== 1 ? 's' : ''}. Enter prices and click List for sale.`);
+  if (imported) setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+}
+
 async function bazaarImportAura(auraId) {
   if (!authUser || !supabase) return;
   const { data, error } = await supabase.rpc('bazaar_import_aura_from_casino', { p_aura_id: auraId });
@@ -3084,6 +3127,21 @@ function renderBazaar() {
       listEl.innerHTML = rows.length ? rows.join('') : '<p class="casino-empty">No listings.</p>';
       listEl.querySelectorAll('.bazaar-buy-btn').forEach((btn) => btn.addEventListener('click', () => bazaarBuyListing(Number(btn.dataset.id))));
     }
+    const locked = getLockedStorage();
+    const lockedImportEl = document.getElementById('bazaar-locked-import');
+    if (lockedImportEl) {
+      if (locked.length) {
+        const importAllLockedHtml = `<button type="button" id="bazaar-import-all-locked-btn" class="hub-btn hub-btn--small bazaar-import-all-btn">Import all (${locked.length})</button>`;
+        lockedImportEl.innerHTML = importAllLockedHtml + locked.map((h, i) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${(h.font || '').replace(/'/g, "\\'")}';color:${h.color || '#fff'}">${escapeHtml(h.text)}</span><span class="history-rarity">${formatRarity(h.rarity)}</span><button type="button" class="hub-btn bazaar-import-locked-btn" data-locked-index="${i}">Import</button></div>`).join('');
+        lockedImportEl.querySelectorAll('.bazaar-import-locked-btn').forEach((btn) => {
+          const idx = Number(btn.dataset.lockedIndex);
+          btn.addEventListener('click', () => bazaarImportFromLocked(idx));
+        });
+        document.getElementById('bazaar-import-all-locked-btn')?.addEventListener('click', () => bazaarImportAllFromLocked());
+      } else {
+        lockedImportEl.innerHTML = '<p class="casino-empty">No locked auras. Lock items from Past rolls first.</p>';
+      }
+    }
     const { data: casinoVault } = authProfile?.casino_username
       ? await supabase.from('casino_aura_inventory').select('id, item_json').eq('username', authProfile.casino_username).order('id', { ascending: false })
       : { data: [] };
@@ -3104,7 +3162,7 @@ function renderBazaar() {
     if (invEl) {
       invEl.innerHTML = invList.length
         ? invList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><input type="number" class="casino-amount-input bazaar-price-input" placeholder="Price (coins)" min="1" data-id="${a.id}" /><button type="button" class="hub-btn bazaar-list-btn" data-id="${a.id}">List for sale</button><button type="button" class="hub-btn hub-btn--secondary bazaar-withdraw-aura-btn" data-id="${a.id}">To Casino</button></div>`).join('')
-        : '<p class="casino-empty">No auras in Bazaar inventory. Import from Casino vault above.</p>';
+        : '<p class="casino-empty">No auras in Bazaar inventory. Import from Locked or Casino vault above.</p>';
       invEl.querySelectorAll('.bazaar-list-btn').forEach((btn) => {
         const id = Number(btn.dataset.id);
         const row = btn.closest('.casino-aura-row');

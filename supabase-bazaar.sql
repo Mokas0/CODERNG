@@ -225,6 +225,36 @@ begin
 end;
 $$;
 
+-- RPC: import aura directly from client (Locked storage) — no Casino link needed
+create or replace function public.bazaar_import_aura_from_client(p_item_json jsonb)
+returns table(success boolean, message text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    return query select false, 'Not signed in'::text;
+    return;
+  end if;
+  if p_item_json is null or (p_item_json->>'text') is null or trim(p_item_json->>'text') = '' then
+    return query select false, 'Invalid aura data'::text;
+    return;
+  end if;
+  insert into bazaar_seller_inventory (user_id, item_json)
+  values (auth.uid(), jsonb_build_object(
+    'text', coalesce(nullif(trim(p_item_json->>'text'), ''), '?'),
+    'font', coalesce(p_item_json->>'font', 'Inter'),
+    'color', coalesce(p_item_json->>'color', '#ffffff'),
+    'fontWeight', coalesce(p_item_json->>'fontWeight', '400'),
+    'fontStyle', coalesce(p_item_json->>'fontStyle', 'normal'),
+    'textShadow', coalesce(p_item_json->>'textShadow', 'none'),
+    'rarity', coalesce((p_item_json->>'rarity')::int, 1)
+  ));
+  return query select true, ''::text;
+end;
+$$;
+
 -- RPC: import aura from Casino vault into Bazaar inventory
 create or replace function public.bazaar_import_aura_from_casino(p_aura_id bigint)
 returns table(success boolean, message text)
@@ -778,6 +808,7 @@ grant execute on function public.generate_casino_link_code(text) to authenticate
 grant execute on function public.link_casino_to_account(text, text) to authenticated;
 grant execute on function public.bazaar_deposit_coins(int) to authenticated;
 grant execute on function public.bazaar_withdraw_coins(int) to authenticated;
+grant execute on function public.bazaar_import_aura_from_client(jsonb) to authenticated;
 grant execute on function public.bazaar_import_aura_from_casino(bigint) to authenticated;
 grant execute on function public.bazaar_import_all_from_casino() to authenticated;
 grant execute on function public.bazaar_create_listing(bigint, int) to authenticated;
