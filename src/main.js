@@ -2861,18 +2861,14 @@ async function bazaarImportFromLocked(lockedIndex) {
   };
   setBazaarLockedImportStatus('Importing…');
   try {
-    const { data, error } = await supabase.rpc('bazaar_import_aura_from_client', { p_item_json: itemJson });
-    const result = Array.isArray(data) ? data[0] : data;
+    const { error } = await supabase.from('bazaar_seller_inventory').insert({
+      user_id: authUser.id,
+      item_json: itemJson
+    });
     if (error) {
       const msg = error.message || 'Unknown error';
       setBazaarLockedImportStatus('Import failed: ' + msg, true);
       showBazaarBalanceMsg('Import failed: ' + msg, true);
-      return;
-    }
-    if (!result?.success) {
-      const msg = result?.message || 'Import failed';
-      setBazaarLockedImportStatus(msg, true);
-      showBazaarBalanceMsg(msg, true);
       return;
     }
   } catch (err) {
@@ -2906,9 +2902,11 @@ async function bazaarImportAllFromLocked() {
     if (!text) continue;
     const itemJson = { text, font: item.font || 'Inter', color: item.color || '#ffffff', fontWeight: item.fontWeight || '400', fontStyle: item.fontStyle || 'normal', textShadow: item.textShadow || 'none', rarity: item.rarity ?? 1 };
     try {
-      const { data, error } = await supabase.rpc('bazaar_import_aura_from_client', { p_item_json: itemJson });
-      const result = Array.isArray(data) ? data[0] : data;
-      if (!error && result?.success) {
+      const { error } = await supabase.from('bazaar_seller_inventory').insert({
+        user_id: authUser.id,
+        item_json: itemJson
+      });
+      if (!error) {
         locked.splice(i, 1);
         imported++;
       }
@@ -2918,8 +2916,8 @@ async function bazaarImportAllFromLocked() {
   if (btn) btn.disabled = false;
   renderLockedStorage();
   await renderBazaar();
-  setBazaarLockedImportStatus(imported > 0 ? `Imported ${imported} aura${imported !== 1 ? 's' : ''}.` : 'Import failed. Run supabase-bazaar.sql to add bazaar_import_aura_from_client.');
-  showBazaarBalanceMsg(imported > 0 ? `Imported ${imported}. Enter prices and click List for sale.` : 'No auras imported. Ensure supabase-bazaar.sql is deployed.', imported === 0);
+  setBazaarLockedImportStatus(imported > 0 ? `Imported ${imported} aura${imported !== 1 ? 's' : ''}.` : 'Import failed. Sign in and ensure Bazaar tables exist.');
+  showBazaarBalanceMsg(imported > 0 ? `Imported ${imported}. Enter prices and click List for sale.` : 'No auras imported.', imported === 0);
   if (imported) setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
