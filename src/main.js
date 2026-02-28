@@ -2646,9 +2646,11 @@ async function authSignUp() {
   const email = document.getElementById('auth-signup-email')?.value?.trim();
   const password = document.getElementById('auth-signup-password')?.value;
   const displayName = document.getElementById('auth-signup-displayname')?.value?.trim()?.slice(0, 24) || '';
+  const referralCode = document.getElementById('auth-signup-referral')?.value?.trim()?.toUpperCase()?.slice(0, 16) || '';
   const msg = document.getElementById('auth-signup-message');
   if (!email || !password || !supabase) return;
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const signUpOpts = referralCode ? { data: { referral_code: referralCode } } : {};
+  const { data, error } = await supabase.auth.signUp({ email, password, options: signUpOpts });
   if (error) {
     if (msg) { msg.textContent = error.message; msg.style.color = 'var(--danger)'; }
     return;
@@ -2691,6 +2693,20 @@ async function refreshAuthProfile() {
   if (!authUser || !supabase) return;
   const { data } = await supabase.from('profiles').select('display_name, casino_username').eq('id', authUser.id).single();
   authProfile = data || null;
+}
+
+async function claimReferralLocalCoins() {
+  if (!authUser || !supabase) return 0;
+  const { data, error } = await supabase.rpc('claim_referral_local_coins');
+  if (error) return 0;
+  const row = Array.isArray(data) ? data[0] : data;
+  const amount = row?.amount ?? 0;
+  if (amount > 0) {
+    setCoins(getCoins() + amount);
+    renderCoins();
+    showBazaarBalanceMsg(`Referral bonus: ${amount.toLocaleString()} coins!`, false);
+  }
+  return amount;
 }
 
 // ——— Bazaar ———
@@ -5638,15 +5654,34 @@ function init() {
   });
 
   if (supabase) {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       authUser = session?.user ?? null;
-      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); renderBazaar(); refreshUsernameUI(); });
-      else { updateAuthUI(); renderBazaar(); refreshUsernameUI(); }
+      if (authUser) {
+        await refreshAuthProfile();
+        await claimReferralLocalCoins();
+        updateAuthUI();
+        renderBazaar();
+        refreshUsernameUI();
+      } else {
+        updateAuthUI();
+        renderBazaar();
+        refreshUsernameUI();
+      }
     });
     supabase.auth.onAuthStateChange((_event, session) => {
       authUser = session?.user ?? null;
-      if (authUser) refreshAuthProfile().then(() => { updateAuthUI(); renderBazaar(); refreshUsernameUI(); });
-      else { authProfile = null; updateAuthUI(); renderBazaar(); refreshUsernameUI(); }
+      if (authUser) {
+        refreshAuthProfile().then(() => claimReferralLocalCoins()).then(() => {
+          updateAuthUI();
+          renderBazaar();
+          refreshUsernameUI();
+        });
+      } else {
+        authProfile = null;
+        updateAuthUI();
+        renderBazaar();
+        refreshUsernameUI();
+      }
     });
   } else {
     updateAuthUI();

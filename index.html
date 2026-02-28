@@ -240,6 +240,15 @@
                 </div>
                 <div id="bazaar-myshop-anchor" class="casino-section bazaar-section-anchor">
                   <h3 class="hub-heading">My shop</h3>
+                  <div id="bazaar-referral-section" class="bazaar-referral-section hidden">
+                    <h4 class="bazaar-subheading">Your referral code</h4>
+                    <p class="bazaar-referral-desc">Share your code when others sign up. You both get coins when they confirm their email.</p>
+                    <div class="bazaar-referral-code-row">
+                      <code id="bazaar-referral-code" class="bazaar-referral-code">—</code>
+                      <button type="button" id="bazaar-referral-copy-btn" class="hub-btn" title="Copy code">Copy</button>
+                    </div>
+                    <p class="bazaar-referral-share">Share link: <input type="text" id="bazaar-referral-url" class="hub-input bazaar-referral-url" readonly /></p>
+                  </div>
                   <div class="bazaar-link-casino">
                     <button type="button" id="bazaar-link-btn-single" class="hub-btn hub-btn--prominent">Link my Casino</button>
                     <p id="bazaar-link-status" class="hub-status"></p>
@@ -349,6 +358,8 @@
             <input type="password" id="auth-signup-password" class="admin-input" placeholder="Password" autocomplete="new-password" />
             <label for="auth-signup-displayname">Display name</label>
             <input type="text" id="auth-signup-displayname" class="admin-input" placeholder="Display name" maxlength="24" autocomplete="username" />
+            <label for="auth-signup-referral">Referral code <span class="auth-label-optional">(optional)</span></label>
+            <input type="text" id="auth-signup-referral" class="admin-input" placeholder="Referral code" maxlength="16" autocomplete="off" />
             <p id="auth-signup-message" class="admin-message"></p>
             <button type="button" id="auth-signup-submit" class="admin-btn">Sign up</button>
           </div>

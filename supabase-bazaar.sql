@@ -49,6 +49,162 @@ create table if not exists public.casino_link_codes (
 -- Both RPCs that touch it are security definer and handle all access control in code.
 alter table public.casino_link_codes disable row level security;
 
+-- Referral system: add columns to profiles (idempotent)
+alter table public.profiles add column if not exists referral_code text unique;
+alter table public.profiles add column if not exists pending_referral_local_coins int not null default 0;
+
+-- Referrals: tracks referrer->referee pairs; rewards granted on email confirmation
+create table if not exists public.referrals (
+  id bigint generated always as identity primary key,
+  referrer_id uuid not null references auth.users(id) on delete cascade,
+  referee_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz default now(),
+  bazaar_coins_granted boolean not null default false,
+  unique(referrer_id, referee_id)
+);
+
+alter table public.referrals enable row level security;
+drop policy if exists "Referrals read own" on public.referrals;
+create policy "Referrals read own" on public.referrals for select using (auth.uid() = referrer_id or auth.uid() = referee_id);
+
+-- Shared logic: process referral rewards (called from trigger)
+-- Reward constants
+create or replace function public.process_referral_rewards(p_referee_id uuid, p_referral_code text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_referrer_id uuid;
+  v_referrer_bazaar int := 500;
+  v_referrer_local int := 500;
+  v_referee_bazaar int := 500;
+  v_referee_local int := 1000;
+begin
+  if p_referral_code is null or trim(p_referral_code) = '' then return; end if;
+  select id into v_referrer_id from profiles where referral_code = trim(p_referral_code) and id != p_referee_id limit 1;
+  if v_referrer_id is null then return; end if;
+  insert into referrals (referrer_id, referee_id)
+  values (v_referrer_id, p_referee_id)
+  on conflict (referrer_id, referee_id) do nothing;
+  update referrals set bazaar_coins_granted = true
+  where referrer_id = v_referrer_id and referee_id = p_referee_id and not bazaar_coins_granted;
+  if not found then return; end if;
+  insert into bazaar_wallets (user_id, coins_balance) values (v_referrer_id, v_referrer_bazaar)
+  on conflict (user_id) do update set coins_balance = bazaar_wallets.coins_balance + v_referrer_bazaar, updated_at = now();
+  insert into bazaar_wallets (user_id, coins_balance) values (p_referee_id, v_referee_bazaar)
+  on conflict (user_id) do update set coins_balance = bazaar_wallets.coins_balance + v_referee_bazaar, updated_at = now();
+  update profiles set pending_referral_local_coins = pending_referral_local_coins + v_referee_local where id = p_referee_id;
+  update profiles set pending_referral_local_coins = pending_referral_local_coins + v_referrer_local where id = v_referrer_id;
+exception when unique_violation then null;
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, display_name)
+  values (new.id, coalesce(split_part(new.email, '@', 1), new.id::text));
+  if new.email_confirmed_at is not null and new.raw_user_meta_data->>'referral_code' is not null and trim(new.raw_user_meta_data->>'referral_code') != '' then
+    perform public.process_referral_rewards(new.id, new.raw_user_meta_data->>'referral_code');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+create or replace function public.process_referral_on_email_confirmed()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if old.email_confirmed_at is null and new.email_confirmed_at is not null then
+    if new.raw_user_meta_data->>'referral_code' is not null and trim(new.raw_user_meta_data->>'referral_code') != '' then
+      perform public.process_referral_rewards(new.id, new.raw_user_meta_data->>'referral_code');
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_email_confirmed on auth.users;
+create trigger on_auth_user_email_confirmed
+  after update on auth.users
+  for each row execute function public.process_referral_on_email_confirmed();
+
+-- RPC: get or generate referral code for current user
+create or replace function public.get_or_generate_referral_code()
+returns table(code text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_code text;
+  v_existing text;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then return; end if;
+  select p.referral_code into v_existing from profiles p where p.id = v_uid;
+  if v_existing is not null and trim(v_existing) != '' then
+    return query select v_existing;
+    return;
+  end if;
+  loop
+    v_code := upper(substring(md5(random()::text || clock_timestamp()::text) from 1 for 8));
+    begin
+      update profiles set referral_code = v_code where id = v_uid and (referral_code is null or referral_code = '');
+      if found then
+        return query select v_code;
+        return;
+      end if;
+      select referral_code into v_existing from profiles where id = v_uid;
+      if v_existing is not null and trim(v_existing) != '' then
+        return query select v_existing;
+        return;
+      end if;
+    exception when unique_violation then
+      null;
+    end;
+  end loop;
+end;
+$$;
+
+-- RPC: claim pending referral local coins (client adds to localStorage)
+create or replace function public.claim_referral_local_coins()
+returns table(amount int)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_amt int;
+begin
+  v_uid := auth.uid();
+  if v_uid is null then return; end if;
+  select pending_referral_local_coins into v_amt from profiles where id = v_uid and pending_referral_local_coins > 0;
+  if v_amt is null or v_amt <= 0 then
+    return query select 0;
+    return;
+  end if;
+  update profiles set pending_referral_local_coins = 0 where id = v_uid;
+  return query select v_amt;
+end;
+$$;
+
 -- Bazaar wallet: coins per user (deposit from game, withdraw to game)
 create table if not exists public.bazaar_wallets (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -812,6 +968,8 @@ grant execute on function public.bazaar_stock_sell(text, int) to authenticated;
 grant execute on function public.generate_casino_link_code(text) to anon;
 grant execute on function public.generate_casino_link_code(text) to authenticated;
 grant execute on function public.link_casino_to_account(text, text) to authenticated;
+grant execute on function public.get_or_generate_referral_code() to authenticated;
+grant execute on function public.claim_referral_local_coins() to authenticated;
 grant execute on function public.bazaar_deposit_coins(int) to authenticated;
 grant execute on function public.bazaar_withdraw_coins(int) to authenticated;
 grant execute on function public.bazaar_import_aura_from_client(jsonb) to authenticated;
