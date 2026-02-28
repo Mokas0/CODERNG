@@ -2698,7 +2698,13 @@ async function bazaarFetchBalance() {
 
 function showBazaarBalanceMsg(text, isError = false) {
   const el = document.getElementById('bazaar-balance-msg');
-  if (el) { el.textContent = text; el.style.color = isError ? 'var(--danger)' : 'var(--roll)'; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 4000); }
+  if (el) {
+    el.textContent = text;
+    el.style.color = isError ? 'var(--danger)' : 'var(--roll)';
+    el.classList.remove('hidden');
+    el.style.visibility = 'visible';
+    setTimeout(() => el.classList.add('hidden'), 6000);
+  }
 }
 
 async function bazaarDepositAllCoins() {
@@ -2830,46 +2836,90 @@ async function sendLockedAuraToBazaar(lockedIndex) {
   setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
 }
 
+function setBazaarLockedImportStatus(text, isError = false) {
+  const el = document.getElementById('bazaar-locked-import-status');
+  if (el) { el.textContent = text; el.style.color = isError ? 'var(--danger)' : 'var(--roll)'; }
+}
+
 async function bazaarImportFromLocked(lockedIndex) {
-  if (!authUser || !supabase) return;
+  setBazaarLockedImportStatus('');
+  if (!authUser) { setBazaarLockedImportStatus('Sign in to import.', true); showBazaarBalanceMsg('Sign in to import.', true); return; }
+  if (!supabase) { setBazaarLockedImportStatus('Bazaar not configured.', true); showBazaarBalanceMsg('Bazaar not configured.', true); return; }
   const locked = getLockedStorage();
-  if (lockedIndex < 0 || lockedIndex >= locked.length) return;
+  if (lockedIndex < 0 || lockedIndex >= locked.length) { setBazaarLockedImportStatus('Invalid item.', true); return; }
   const item = locked[lockedIndex];
-  const itemJson = { text: item.text, font: item.font, color: item.color, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textShadow: item.textShadow, rarity: item.rarity };
-  const { data, error } = await supabase.rpc('bazaar_import_aura_from_client', { p_item_json: itemJson });
-  const result = Array.isArray(data) ? data[0] : data;
-  if (error) { showBazaarBalanceMsg('Import failed: ' + error.message, true); return; }
-  if (!result?.success) { showBazaarBalanceMsg(result?.message || 'Import failed', true); return; }
+  const text = typeof item.text === 'string' ? item.text.trim() : String(item?.text ?? '').trim();
+  if (!text) { setBazaarLockedImportStatus('Invalid aura data.', true); return; }
+  const itemJson = {
+    text,
+    font: item.font || 'Inter',
+    color: item.color || '#ffffff',
+    fontWeight: item.fontWeight || '400',
+    fontStyle: item.fontStyle || 'normal',
+    textShadow: item.textShadow || 'none',
+    rarity: item.rarity ?? 1
+  };
+  setBazaarLockedImportStatus('Importing…');
+  try {
+    const { data, error } = await supabase.rpc('bazaar_import_aura_from_client', { p_item_json: itemJson });
+    const result = Array.isArray(data) ? data[0] : data;
+    if (error) {
+      const msg = error.message || 'Unknown error';
+      setBazaarLockedImportStatus('Import failed: ' + msg, true);
+      showBazaarBalanceMsg('Import failed: ' + msg, true);
+      return;
+    }
+    if (!result?.success) {
+      const msg = result?.message || 'Import failed';
+      setBazaarLockedImportStatus(msg, true);
+      showBazaarBalanceMsg(msg, true);
+      return;
+    }
+  } catch (err) {
+    const msg = err?.message || String(err);
+    setBazaarLockedImportStatus('Import failed: ' + msg, true);
+    showBazaarBalanceMsg('Import failed: ' + msg, true);
+    return;
+  }
   locked.splice(lockedIndex, 1);
   setLockedStorage(locked);
   renderLockedStorage();
   await renderBazaar();
+  setBazaarLockedImportStatus('Imported. Enter a price and click List for sale.');
   showBazaarBalanceMsg('Imported. Enter a price and click List for sale.');
   setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
 async function bazaarImportAllFromLocked() {
-  if (!authUser || !supabase) return;
+  setBazaarLockedImportStatus('');
+  if (!authUser) { setBazaarLockedImportStatus('Sign in to import.', true); return; }
+  if (!supabase) { setBazaarLockedImportStatus('Bazaar not configured.', true); return; }
   const locked = getLockedStorage();
-  if (!locked.length) { showBazaarBalanceMsg('No locked auras.', true); return; }
+  if (!locked.length) { setBazaarLockedImportStatus('No locked auras.', true); return; }
   const btn = document.getElementById('bazaar-import-all-locked-btn');
   if (btn) btn.disabled = true;
+  setBazaarLockedImportStatus('Importing…');
   let imported = 0;
   for (let i = locked.length - 1; i >= 0; i--) {
     const item = locked[i];
-    const itemJson = { text: item.text, font: item.font, color: item.color, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textShadow: item.textShadow, rarity: item.rarity };
-    const { data, error } = await supabase.rpc('bazaar_import_aura_from_client', { p_item_json: itemJson });
-    const result = Array.isArray(data) ? data[0] : data;
-    if (!error && result?.success) {
-      locked.splice(i, 1);
-      imported++;
-    }
+    const text = typeof item.text === 'string' ? item.text.trim() : String(item?.text ?? '').trim();
+    if (!text) continue;
+    const itemJson = { text, font: item.font || 'Inter', color: item.color || '#ffffff', fontWeight: item.fontWeight || '400', fontStyle: item.fontStyle || 'normal', textShadow: item.textShadow || 'none', rarity: item.rarity ?? 1 };
+    try {
+      const { data, error } = await supabase.rpc('bazaar_import_aura_from_client', { p_item_json: itemJson });
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!error && result?.success) {
+        locked.splice(i, 1);
+        imported++;
+      }
+    } catch (_) { /* skip failed */ }
   }
   setLockedStorage(locked);
   if (btn) btn.disabled = false;
   renderLockedStorage();
   await renderBazaar();
-  showBazaarBalanceMsg(`Imported ${imported} aura${imported !== 1 ? 's' : ''}. Enter prices and click List for sale.`);
+  setBazaarLockedImportStatus(imported > 0 ? `Imported ${imported} aura${imported !== 1 ? 's' : ''}.` : 'Import failed. Run supabase-bazaar.sql to add bazaar_import_aura_from_client.');
+  showBazaarBalanceMsg(imported > 0 ? `Imported ${imported}. Enter prices and click List for sale.` : 'No auras imported. Ensure supabase-bazaar.sql is deployed.', imported === 0);
   if (imported) setTimeout(() => document.getElementById('bazaar-inventory-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
