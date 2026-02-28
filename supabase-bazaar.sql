@@ -415,6 +415,7 @@ create table if not exists public.bazaar_business_investments (
 );
 
 alter table public.bazaar_business_investments enable row level security;
+drop policy if exists "Bazaar investments own" on public.bazaar_business_investments;
 create policy "Bazaar investments own" on public.bazaar_business_investments for all using (auth.uid() = investor_id);
 
 create table if not exists public.bazaar_business_stats (

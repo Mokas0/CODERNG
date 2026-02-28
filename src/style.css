@@ -2061,6 +2061,12 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
 }
+.bazaar-link-or {
+  align-self: center;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 0 0.25rem;
+}
 .bazaar-link-code-box {
   margin-bottom: 0.75rem;
   padding: 0.5rem 0;

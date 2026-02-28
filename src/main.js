@@ -2678,10 +2678,33 @@ async function bazaarWithdrawCoins() {
   renderBazaar();
 }
 
+let bazaarAutoLinkAttempted = false;
+
+/** One-click link: generate code for game's casino username and immediately link (same device) */
+async function bazaarAutoLinkCasino() {
+  const username = getCasinoUsername()?.trim()?.slice(0, 24);
+  if (!authUser || !supabase || !username) return false;
+  const { data: codeData } = await supabase.rpc('generate_casino_link_code', { p_username: username });
+  const codeRow = Array.isArray(codeData) ? codeData[0] : codeData;
+  const code = codeRow?.code ? String(codeRow.code).padStart(6, '0').slice(0, 6) : '';
+  if (!code) return false;
+  const { data, error } = await supabase.rpc('link_casino_to_account', { p_username: username, p_code: code });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) return false;
+  await refreshAuthProfile();
+  return true;
+}
+
 async function bazaarLinkCasino() {
-  const username = document.getElementById('bazaar-link-username')?.value?.trim()?.slice(0, 24) || '';
-  const code = document.getElementById('bazaar-link-code')?.value?.trim()?.slice(0, 6) || '';
-  if (!authUser || !supabase || !username || !code) return;
+  const username = document.getElementById('bazaar-link-username')?.value?.trim()?.slice(0, 24) || getCasinoUsername()?.trim()?.slice(0, 24) || '';
+  const codeInput = document.getElementById('bazaar-link-code')?.value?.trim()?.slice(0, 6) || '';
+  let code = codeInput;
+  if (!username || !code) {
+    const statusEl = document.getElementById('bazaar-link-status');
+    if (statusEl) { statusEl.textContent = 'Enter Casino name and 6-digit code, or use "Link my Casino".'; statusEl.style.color = 'var(--danger)'; }
+    return;
+  }
+  if (!authUser || !supabase) return;
   const { data, error } = await supabase.rpc('link_casino_to_account', { p_username: username, p_code: code });
   const result = Array.isArray(data) ? data[0] : data;
   const statusEl = document.getElementById('bazaar-link-status');
@@ -2892,6 +2915,18 @@ function renderBazaar() {
       if (linkUsernameInput && !linkUsernameInput.value) {
         const hubName = getCasinoUsername();
         if (hubName) linkUsernameInput.placeholder = `e.g. ${hubName}`;
+      }
+      const casinoName = getCasinoUsername();
+      if (casinoName && !bazaarAutoLinkAttempted) {
+        bazaarAutoLinkAttempted = true;
+        if (linkStatus) linkStatus.textContent = 'Connecting to Casino…';
+        const ok = await bazaarAutoLinkCasino();
+        if (ok) {
+          if (linkStatus) linkStatus.textContent = `Linked as ${escapeHtml(authProfile?.casino_username || casinoName)}`;
+          if (linkForm) linkForm.classList.add('hidden');
+        } else {
+          if (linkStatus) linkStatus.textContent = 'Link your Casino vault to import auras.';
+        }
       }
     }
     const { data: listings } = await supabase.from('bazaar_listings').select('id, seller_id, item_json, price').eq('status', 'listed').order('created_at', { ascending: false }).limit(50);
@@ -5199,6 +5234,24 @@ function init() {
   document.getElementById('bazaar-withdraw-btn')?.addEventListener('click', bazaarWithdrawCoins);
   document.getElementById('bazaar-withdraw-all-btn')?.addEventListener('click', bazaarWithdrawAllCoins);
   document.getElementById('bazaar-link-btn')?.addEventListener('click', bazaarLinkCasino);
+  document.getElementById('bazaar-auto-link-btn')?.addEventListener('click', async () => {
+    const statusEl = document.getElementById('bazaar-link-status');
+    const btn = document.getElementById('bazaar-auto-link-btn');
+    if (!getCasinoUsername()) {
+      if (statusEl) { statusEl.textContent = 'Set a display name in the Hub/Casino first.'; statusEl.style.color = 'var(--danger)'; }
+      return;
+    }
+    if (btn) btn.disabled = true;
+    if (statusEl) { statusEl.textContent = 'Connecting…'; statusEl.style.color = ''; }
+    const ok = await bazaarAutoLinkCasino();
+    if (btn) btn.disabled = false;
+    if (ok) {
+      if (statusEl) { statusEl.textContent = `Linked as ${escapeHtml(authProfile?.casino_username || getCasinoUsername())}`; statusEl.style.color = 'var(--roll)'; }
+      renderBazaar();
+    } else {
+      if (statusEl) { statusEl.textContent = 'Link failed. That name may already be linked. Try manual link.'; statusEl.style.color = 'var(--danger)'; }
+    }
+  });
   document.getElementById('bazaar-stock-buy-btn')?.addEventListener('click', bazaarStockBuy);
   document.getElementById('bazaar-stock-buy-max-btn')?.addEventListener('click', bazaarStockBuyMax);
   document.getElementById('bazaar-stock-sell-btn')?.addEventListener('click', bazaarStockSell);
