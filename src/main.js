@@ -1,5 +1,5 @@
 import './style.css';
-import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, ACCOMPLISHMENT_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, classifyAuraType } from './data/items.js';
+import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, ACCOMPLISHMENT_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, MINING_MATERIALS, classifyAuraType } from './data/items.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
@@ -48,6 +48,9 @@ const STORAGE_KEYS = {
   competitionQuests: STORAGE_PREFIX + 'competition_quests',
   nullCoins: STORAGE_PREFIX + 'null_coins',
   materials: STORAGE_PREFIX + 'materials',
+  luckRolls: STORAGE_PREFIX + 'luck_rolls', // rolls remaining for multi-roll luck potions
+  achievementsUnlocked: STORAGE_PREFIX + 'achievements_unlocked',
+  achievementEquipped: STORAGE_PREFIX + 'achievement_equipped',
 };
 
 const WORLD_CONFIG = {
@@ -160,6 +163,8 @@ function setLuckMultiplier(m) {
   }
   localStorage.setItem(STORAGE_KEYS.luck, String(Math.max(1, m)));
 }
+function getLuckRolls() { return Math.max(0, Math.floor(Number(localStorage.getItem(STORAGE_KEYS.luckRolls) || 0))); }
+function setLuckRolls(n) { localStorage.setItem(STORAGE_KEYS.luckRolls, String(Math.max(0, Math.floor(n)))); }
 
 function getNullCoins() {
   if (WORLD_ID !== 2) return 0;
@@ -485,12 +490,14 @@ function renderLuck() {
   const btn = document.getElementById('luck-btn');
   if (el) {
     const fmt = (n) => Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    const r = getLuckRolls();
+    const rollSuffix = r > 0 ? ` — ${r} roll${r !== 1 ? 's' : ''} left` : '';
     if (WORLD_CONFIG.luckCapEffective !== Infinity && effectiveRaw >= WORLD_CONFIG.luckCapEffective) {
-      el.textContent = `${fmt(effectiveMult)}× (capped)`;
+      el.textContent = `${fmt(effectiveMult)}× (capped)${rollSuffix}`;
     } else if (gear > 0) {
-      el.textContent = `${fmt(effectiveMult)}× (${fmt(m)} + ${fmt(gear)} gear)`;
+      el.textContent = `${fmt(effectiveMult)}× (${fmt(m)} + ${fmt(gear)} gear)${rollSuffix}`;
     } else {
-      el.textContent = effectiveMult === 1 ? '1× (normal)' : `${fmt(effectiveMult)}×`;
+      el.textContent = (effectiveMult === 1 ? '1× (normal)' : `${fmt(effectiveMult)}×`) + rollSuffix;
     }
   }
   if (btn) {
@@ -569,8 +576,17 @@ const POTION_OF_DESTRUCTION = {
   desc: 'Use in World 2 to summon THE VOID QUEEN. The enemy of the Supreme King.',
 };
 
+// Mining potions — crafted from Minesweeper materials; multi-roll luck (early game)
+const MINING_POTIONS = [
+  { id: 'potionMiningCoal', name: 'Coal Luck Brew', luckBonus: 10, luckRolls: 3, emoji: '🪨', desc: '+10× luck for 3 rolls. Early-game staple from Mining.' },
+  { id: 'potionMiningIron', name: 'Iron Fortune Elixir', luckBonus: 35, luckRolls: 4, emoji: '⚙️', desc: '+35× luck for 4 rolls. Forge your fortune.' },
+  { id: 'potionMiningSilver', name: 'Silver Chance Tonic', luckBonus: 80, luckRolls: 5, emoji: '🩶', desc: '+80× luck for 5 rolls. Silver lining.' },
+  { id: 'potionMiningCrystal', name: 'Crystal Luck Potion', luckBonus: 150, luckRolls: 6, emoji: '💎', desc: '+150× luck for 6 rolls. Crystal clarity.' },
+  { id: 'potionMiningFortune', name: 'Fortune Ore Elixir', luckBonus: 400, luckRolls: 8, emoji: '🌟', desc: '+400× luck for 8 rolls. The finest Mining brew.' },
+];
+
 const ALL_POTIONS_BY_ID = {};
-[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION, POTION_OF_DESTRUCTION].forEach(p => {
+[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION, POTION_OF_DESTRUCTION, ...MINING_POTIONS].forEach(p => {
   ALL_POTIONS_BY_ID[p.id] = p;
 });
 
@@ -930,6 +946,7 @@ function usePotion(potionId) {
   if (inv[potionId] <= 0) delete inv[potionId];
   setPotionInventory(inv);
   setLuckMultiplier(getLuckMultiplier() + (potion.luckBonus || 0));
+  if (potion.luckRolls) setLuckRolls(potion.luckRolls);
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (potion.id === 'potionBennyUltraluck') triggerSecretAura(1).catch(console.error);
   if (potion.id === 'potionSupremeLuck') triggerSupremeKing().catch(console.error);
@@ -940,6 +957,7 @@ function usePotion(potionId) {
 function useAllPotions() {
   const inv = getPotionInventory();
   let totalLuck = 0;
+  let totalRolls = 0;
   let ultraluckCount = 0;
   let hasSupreme = false;
   for (const [id, count] of Object.entries(inv)) {
@@ -947,15 +965,17 @@ function useAllPotions() {
     const potion = ALL_POTIONS_BY_ID[id];
     if (!potion || count < 1) continue;
     totalLuck += (potion.luckBonus || 0) * count;
+    if (potion.luckRolls) totalRolls += potion.luckRolls * count;
     if (id === 'potionBennyUltraluck') ultraluckCount += count;
     if (id === 'potionSupremeLuck') hasSupreme = true;
   }
-  if (totalLuck === 0) return;
+  if (totalLuck === 0 && totalRolls === 0) return;
   const toRemove = Object.keys(inv).filter(k => k !== 'potionDestruction');
   const newInv = {};
   if (inv.potionDestruction) newInv.potionDestruction = inv.potionDestruction;
   setPotionInventory(newInv);
   setLuckMultiplier(getLuckMultiplier() + totalLuck);
+  if (totalRolls > 0) setLuckRolls(totalRolls);
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (ultraluckCount > 0) triggerSecretAura(ultraluckCount).catch(console.error);
   if (hasSupreme) triggerSupremeKing().catch(console.error);
@@ -984,7 +1004,8 @@ function renderPotionInventory() {
       <span class="potion-inv-total">Total: +${totalLuck.toLocaleString()}× luck</span>
     </div>
     <div class="potion-inv-list">${entries.map(e => {
-      const bonusText = (e.potion.luckBonus || 0) > 0 ? `+${(e.potion.luckBonus * e.count).toLocaleString()}× luck` : (e.potion.desc || 'Special effect');
+      let bonusText = (e.potion.luckBonus || 0) > 0 ? `+${(e.potion.luckBonus * e.count).toLocaleString()}× luck` : (e.potion.desc || 'Special effect');
+      if (e.potion.luckRolls) bonusText += ` for ${e.potion.luckRolls * e.count} roll${e.potion.luckRolls * e.count !== 1 ? 's' : ''}`;
       return `
       <div class="potion-inv-row">
         <span class="potion-inv-emoji">${e.potion.emoji}</span>
@@ -1365,12 +1386,20 @@ function getMaterialLabel(id) {
   if (j) return j.text;
   const s = SELLER_MATERIALS.find(m => m.id === id);
   if (s) return s.name;
+  const mining = MINING_MATERIALS.find(m => m.id === id);
+  if (mining) return mining.name;
   return `Material ${id}`;
 }
 
 const CRAFTING_RECIPES = [
   { id: 'potionDestruction', name: 'Potion of Destruction', outputType: 'potion', outputId: 'potionDestruction', materials: [{ id: 10130, n: 5 }, { id: 10131, n: 5 }, { id: 10132, n: 5 }, { id: 10133, n: 5 }], world: 2 },
   { id: 'potionMinor', name: 'Minor Luck Potion', outputType: 'potion', outputId: 'potion1', materials: [{ id: 20101, n: 2 }, { id: 20102, n: 1 }] },
+  // Mining potions — multi-roll luck (early game)
+  { id: 'potionMiningCoal', name: 'Coal Luck Brew', outputType: 'potion', outputId: 'potionMiningCoal', materials: [{ id: 20201, n: 3 }, { id: 20102, n: 1 }] },
+  { id: 'potionMiningIron', name: 'Iron Fortune Elixir', outputType: 'potion', outputId: 'potionMiningIron', materials: [{ id: 20202, n: 2 }, { id: 20203, n: 2 }, { id: 20102, n: 1 }] },
+  { id: 'potionMiningSilver', name: 'Silver Chance Tonic', outputType: 'potion', outputId: 'potionMiningSilver', materials: [{ id: 20204, n: 2 }, { id: 20205, n: 1 }, { id: 20102, n: 1 }] },
+  { id: 'potionMiningCrystal', name: 'Crystal Luck Potion', outputType: 'potion', outputId: 'potionMiningCrystal', materials: [{ id: 20206, n: 2 }, { id: 20207, n: 1 }, { id: 20102, n: 1 }] },
+  { id: 'potionMiningFortune', name: 'Fortune Ore Elixir', outputType: 'potion', outputId: 'potionMiningFortune', materials: [{ id: 20208, n: 1 }, { id: 20206, n: 1 }, { id: 20207, n: 1 }, { id: 20102, n: 1 }] },
 ];
 
 function openCrafter() {
@@ -1395,11 +1424,11 @@ function renderCrafterPanel() {
   const recipesEl = document.getElementById('crafter-recipes');
   if (!materialsEl || !recipesEl) return;
   const mats = getMaterials();
-  const matIds = [...new Set([...JIA_RARE_ITEMS.map(i => i.id), ...SELLER_MATERIALS.map(m => m.id)])];
+  const matIds = [...new Set([...JIA_RARE_ITEMS.map(i => i.id), ...SELLER_MATERIALS.map(m => m.id), ...MINING_MATERIALS.map(m => m.id)])];
   const haveAny = matIds.some(id => (mats[id] || 0) > 0);
   materialsEl.innerHTML = haveAny
     ? matIds.filter(id => (mats[id] || 0) > 0).map(id => `<span class="crafter-mat">${getMaterialLabel(id)}: ${mats[id]}</span>`).join(' · ')
-    : '<p class="tab-desc">No materials yet. Buy from the Material Seller or from Jia (World 2).</p>';
+    : '<p class="tab-desc">No materials yet. Buy from the Material Seller, play Mining, or from Jia (World 2).</p>';
   const recipes = CRAFTING_RECIPES.filter(r => !r.world || r.world === WORLD_ID);
   recipesEl.innerHTML = recipes.map(rec => {
     const canCraft = hasMaterials(rec.materials);
@@ -1472,6 +1501,181 @@ function renderMaterialSellerShop() {
       renderMaterialSellerShop();
     });
   });
+}
+
+// ——— Mining (Minesweeper minigame — early-game materials for luck potions) ———
+const MINING_ENTRY_FEE = 50;
+const MINING_ROWS = 8;
+const MINING_COLS = 10;
+const MINING_MINES = 12;
+const MINING_TOTAL_CELLS = MINING_ROWS * MINING_COLS;
+
+let miningState = null; // { grid, mineCounts, revealed, flagged, gameOver, won }
+
+function createMiningGrid() {
+  const total = MINING_TOTAL_CELLS;
+  const mines = new Set();
+  while (mines.size < MINING_MINES) {
+    mines.add(Math.floor(Math.random() * total));
+  }
+  const grid = Array(total).fill(false);
+  mines.forEach(i => { grid[i] = true; });
+  const mineCounts = Array(total).fill(0);
+  for (let r = 0; r < MINING_ROWS; r++) {
+    for (let c = 0; c < MINING_COLS; c++) {
+      const i = r * MINING_COLS + c;
+      if (grid[i]) continue;
+      let count = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < MINING_ROWS && nc >= 0 && nc < MINING_COLS) {
+            if (grid[nr * MINING_COLS + nc]) count++;
+          }
+        }
+      }
+      mineCounts[i] = count;
+    }
+  }
+  return { grid, mineCounts, revealed: new Set(), flagged: new Set(), gameOver: false, won: false };
+}
+
+function miningReveal(r, c) {
+  if (!miningState || miningState.gameOver) return;
+  const i = r * MINING_COLS + c;
+  if (miningState.revealed.has(i) || miningState.flagged.has(i)) return;
+  if (miningState.grid[i]) {
+    miningState.gameOver = true;
+    miningState.won = false;
+    renderMiningPanel();
+    return;
+  }
+  const flood = (ir, ic) => {
+    const idx = ir * MINING_COLS + ic;
+    if (ir < 0 || ir >= MINING_ROWS || ic < 0 || ic >= MINING_COLS) return;
+    if (miningState.revealed.has(idx) || miningState.flagged.has(idx) || miningState.grid[idx]) return;
+    miningState.revealed.add(idx);
+    if (miningState.mineCounts[idx] === 0) {
+      for (let dr = -1; dr <= 1; dr++)
+        for (let dc = -1; dc <= 1; dc++)
+          if (dr !== 0 || dc !== 0) flood(ir + dr, ic + dc);
+    }
+  };
+  flood(r, c);
+  if (miningState.revealed.size + MINING_MINES >= MINING_TOTAL_CELLS) {
+    miningState.gameOver = true;
+    miningState.won = true;
+    grantMiningRewards(true);
+  }
+  renderMiningPanel();
+}
+
+function grantMiningRewards(won) {
+  const revealed = miningState?.revealed?.size ?? 0;
+  const totalSafe = MINING_TOTAL_CELLS - MINING_MINES;
+  const ratio = won ? 1 : Math.max(0, revealed / Math.max(1, totalSafe * 0.5));
+  const tierWeights = [
+    [1, 60], [2, 25], [3, 10], [4, 4], [5, 1],
+  ];
+  const roll = () => {
+    const r = Math.random();
+    let cum = 0;
+    for (const [tier, w] of tierWeights) {
+      cum += (w / 100) * ratio;
+      if (r < cum) return tier;
+    }
+    return 1;
+  };
+  const count = won ? 3 + Math.floor(ratio * 5) : Math.max(1, Math.floor(ratio * 4));
+  for (let n = 0; n < count; n++) {
+    const tier = roll();
+    const candidates = MINING_MATERIALS.filter(m => m.tier === tier);
+    if (candidates.length) {
+      const m = candidates[Math.floor(Math.random() * candidates.length)];
+      addMaterial(m.id, 1);
+    }
+  }
+}
+
+function openMining() {
+  const overlay = document.getElementById('mining-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    overlay.setAttribute('aria-hidden', 'false');
+    renderMiningPanel();
+  }
+}
+
+function closeMining() {
+  const overlay = document.getElementById('mining-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function startMiningGame() {
+  if (getCoins() < MINING_ENTRY_FEE) return;
+  setCoins(getCoins() - MINING_ENTRY_FEE);
+  miningState = createMiningGrid();
+  renderCoins();
+  renderMiningPanel();
+}
+
+function renderMiningPanel() {
+  const gridEl = document.getElementById('mining-grid');
+  const statusEl = document.getElementById('mining-status');
+  const statsEl = document.getElementById('mining-stats');
+  const startBtn = document.getElementById('mining-start-btn');
+  if (!gridEl || !statusEl) return;
+
+  const canStart = getCoins() >= MINING_ENTRY_FEE;
+  if (startBtn) {
+    startBtn.textContent = `Start game (${MINING_ENTRY_FEE} coins)`;
+    startBtn.disabled = !canStart;
+    startBtn.style.display = miningState && !miningState.gameOver ? 'none' : '';
+  }
+
+  if (!miningState) {
+    statusEl.textContent = `Pay ${MINING_ENTRY_FEE} coins to start a new game.`;
+    statsEl.textContent = '';
+    gridEl.innerHTML = '';
+    return;
+  }
+
+  const { revealed, flagged, gameOver, won, grid, mineCounts } = miningState;
+  if (gameOver) {
+    statusEl.textContent = won ? 'You won! Materials added to your inventory.' : 'Boom! Hit a mine. Partial rewards based on cells revealed.';
+    if (!won) grantMiningRewards(false);
+  }
+  statsEl.textContent = gameOver ? '' : `Revealed: ${revealed.size} / ${MINING_TOTAL_CELLS - MINING_MINES} safe`;
+
+  gridEl.style.gridTemplateColumns = `repeat(${MINING_COLS}, 1fr)`;
+  gridEl.innerHTML = '';
+  for (let r = 0; r < MINING_ROWS; r++) {
+    for (let c = 0; c < MINING_COLS; c++) {
+      const i = r * MINING_COLS + c;
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'mining-cell';
+      cell.dataset.r = String(r);
+      cell.dataset.c = String(c);
+      if (gameOver && grid[i]) {
+        cell.classList.add('mining-cell--mine');
+        cell.textContent = '💣';
+        cell.disabled = true;
+      } else if (revealed.has(i)) {
+        cell.classList.add('mining-cell--revealed');
+        const cnt = mineCounts[i];
+        cell.textContent = cnt > 0 ? String(cnt) : '';
+        cell.disabled = true;
+      } else {
+        cell.addEventListener('click', () => miningReveal(r, c));
+      }
+      gridEl.appendChild(cell);
+    }
+  }
+  if (gameOver) miningState = null;
 }
 
 // ——— Sneho (forbidden rotating shop, 10-min rotation) ———
@@ -1667,6 +1871,93 @@ function buyGear(gearId) {
   addGearBonus(gear.luckBonus);
   renderTheo();
   renderLuck();
+}
+
+// ——— Achievements (Sol's RNG style — display one next to name in chat) ———
+const ACHIEVEMENTS = [
+  { id: 'first_roll', name: 'First Roll', emoji: '🎲', check: () => getElderRollTotal() >= 1 },
+  { id: 'rolling_start', name: 'Rolling Start', emoji: '⚡', check: () => getElderRollTotal() >= 10 },
+  { id: 'dedicated', name: 'Dedicated', emoji: '🔥', check: () => getElderRollTotal() >= 100 },
+  { id: 'veteran', name: 'Veteran', emoji: '⭐', check: () => getElderRollTotal() >= 1000 },
+  { id: 'master_roller', name: 'Master Roller', emoji: '👑', check: () => getElderRollTotal() >= 10000 },
+  { id: 'coin_collector', name: 'Coin Collector', emoji: '🪙', check: () => getCoins() >= 1000 },
+  { id: 'wealthy', name: 'Wealthy', emoji: '💰', check: () => getCoins() >= 10000 },
+  { id: 'millionaire', name: 'Millionaire', emoji: '💎', check: () => getCoins() >= 1000000 },
+  { id: 'first_aura', name: 'First Aura', emoji: '✨', check: () => getHistory().length >= 1 },
+  { id: 'collector', name: 'Collector', emoji: '📦', check: () => getHistory().length >= 10 },
+  { id: 'elder_hunter', name: 'Elder Hunter', emoji: '⬡', check: () => getElderReceived().some(id => ELDER_AURAS.some(a => a.id === id)) },
+  { id: 'ascendant', name: 'Ascendant', emoji: '⬡', check: () => getElderReceived().some(id => ASCENDANT_AURAS.some(a => a.id === id)) },
+  { id: 'emperor', name: 'Emperor', emoji: '♛', check: () => getElderReceived().some(id => EMPEROR_AURAS.some(a => a.id === id)) },
+  { id: 'supreme', name: 'Supreme', emoji: '♔', check: () => getElderReceived().includes(9999) },
+  { id: 'void_walker', name: 'Void Walker', emoji: '👑', check: () => getElderReceived().includes(9998) },
+  { id: 'lucky', name: 'Lucky', emoji: '🍀', check: () => Math.pow(Math.max(getLuckMultiplier() + getGearBonus(), 1), 0.4) >= 100 },
+  { id: 'very_lucky', name: 'Very Lucky', emoji: '🌠', check: () => Math.pow(Math.max(getLuckMultiplier() + getGearBonus(), 1), 0.4) >= 1000 },
+  { id: 'potion_fan', name: 'Potion Fan', emoji: '⚗️', check: () => { const inv = getPotionInventory(); return Object.values(inv).some(n => n > 0) || (getLuckMultiplier() > 1 && getLuckRolls() > 0); } },
+  { id: 'miner', name: 'Miner', emoji: '⛏️', check: () => getMaterialCount(20201) > 0 || getMaterialCount(20202) > 0 || getMaterialCount(20208) > 0 },
+  { id: 'craftsman', name: 'Craftsman', emoji: '🧪', check: () => { const inv = getPotionInventory(); return ['potionMiningCoal','potionMiningIron','potionMiningSilver','potionMiningCrystal','potionMiningFortune'].some(id => (inv[id] || 0) > 0); } },
+];
+
+function getUnlockedAchievements() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.achievementsUnlocked) || '[]'); }
+  catch { return []; }
+}
+function setUnlockedAchievements(ids) {
+  localStorage.setItem(STORAGE_KEYS.achievementsUnlocked, JSON.stringify(ids));
+}
+function getEquippedAchievement() {
+  return localStorage.getItem(STORAGE_KEYS.achievementEquipped) || '';
+}
+function setEquippedAchievement(id) {
+  localStorage.setItem(STORAGE_KEYS.achievementEquipped, id || '');
+}
+
+function checkAllAchievements() {
+  const unlocked = new Set(getUnlockedAchievements());
+  let changed = false;
+  for (const ach of ACHIEVEMENTS) {
+    if (unlocked.has(ach.id)) continue;
+    try {
+      if (ach.check()) {
+        unlocked.add(ach.id);
+        changed = true;
+      }
+    } catch (_) {}
+  }
+  if (changed) {
+    setUnlockedAchievements([...unlocked]);
+    renderAchievementsPanel();
+  }
+}
+
+function getEquippedAchievementData() {
+  const id = getEquippedAchievement();
+  if (!id) return null;
+  return ACHIEVEMENTS.find(a => a.id === id) || null;
+}
+
+function renderAchievementsPanel() {
+  const container = document.getElementById('hub-achievements-list');
+  if (!container) return;
+  const unlocked = new Set(getUnlockedAchievements());
+  const equipped = getEquippedAchievement();
+  container.innerHTML = ACHIEVEMENTS.map(ach => {
+    const isUnlocked = unlocked.has(ach.id);
+    const isEquipped = equipped === ach.id;
+    return `<div class="achievement-row ${isUnlocked ? '' : 'achievement-row--locked'}" data-ach-id="${ach.id}">
+      <span class="achievement-emoji">${isUnlocked ? ach.emoji : '🔒'}</span>
+      <span class="achievement-name">${ach.name}</span>
+      ${isUnlocked
+        ? `<button type="button" class="hub-btn achievement-equip-btn ${isEquipped ? 'achievement-equip-btn--active' : ''}" data-ach-id="${ach.id}" title="${isEquipped ? 'Displayed next to your name in chat' : 'Display next to your name'}">${isEquipped ? '✓ Equipped' : 'Equip'}</button>`
+        : '<span class="achievement-locked">Locked</span>'}
+    </div>`;
+  }).join('');
+  container.querySelectorAll('.achievement-equip-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.achId;
+      setEquippedAchievement(getEquippedAchievement() === id ? '' : id);
+      renderAchievementsPanel();
+    });
+  });
 }
 
 // ——— Hub (global chat + trading) ———
@@ -1930,7 +2221,7 @@ async function loadHubMessages() {
   if (!list || !supabase) return;
   const { data, error } = await supabase
     .from('messages')
-    .select('id, username, body, created_at')
+    .select('id, username, body, created_at, achievement_emoji, achievement_name')
     .order('created_at', { ascending: true })
     .limit(CHAT_KEEP);
   if (error) {
@@ -1942,9 +2233,12 @@ async function loadHubMessages() {
   if (countEl) countEl.textContent = msgs.length ? `(${msgs.length}/${CHAT_KEEP})` : '';
   list.innerHTML = msgs.map((m) => {
     const time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const achPrefix = (m.achievement_emoji && m.achievement_name)
+      ? `<span class="hub-msg-achievement" title="${escapeHtml(m.achievement_name)}">${escapeHtml(m.achievement_emoji)}</span> `
+      : '';
     return `<div class="hub-msg">
       <span class="hub-msg-time">${time}</span>
-      <span class="hub-msg-user">${escapeHtml(m.username || '?')}</span>
+      ${achPrefix}<span class="hub-msg-user">${escapeHtml(m.username || '?')}</span>
       <span class="hub-msg-body">${escapeHtml(m.body || '')}</span>
     </div>`;
   }).join('');
@@ -2028,7 +2322,13 @@ async function sendHubMessage() {
 
   if (sendBtn) sendBtn.disabled = true;
   recordChatTimestamp();
-  const { error } = await supabase.from('messages').insert({ username, body });
+  const equipped = getEquippedAchievementData();
+  const insertRow = { username, body };
+  if (equipped) {
+    insertRow.achievement_emoji = equipped.emoji;
+    insertRow.achievement_name = equipped.name;
+  }
+  const { error } = await supabase.from('messages').insert(insertRow);
   if (!error) {
     input.value = '';
     spamStrikes = Math.max(0, spamStrikes - 1);
@@ -3295,6 +3595,8 @@ function renderHub() {
   const usernameInput = document.getElementById('hub-username');
   if (usernameInput) usernameInput.value = getHubUsername();
   if (status) status.textContent = isHubAvailable() ? 'Connected. Set a display name, then chat or post trades below.' : 'Hub is offline. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to use chat and trading.';
+  checkAllAchievements();
+  renderAchievementsPanel();
   if (!supabase) return;
   refreshBanCache();
   loadHubMessages();
@@ -4848,7 +5150,12 @@ async function roll() {
   addQuestProgress('luck_reach', mult);
   addQuestProgress('rarity_hit', item.rarity);
 
-  if (mult > 1) setLuckMultiplier(1);
+  // Multi-roll luck: decrement rolls remaining; only reset luck when rolls hit 0
+  const rolls = getLuckRolls();
+  if (mult > 1 && rolls > 0) {
+    setLuckRolls(rolls - 1);
+    if (getLuckRolls() === 0) setLuckMultiplier(1);
+  } else if (mult > 1) setLuckMultiplier(1);
 
   // ── Elder / Ascendant / Emperor / 100Q / Tier 2 rolled ────────────────────────
   if (item.isElder || item.isAscendant || item.isEmperor || item.is100Q || item.isTier2) {
@@ -4877,6 +5184,7 @@ async function roll() {
     checkElderUnlock();
     checkAscendantUnlock();
     checkEmperorUnlock();
+    checkAllAchievements();
     await showElderCutscene(item);
     await checkAccomplishments();
     return;
@@ -4922,6 +5230,7 @@ async function roll() {
   renderCoins();
   renderLuck();
   if (item.rarity >= RARE_ROLL_THRESHOLD) reportRareRoll(item);
+  checkAllAchievements();
 
   // Biome bonus roll — only fires during an active biome
   if (activeBiome && new Date(activeBiome.ends_at) > Date.now()) {
@@ -5527,6 +5836,9 @@ function init() {
   });
   document.getElementById('materialseller-popup-btn')?.addEventListener('click', openMaterialSeller);
   document.getElementById('materialseller-close')?.addEventListener('click', closeMaterialSeller);
+  document.getElementById('mining-popup-btn')?.addEventListener('click', openMining);
+  document.getElementById('mining-close')?.addEventListener('click', closeMining);
+  document.getElementById('mining-start-btn')?.addEventListener('click', startMiningGame);
   document.getElementById('materialseller-overlay')?.addEventListener('click', (e) => {
     if (e.target.id === 'materialseller-overlay') closeMaterialSeller();
   });

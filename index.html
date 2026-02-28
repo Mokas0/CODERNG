@@ -112,6 +112,11 @@
               <p id="hub-status" class="hub-status"></p>
             </div>
             <div class="hub-sections">
+              <div class="hub-section hub-section--achievements">
+                <h3 class="hub-heading">Achievements</h3>
+                <p class="tab-desc">Unlock achievements by playing. Equip one to display next to your name in chat.</p>
+                <div id="hub-achievements-list" class="hub-achievements-list"></div>
+              </div>
               <div class="hub-section hub-section--chat">
                 <h3 class="hub-heading">Chat <span id="hub-chat-count" style="font-weight:400;font-size:0.75rem;opacity:0.5"></span></h3>
                 <div id="hub-chat-list" class="hub-chat-list"></div>
@@ -423,7 +428,7 @@
       <div id="crafter-overlay" class="admin-overlay hidden" aria-hidden="true">
         <div class="admin-panel crafter-panel">
           <h2 class="admin-title">The Crafter</h2>
-          <p class="admin-desc">Combine materials into potions. Get materials from the Material Seller or from Jia in World 2.</p>
+          <p class="admin-desc">Combine materials into potions. Get materials from the Material Seller, Mining minigame, or from Jia in World 2.</p>
           <h3 class="jia-section-title">Your materials</h3>
           <div id="crafter-materials" class="crafter-materials"></div>
           <h3 class="jia-section-title">Recipes</h3>
@@ -438,6 +443,22 @@
           <p class="admin-desc">Buy crafting materials for coins.</p>
           <div id="materialseller-shop-list" class="shop-list"></div>
           <button type="button" id="materialseller-close" class="admin-btn">Done</button>
+        </div>
+      </div>
+      <button type="button" id="mining-popup-btn" class="mining-popup-btn">Mining</button>
+      <div id="mining-overlay" class="admin-overlay hidden" aria-hidden="true">
+        <div class="admin-panel mining-panel">
+          <h2 class="admin-title">Mining — Minesweeper</h2>
+          <p class="admin-desc">Play Minesweeper to find ores! Pay a coin fee to start. Reveal safe cells to earn materials. Hit a mine and you're done. Win to get the best rewards for crafting luck potions.</p>
+          <div class="mining-header">
+            <span id="mining-status" class="mining-status">Pay 50 coins to start a new game.</span>
+            <span id="mining-stats" class="mining-stats"></span>
+          </div>
+          <div id="mining-grid" class="mining-grid"></div>
+          <div class="mining-actions">
+            <button type="button" id="mining-start-btn" class="admin-btn">Start game (50 coins)</button>
+            <button type="button" id="mining-close" class="admin-btn admin-btn--secondary">Done</button>
+          </div>
         </div>
       </div>
       <div id="dev-panel-overlay" class="admin-overlay hidden" aria-hidden="true">

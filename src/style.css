@@ -944,6 +944,85 @@ body {
   margin-bottom: 1rem;
 }
 
+/* Mining (Minesweeper minigame) */
+.mining-popup-btn {
+  position: fixed;
+  top: 0.75rem;
+  left: 14.25rem;
+  z-index: 1000;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #3d5a4a, #1e3328);
+  border: 3px solid #5a8a6e;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(58, 122, 90, 0.5), 0 0 0 1px rgba(255,255,255,0.1);
+}
+.mining-popup-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 28px rgba(58, 122, 90, 0.65), 0 0 0 1px rgba(255,255,255,0.15);
+}
+.mining-panel {
+  max-width: 540px;
+}
+.mining-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.mining-status {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.mining-stats {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.mining-grid {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 1rem;
+  aspect-ratio: 10 / 8;
+  max-height: 280px;
+}
+.mining-cell {
+  min-width: 0;
+  min-height: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  background: linear-gradient(145deg, #3a4a3e, #2a3530);
+  border: 2px solid #4a5a4e;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.mining-cell:hover:not(:disabled) {
+  background: linear-gradient(145deg, #4a5a4e, #3a4540);
+  transform: scale(1.02);
+}
+.mining-cell--revealed {
+  background: #2a3530;
+  border-color: #3a4540;
+  cursor: default;
+  color: #8fc9a0;
+}
+.mining-cell--mine {
+  background: linear-gradient(145deg, #5a3030, #3a2020);
+  border-color: #8a4040;
+  color: #ff6b6b;
+}
+.mining-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 /* Theo's Workshop */
 .theo-shop {
   margin-top: 2rem;
@@ -1747,6 +1826,51 @@ body {
 @keyframes warn-in {
   0%   { opacity: 0; transform: translateY(-4px); }
   100% { opacity: 1; transform: translateY(0); }
+}
+
+.hub-msg-achievement {
+  margin-right: 0.2rem;
+  font-size: 1em;
+  opacity: 0.9;
+}
+.hub-section--achievements {
+  margin-bottom: 1rem;
+}
+.hub-achievements-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.achievement-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+}
+.achievement-row--locked {
+  opacity: 0.5;
+  filter: grayscale(0.5);
+}
+.achievement-emoji {
+  font-size: 1.1em;
+}
+.achievement-equip-btn {
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+.achievement-equip-btn--active {
+  background: var(--accent);
+  color: var(--bg);
+}
+.achievement-locked {
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 /* Casino */

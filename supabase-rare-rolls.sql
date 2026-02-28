@@ -7,6 +7,7 @@ create table if not exists public.rare_rolls (
   username   text,
   aura_text  text not null,
   aura_rarity bigint not null,
+  aura_tier  text,
   font       text,
   color      text,
   font_weight text,

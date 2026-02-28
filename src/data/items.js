@@ -1014,6 +1014,18 @@ export const SELLER_MATERIALS = [
   { id: 20103, name: 'Luck Essence', costCoins: 35, emoji: '✨' },
 ];
 
+// Mining materials — from Minesweeper minigame (ids 20201+)
+export const MINING_MATERIALS = [
+  { id: 20201, name: 'Coal', emoji: '🪨', tier: 1 },
+  { id: 20202, name: 'Iron Ore', emoji: '⚙️', tier: 2 },
+  { id: 20203, name: 'Copper Ore', emoji: '🟫', tier: 2 },
+  { id: 20204, name: 'Silver Shard', emoji: '🩶', tier: 3 },
+  { id: 20205, name: 'Gold Nugget', emoji: '🟡', tier: 3 },
+  { id: 20206, name: 'Crystal Shard', emoji: '💎', tier: 4 },
+  { id: 20207, name: 'Mystic Dust', emoji: '✨', tier: 4 },
+  { id: 20208, name: 'Fortune Ore', emoji: '🌟', tier: 5 },
+];
+
 // Tier 2 Auras — only unlockable after receiving THE SUPREME KING. Post-Supreme tier.
 export const TIER2_AURAS = [
   { id: 9980, text: 'THE TRANSCENDENT',

@@ -5,6 +5,8 @@ create table if not exists public.messages (
   id bigint generated always as identity primary key,
   username text not null,
   body text not null,
+  achievement_emoji text,
+  achievement_name text,
   created_at timestamptz default now()
 );
 
