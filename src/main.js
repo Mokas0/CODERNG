@@ -2372,6 +2372,7 @@ function renderCasino() {
   if (coinsEl) coinsEl.textContent = casinoCoinBalance.toLocaleString();
   if (!supabase) return;
   (async () => {
+    if (authUser) await refreshAuthProfile();
     await casinoFetchBalance();
     if (coinsEl) coinsEl.textContent = casinoCoinBalance.toLocaleString();
     const amountInput = document.getElementById('casino-coinflip-amount');
@@ -2386,10 +2387,17 @@ function renderCasino() {
     const vaultEl = document.getElementById('casino-aura-vault');
     if (vaultEl) {
       const locked = getLockedStorage();
+      const canImportToBazaar = authUser && authProfile?.casino_username && (authProfile.casino_username || '').toLowerCase() === (getCasinoUsername() || '').toLowerCase();
       let html = '<p class="casino-vault-label">In vault (for itemflip):</p>';
       if (casinoAuraVault.length) {
-        html += casinoAuraVault.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color};font-weight:${a.fontWeight || '400'};font-style:${a.fontStyle || 'normal'};text-shadow:${a.textShadow || 'none'}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><button type="button" class="hub-btn casino-withdraw-aura-btn" data-aura-id="${a.id}">Withdraw</button></div>`).join('');
+        html += casinoAuraVault.map((a) => {
+          const importBtn = canImportToBazaar ? `<button type="button" class="hub-btn hub-btn--small bazaar-import-from-casino-btn" data-aura-id="${a.id}" title="Send to Bazaar inventory">Import to Bazaar</button>` : '';
+          return `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color};font-weight:${a.fontWeight || '400'};font-style:${a.fontStyle || 'normal'};text-shadow:${a.textShadow || 'none'}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span>${importBtn}<button type="button" class="hub-btn casino-withdraw-aura-btn" data-aura-id="${a.id}">Withdraw</button></div>`;
+        }).join('');
       } else html += '<p class="casino-empty">No auras in vault. Deposit from Locked tab.</p>';
+      if (casinoAuraVault.length && authUser && !canImportToBazaar) {
+        html += '<p class="casino-vault-import-hint">Link your vault in Bazaar (My shop) to enable Import to Bazaar.</p>';
+      }
       html += '<p class="casino-vault-label">Deposit from Locked (below):</p>';
       if (locked.length) {
         html += locked.map((h, i) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${(h.font || '').replace(/'/g, "\\'")}';color:${h.color || '#fff'}">${escapeHtml(h.text)}</span><span class="history-rarity">${formatRarity(h.rarity)}</span><button type="button" class="hub-btn casino-deposit-aura-btn" data-locked-index="${i}">Deposit</button></div>`).join('');
@@ -2401,6 +2409,12 @@ function renderCasino() {
         btn.addEventListener('click', () => casinoWithdrawAura(id));
       });
       vaultEl.querySelectorAll('.casino-deposit-aura-btn').forEach((btn) => btn.addEventListener('click', () => casinoDepositAura(Number(btn.dataset.lockedIndex))));
+      vaultEl.querySelectorAll('.bazaar-import-from-casino-btn').forEach((btn) => btn.addEventListener('click', async () => {
+        const id = Number(btn.dataset.auraId);
+        if (!authUser || !supabase) return;
+        await bazaarImportAura(id);
+        switchTab('bazaar');
+      }));
     }
     const auraSelect = document.getElementById('casino-itemflip-aura');
     if (auraSelect) {

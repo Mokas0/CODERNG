@@ -2067,6 +2067,17 @@ body {
   font-size: 0.85rem;
   margin: 0 0.25rem;
 }
+.bazaar-import-hint {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin: 0 0 0.5rem;
+  max-width: 42rem;
+}
+.casino-vault-import-hint {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 0.25rem 0;
+}
 .bazaar-link-code-box {
   margin-bottom: 0.75rem;
   padding: 0.5rem 0;
