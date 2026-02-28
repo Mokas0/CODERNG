@@ -1722,6 +1722,10 @@ body {
   font-size: 0.75rem;
   min-width: auto;
 }
+.hub-btn--prominent {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
 .hub-error {
   color: var(--danger);
   font-size: 0.8125rem;
@@ -2060,6 +2064,20 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
+}
+.bazaar-link-one-click {
+  margin-bottom: 0.5rem;
+}
+.bazaar-link-one-click .hub-btn {
+  margin-right: 0.5rem;
+}
+.bazaar-link-manual {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+.bazaar-link-manual summary {
+  cursor: pointer;
+  color: var(--text-dim);
 }
 .bazaar-link-or {
   align-self: center;

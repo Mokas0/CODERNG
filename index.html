@@ -22,6 +22,7 @@
           <span class="luck-wrap">Luck: <span id="luck-value">1× (normal)</span></span>
           <button type="button" id="luck-btn" class="luck-btn">Boost luck (50 coins)</button>
           <button type="button" id="bazaar-quick-btn" class="bazaar-quick-btn" title="Open Bazaar">🏪 Bazaar</button>
+          <button type="button" id="link-casino-btn" class="bazaar-quick-btn link-casino-btn hidden" title="One-click link Casino vault to Bazaar">🔗 Link Casino</button>
           <button type="button" id="settings-btn" class="settings-btn" title="Settings">⚙️</button>
           <button type="button" id="dev-panel-btn" class="dev-panel-btn hidden" title="Admin panel">🔧</button>
           <div class="auth-bar">
@@ -164,10 +165,10 @@
               <div class="casino-section">
                 <h3 class="hub-heading">Aura vault</h3>
                 <p class="tab-desc">Deposit auras from Locked storage to use in itemflip.</p>
-                <div class="bazaar-link-code-box">
-                  <p class="tab-desc">Link to Bazaar account: generate a code in Casino, then enter it in the Bazaar tab while signed in.</p>
-                  <button type="button" id="casino-generate-link-code-btn" class="hub-btn">Generate link code</button>
-                  <p id="casino-link-code-display" class="casino-link-code-display"></p>
+                <div class="bazaar-link-one-click">
+                  <button type="button" id="casino-link-to-bazaar-btn" class="hub-btn hub-btn--prominent">Link to Bazaar</button>
+                  <button type="button" id="casino-generate-link-code-btn" class="hub-btn hub-btn--secondary hub-btn--small" title="For manual link from another device">Get code</button>
+                  <p id="casino-link-to-bazaar-status" class="hub-status"></p>
                 </div>
                 <div id="casino-aura-vault" class="casino-aura-vault"></div>
               </div>
@@ -239,14 +240,16 @@
                 <div id="bazaar-myshop-anchor" class="casino-section bazaar-section-anchor">
                   <h3 class="hub-heading">My shop</h3>
                   <div class="bazaar-link-casino">
+                    <button type="button" id="bazaar-link-btn-single" class="hub-btn hub-btn--prominent">Link my Casino</button>
                     <p id="bazaar-link-status" class="hub-status"></p>
-                    <div id="bazaar-link-form" class="hub-chat-form">
-                      <button type="button" id="bazaar-auto-link-btn" class="hub-btn">Link my Casino</button>
-                      <span class="bazaar-link-or">or</span>
-                      <input type="text" id="bazaar-link-username" class="hub-input" placeholder="Casino display name" maxlength="24" />
-                      <input type="text" id="bazaar-link-code" class="hub-input" placeholder="6-digit code" maxlength="6" />
-                      <button type="button" id="bazaar-link-btn" class="hub-btn">Link vault</button>
-                    </div>
+                    <details class="bazaar-link-manual">
+                      <summary>Having trouble? Manual link</summary>
+                      <div id="bazaar-link-form" class="hub-chat-form">
+                        <input type="text" id="bazaar-link-username" class="hub-input" placeholder="Casino display name" maxlength="24" />
+                        <input type="text" id="bazaar-link-code" class="hub-input" placeholder="6-digit code" maxlength="6" />
+                        <button type="button" id="bazaar-link-btn" class="hub-btn">Link with code</button>
+                      </div>
+                    </details>
                   </div>
                   <h4 class="bazaar-subheading">Import from Casino vault</h4>
                   <p class="bazaar-import-hint">Auras here come from your Casino vault. To add auras: 1) Lock them from Past rolls. 2) In the <strong>Casino</strong> tab, click Deposit on locked items. 3) Click <strong>Import to Bazaar</strong> below (or use <strong>To Bazaar</strong> on Locked items for one-click).</p>
