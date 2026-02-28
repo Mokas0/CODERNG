@@ -3,6 +3,7 @@
 -- Add bazaar_listings to Realtime (Database → Replication).
 
 -- Profiles: one per auth user (display name, optional linked Casino username)
+-- Idempotent: safe to run multiple times (drop policy before create policy)
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text not null,
@@ -269,6 +270,45 @@ begin
 end;
 $$;
 
+-- RPC: import all importable auras from Casino vault into Bazaar (skips those staked in itemflip)
+create or replace function public.bazaar_import_all_from_casino()
+returns table(success boolean, imported_count int, message text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_username text;
+  v_row record;
+  v_count int := 0;
+begin
+  if auth.uid() is null then
+    return query select false, 0, 'Not signed in'::text;
+    return;
+  end if;
+  select casino_username into v_username from profiles where id = auth.uid();
+  if v_username is null or trim(v_username) = '' then
+    return query select false, 0, 'Link your Casino vault first'::text;
+    return;
+  end if;
+  for v_row in
+    select c.id, c.item_json
+    from casino_aura_inventory c
+    where c.username = v_username
+      and not exists (
+        select 1 from itemflip_challenges i
+        where (i.creator_aura_id = c.id or i.acceptor_aura_id = c.id)
+          and i.status in ('open', 'matched')
+      )
+  loop
+    delete from casino_aura_inventory where id = v_row.id and username = v_username;
+    insert into bazaar_seller_inventory (user_id, item_json) values (auth.uid(), v_row.item_json);
+    v_count := v_count + 1;
+  end loop;
+  return query select true, v_count, ''::text;
+end;
+$$;
+
 -- RPC: create listing from Bazaar inventory
 create or replace function public.bazaar_create_listing(p_inventory_id bigint, p_price int)
 returns table(success boolean, listing_id bigint, message text)
@@ -427,6 +467,7 @@ create table if not exists public.bazaar_business_stats (
 );
 
 alter table public.bazaar_business_stats enable row level security;
+drop policy if exists "Bazaar business stats read" on public.bazaar_business_stats;
 create policy "Bazaar business stats read" on public.bazaar_business_stats for select using (true);
 
 -- RPC: invest in another player's business
@@ -524,6 +565,7 @@ create table if not exists public.bazaar_volume_stats (
 );
 
 alter table public.bazaar_volume_stats enable row level security;
+drop policy if exists "Bazaar volume stats read" on public.bazaar_volume_stats;
 create policy "Bazaar volume stats read" on public.bazaar_volume_stats for select using (true);
 
 insert into public.bazaar_volume_stats (id, period_start, sales_count, volume_coins)
@@ -538,6 +580,8 @@ create table if not exists public.bazaar_stock_ticker (
 );
 
 alter table public.bazaar_stock_ticker enable row level security;
+drop policy if exists "Bazaar ticker read" on public.bazaar_stock_ticker;
+drop policy if exists "Bazaar ticker rpc" on public.bazaar_stock_ticker;
 create policy "Bazaar ticker read" on public.bazaar_stock_ticker for select using (true);
 create policy "Bazaar ticker rpc" on public.bazaar_stock_ticker for all using (true);
 
@@ -554,6 +598,7 @@ create table if not exists public.bazaar_stock_holdings (
 );
 
 alter table public.bazaar_stock_holdings enable row level security;
+drop policy if exists "Bazaar holdings own" on public.bazaar_stock_holdings;
 create policy "Bazaar holdings own" on public.bazaar_stock_holdings for all using (auth.uid() = user_id);
 
 -- Trigger: update volume stats and business sales when a listing is sold
@@ -734,6 +779,7 @@ grant execute on function public.link_casino_to_account(text, text) to authentic
 grant execute on function public.bazaar_deposit_coins(int) to authenticated;
 grant execute on function public.bazaar_withdraw_coins(int) to authenticated;
 grant execute on function public.bazaar_import_aura_from_casino(bigint) to authenticated;
+grant execute on function public.bazaar_import_all_from_casino() to authenticated;
 grant execute on function public.bazaar_create_listing(bigint, int) to authenticated;
 grant execute on function public.bazaar_buy_listing(bigint) to authenticated;
 grant execute on function public.bazaar_cancel_listing(bigint) to authenticated;

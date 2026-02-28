@@ -2073,6 +2073,10 @@ body {
   margin: 0 0 0.5rem;
   max-width: 42rem;
 }
+.bazaar-import-all-btn,
+.casino-import-all-to-bazaar-btn {
+  margin-bottom: 0.5rem;
+}
 .casino-vault-import-hint {
   font-size: 0.85rem;
   color: var(--text-dim);
