@@ -1,5 +1,6 @@
 import './style.css';
 import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, ACCOMPLISHMENT_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, MINING_MATERIALS, classifyAuraType } from './data/items.js';
+import { auraToRealmItem, REALM_MAP_NODES, REALM_DUNGEONS, REALM_ENEMIES, REALM_NPCS, REALM_QUESTS } from './data/realm.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
@@ -51,6 +52,13 @@ const STORAGE_KEYS = {
   luckRolls: STORAGE_PREFIX + 'luck_rolls', // rolls remaining for multi-roll luck potions
   achievementsUnlocked: STORAGE_PREFIX + 'achievements_unlocked',
   achievementEquipped: STORAGE_PREFIX + 'achievement_equipped',
+  // Realm (shared across World 1 and 2)
+  realmInventory: 'rng_realm_inventory',
+  realmLoadout: 'rng_realm_loadout',
+  realmMapProgress: 'rng_realm_map_progress',
+  realmQuests: 'rng_realm_quests',
+  realmPlayerStats: 'rng_realm_player_stats',
+  realmDungeonState: 'rng_realm_dungeon_state',
 };
 
 const WORLD_CONFIG = {
@@ -185,6 +193,53 @@ function getLockedStorage() {
 }
 function setLockedStorage(arr) {
   localStorage.setItem(STORAGE_KEYS.lockedStorage, JSON.stringify(arr));
+}
+
+// ——— Realm (RPG world — shared across World 1 and 2) ———
+function getRealmInventory() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.realmInventory) || '[]'); }
+  catch { return []; }
+}
+function setRealmInventory(arr) {
+  localStorage.setItem(STORAGE_KEYS.realmInventory, JSON.stringify(arr || []));
+}
+function getRealmLoadout() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.realmLoadout) || '{}'); }
+  catch { return {}; }
+}
+function setRealmLoadout(obj) {
+  localStorage.setItem(STORAGE_KEYS.realmLoadout, JSON.stringify(obj || {}));
+}
+function getRealmMapProgress() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.realmMapProgress) || '{}'); }
+  catch { return {}; }
+}
+function setRealmMapProgress(obj) {
+  localStorage.setItem(STORAGE_KEYS.realmMapProgress, JSON.stringify(obj || {}));
+}
+function getRealmQuests() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.realmQuests) || '{}'); }
+  catch { return {}; }
+}
+function setRealmQuests(obj) {
+  localStorage.setItem(STORAGE_KEYS.realmQuests, JSON.stringify(obj || {}));
+}
+function getRealmPlayerStats() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.realmPlayerStats);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+function setRealmPlayerStats(obj) {
+  localStorage.setItem(STORAGE_KEYS.realmPlayerStats, JSON.stringify(obj || {}));
+}
+function getRealmDungeonState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.realmDungeonState) || 'null'); }
+  catch { return null; }
+}
+function setRealmDungeonState(obj) {
+  localStorage.setItem(STORAGE_KEYS.realmDungeonState, obj ? JSON.stringify(obj) : 'null');
 }
 
 function getPotionInventory() {
@@ -3873,7 +3928,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests', 'competition'].forEach((id) => {
+  ['past', 'locked', 'shop', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests', 'competition', 'realm'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -3888,6 +3943,7 @@ function switchTab(tabName) {
   if (tabName === 'store')  renderStore();
   if (tabName === 'quests') renderQuestBoard();
   if (tabName === 'competition') renderCompetition();
+  if (tabName === 'realm') renderRealm();
 }
 
 const RARE_ROLL_THRESHOLD  = 1_000_000_000_000;   // Jerry broadcast threshold (1T)
@@ -5560,6 +5616,374 @@ function renderTycoon() {
   }
   list.innerHTML = html;
   document.getElementById('tycoon-buy-btn')?.addEventListener('click', buyTycoonUpgrade);
+}
+
+// ——— Realm (RPG world) ———
+const REALM_BASE_HP = 100;
+const REALM_BASE_ATK = 5;
+const REALM_BASE_DEF = 3;
+
+function getEffectiveRealmStats() {
+  const base = getRealmPlayerStats() || {
+    hp: REALM_BASE_HP, maxHp: REALM_BASE_HP, atk: REALM_BASE_ATK, def: REALM_BASE_DEF,
+    gold: 0, level: 1, exp: 0, totalExp: 0,
+  };
+  const loadout = getRealmLoadout();
+  let atk = base.atk ?? REALM_BASE_ATK;
+  let def = base.def ?? REALM_BASE_DEF;
+  let maxHp = base.maxHp ?? REALM_BASE_HP;
+  const specials = [];
+  for (const slot of ['weapon', 'armor', 'artifact']) {
+    const item = loadout[slot];
+    if (!item) continue;
+    const mapped = auraToRealmItem(item, classifyAuraType);
+    atk += mapped.atkBonus || 0;
+    def += mapped.defBonus || 0;
+    if (mapped.specialEffect) specials.push(mapped.specialEffect);
+  }
+  return { ...base, atk, def, maxHp, specials };
+}
+
+function initRealmIfNeeded() {
+  let progress = getRealmMapProgress();
+  if (!progress.currentCellId) {
+    progress = { currentCellId: 'village', visitedCells: ['village'] };
+    setRealmMapProgress(progress);
+  }
+  let stats = getRealmPlayerStats();
+  if (!stats) {
+    stats = {
+      hp: REALM_BASE_HP, maxHp: REALM_BASE_HP, atk: REALM_BASE_ATK, def: REALM_BASE_DEF,
+      gold: 0, level: 1, exp: 0, totalExp: 0,
+    };
+    setRealmPlayerStats(stats);
+  }
+}
+
+function realmRecordKill(enemyId) {
+  const qProgress = getRealmQuests();
+  let changed = false;
+  const s = getRealmPlayerStats() || {};
+  for (const q of REALM_QUESTS) {
+    const obj = q.objectives?.[0];
+    if (!obj || obj.type !== 'kill' || (obj.target !== 'any' && obj.target !== enemyId)) continue;
+    const p = qProgress[q.id] || { progress: 0, completed: false };
+    if (p.completed) continue;
+    p.progress = Math.min((p.progress || 0) + 1, obj.count);
+    const justCompleted = p.progress >= obj.count && !p.completed;
+    if (p.progress >= obj.count) p.completed = true;
+    qProgress[q.id] = p;
+    changed = true;
+    if (justCompleted && q.rewards) {
+      s.gold = (s.gold || 0) + (q.rewards.gold || 0);
+      s.exp = (s.exp || 0) + (q.rewards.exp || 0);
+      s.totalExp = (s.totalExp || 0) + (q.rewards.exp || 0);
+      setRealmPlayerStats(s);
+    }
+  }
+  if (changed) setRealmQuests(qProgress);
+}
+
+function realmImportFromLocked(lockedIndex) {
+  const locked = getLockedStorage();
+  if (lockedIndex < 0 || lockedIndex >= locked.length) return;
+  const [aura] = locked.splice(lockedIndex, 1);
+  setLockedStorage(locked);
+  const inv = getRealmInventory();
+  inv.push(aura);
+  setRealmInventory(inv);
+  renderLockedStorage();
+  renderRealm();
+}
+
+function realmEquip(slot, invIndex) {
+  const inv = getRealmInventory();
+  if (invIndex < 0 || invIndex >= inv.length) return;
+  const loadout = getRealmLoadout();
+  const item = inv[invIndex];
+  const mapped = auraToRealmItem(item, classifyAuraType);
+  if (mapped.slot !== slot) return;
+  loadout[slot] = item;
+  setRealmLoadout(loadout);
+  renderRealm();
+}
+
+function realmUnequip(slot) {
+  const loadout = getRealmLoadout();
+  delete loadout[slot];
+  setRealmLoadout(loadout);
+  renderRealm();
+}
+
+function renderRealm() {
+  initRealmIfNeeded();
+  const loadout = getRealmLoadout();
+  const inv = getRealmInventory();
+  const locked = getLockedStorage();
+  const stats = getEffectiveRealmStats();
+  const progress = getRealmMapProgress();
+  const currentId = progress.currentCellId || 'village';
+  const currentNode = REALM_MAP_NODES.find((n) => n.id === currentId);
+
+  // Loadout slots
+  const slotsEl = document.getElementById('realm-loadout-slots');
+  if (slotsEl) {
+    const slotLabels = { weapon: '⚔️ Weapon', armor: '🛡️ Armor', artifact: '✨ Artifact' };
+    slotsEl.innerHTML = ['weapon', 'armor', 'artifact'].map((slot) => {
+      const item = loadout[slot];
+      if (!item) {
+        return `<div class="realm-slot realm-slot--empty" data-slot="${slot}">
+          <span class="realm-slot-label">${slotLabels[slot]}</span>
+          <span class="realm-slot-empty">Empty</span>
+        </div>`;
+      }
+      const mapped = auraToRealmItem(item, classifyAuraType);
+      return `<div class="realm-slot" data-slot="${slot}">
+        <span class="realm-slot-label">${slotLabels[slot]}</span>
+        <span class="realm-slot-name" style="color:${item.color || '#fff'}">${escapeHtml(item.text || '?')}</span>
+        <span class="realm-slot-stats">+${mapped.atkBonus} ATK, +${mapped.defBonus} DEF</span>
+        <button type="button" class="hub-btn hub-btn--small realm-unequip-btn" data-slot="${slot}">Unequip</button>
+      </div>`;
+    }).join('');
+    slotsEl.querySelectorAll('.realm-unequip-btn').forEach((btn) => {
+      btn.addEventListener('click', () => realmUnequip(btn.dataset.slot));
+    });
+  }
+
+  // Stats
+  const statsEl = document.getElementById('realm-stats');
+  if (statsEl) {
+    statsEl.innerHTML = `HP: ${stats.hp}/${stats.maxHp} · ATK: ${stats.atk} · DEF: ${stats.def} · Gold: ${stats.gold} · Level ${stats.level}`;
+  }
+
+  // Locked import list
+  const lockedEl = document.getElementById('realm-locked-import');
+  if (lockedEl) {
+    if (locked.length === 0) {
+      lockedEl.innerHTML = '<p class="realm-empty">No auras in Locked storage. Lock some from Past rolls first.</p>';
+    } else {
+      lockedEl.innerHTML = locked.map((h, i) => {
+        const idx = locked.length - 1 - i;
+        return `<div class="realm-locked-row">
+          <span class="history-text" style="font-family:'${h.font || 'Inter'}';color:${h.color || '#fff'}">${escapeHtml(h.text || '?')}</span>
+          <span class="history-rarity">${formatRarity(h.rarity)}</span>
+          <button type="button" class="hub-btn hub-btn--small realm-import-btn" data-locked-index="${idx}">Import</button>
+        </div>`;
+      }).join('');
+      lockedEl.querySelectorAll('.realm-import-btn').forEach((btn) => {
+        btn.addEventListener('click', () => realmImportFromLocked(parseInt(btn.dataset.lockedIndex, 10)));
+      });
+    }
+  }
+
+  // Realm inventory
+  const invEl = document.getElementById('realm-inventory-list');
+  if (invEl) {
+    if (inv.length === 0) {
+      invEl.innerHTML = '<p class="realm-empty">No auras in Realm. Import from Locked above.</p>';
+    } else {
+      invEl.innerHTML = inv.map((item, i) => {
+        const mapped = auraToRealmItem(item, classifyAuraType);
+        return `<div class="realm-inv-row">
+          <span class="history-text" style="font-family:'${item.font || 'Inter'}';color:${item.color || '#fff'}">${escapeHtml(item.text || '?')}</span>
+          <span class="realm-inv-slot">${mapped.slot}</span>
+          <span class="realm-inv-stats">+${mapped.atkBonus} ATK, +${mapped.defBonus} DEF</span>
+          <button type="button" class="hub-btn hub-btn--small realm-equip-weapon" data-inv-index="${i}" ${mapped.slot !== 'weapon' ? 'disabled' : ''}>Equip Weapon</button>
+          <button type="button" class="hub-btn hub-btn--small realm-equip-armor" data-inv-index="${i}" ${mapped.slot !== 'armor' ? 'disabled' : ''}>Equip Armor</button>
+          <button type="button" class="hub-btn hub-btn--small realm-equip-artifact" data-inv-index="${i}" ${mapped.slot !== 'artifact' ? 'disabled' : ''}>Equip Artifact</button>
+        </div>`;
+      }).join('');
+      invEl.querySelectorAll('.realm-equip-weapon').forEach((btn) => {
+        if (!btn.disabled) btn.addEventListener('click', () => realmEquip('weapon', parseInt(btn.dataset.invIndex, 10)));
+      });
+      invEl.querySelectorAll('.realm-equip-armor').forEach((btn) => {
+        if (!btn.disabled) btn.addEventListener('click', () => realmEquip('armor', parseInt(btn.dataset.invIndex, 10)));
+      });
+      invEl.querySelectorAll('.realm-equip-artifact').forEach((btn) => {
+        if (!btn.disabled) btn.addEventListener('click', () => realmEquip('artifact', parseInt(btn.dataset.invIndex, 10)));
+      });
+    }
+  }
+
+  // Map — current location and travel
+  const locEl = document.getElementById('realm-current-location');
+  const travelEl = document.getElementById('realm-travel-buttons');
+  const actionsEl = document.getElementById('realm-location-actions');
+  if (locEl && currentNode) {
+    locEl.innerHTML = `<strong>${currentNode.name}</strong> — ${currentNode.desc}`;
+  }
+  if (travelEl && currentNode) {
+    const connections = currentNode.connections || [];
+    const nodes = REALM_MAP_NODES.filter((n) => connections.includes(n.id));
+    travelEl.innerHTML = nodes.length
+      ? nodes.map((n) => `<button type="button" class="hub-btn realm-travel-btn" data-target="${n.id}">Travel to ${n.name}</button>`).join('')
+      : '<p class="realm-empty">No exits.</p>';
+    travelEl.querySelectorAll('.realm-travel-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.target;
+        const visited = new Set(progress.visitedCells || []);
+        visited.add(target);
+        setRealmMapProgress({ currentCellId: target, visitedCells: [...visited] });
+        renderRealm();
+      });
+    });
+  }
+  if (actionsEl && currentNode) {
+    const hasEnemy = currentNode.enemies && currentNode.enemies.length > 0;
+    const hasDungeon = currentNode.dungeonId;
+    const hasNpc = currentNode.npcId;
+    let actions = '';
+    if (hasEnemy) {
+      actions += `<button type="button" class="hub-btn realm-explore-btn">Explore (fight)</button>`;
+    }
+    if (hasDungeon) {
+      actions += `<button type="button" class="hub-btn realm-enter-dungeon-btn" data-dungeon="${currentNode.dungeonId}">Enter Dungeon</button>`;
+    }
+    if (hasNpc) {
+      actions += `<button type="button" class="hub-btn realm-talk-btn" data-npc="${currentNode.npcId}">Talk</button>`;
+    }
+    actionsEl.innerHTML = actions || '<p class="realm-empty">Nothing to do here.</p>';
+    actionsEl.querySelector('.realm-explore-btn')?.addEventListener('click', () => {
+      const enemyId = currentNode.enemies[0];
+      if (enemyId) startRealmCombat(enemyId);
+    });
+    actionsEl.querySelector('.realm-enter-dungeon-btn')?.addEventListener('click', (e) => {
+      startRealmDungeon(e.target.dataset.dungeon);
+    });
+    actionsEl.querySelector('.realm-talk-btn')?.addEventListener('click', (e) => {
+      const npc = REALM_NPCS[e.target.dataset.npc];
+      if (npc) alert(npc.dialogue);
+    });
+  }
+
+  // Quest list
+  const questEl = document.getElementById('realm-quest-list');
+  if (questEl) {
+    const qProgress = getRealmQuests();
+    questEl.innerHTML = REALM_QUESTS.map((q) => {
+      const p = qProgress[q.id] || { progress: 0, completed: false };
+      const obj = q.objectives[0];
+      const done = p.completed || (obj.type === 'kill' && p.progress >= obj.count);
+      return `<div class="realm-quest-row ${done ? 'realm-quest-done' : ''}">
+        <strong>${q.name}</strong>: ${q.description}
+        <span class="realm-quest-progress">${p.completed ? 'Done' : `${p.progress || 0}/${obj.count}`}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+function startRealmCombat(enemyId) {
+  const enemy = REALM_ENEMIES[enemyId];
+  if (!enemy) return;
+  const stats = getEffectiveRealmStats();
+  const combatState = {
+    phase: 'active',
+    playerHp: stats.hp,
+    playerMaxHp: stats.maxHp,
+    enemyHp: enemy.hp,
+    enemyMaxHp: enemy.hp,
+    enemyId: enemy.id,
+    enemyName: enemy.name,
+    enemyAtk: enemy.atk,
+    enemyDef: enemy.def,
+    enemyGold: enemy.gold,
+    enemyExp: enemy.exp,
+  };
+  document.getElementById('realm-combat-panel')?.classList.remove('hidden');
+  renderRealmCombat(combatState);
+}
+
+function renderRealmCombat(state) {
+  const playerEl = document.getElementById('realm-combat-player');
+  const enemyEl = document.getElementById('realm-combat-enemy');
+  const logEl = document.getElementById('realm-combat-log');
+  const actionsEl = document.getElementById('realm-combat-actions');
+  if (!playerEl || !enemyEl) return;
+
+  playerEl.innerHTML = `You: HP ${state.playerHp}/${state.playerMaxHp}`;
+  enemyEl.innerHTML = `${state.enemyName}: HP ${state.enemyHp}/${state.enemyMaxHp}`;
+
+  if (state.phase === 'victory') {
+    logEl.innerHTML = (logEl.innerHTML || '') + '<div class="realm-combat-victory">Victory! +' + state.enemyGold + ' gold, +' + state.enemyExp + ' exp</div>';
+    actionsEl.innerHTML = '<button type="button" class="hub-btn realm-combat-done-btn">Done</button>';
+    actionsEl.querySelector('.realm-combat-done-btn')?.addEventListener('click', () => {
+      realmRecordKill(state.enemyId);
+      const s = getRealmPlayerStats() || {};
+      const dungeon = getRealmDungeonState();
+      if (dungeon?.dungeonId) {
+        const d = REALM_DUNGEONS[dungeon.dungeonId];
+        const rooms = d?.rooms || [];
+        const nextIndex = (dungeon.roomIndex || 0) + 1;
+        const rewards = { gold: (dungeon.rewards?.gold || 0) + state.enemyGold, exp: (dungeon.rewards?.exp || 0) + state.enemyExp };
+        if (nextIndex < rooms.length) {
+          setRealmDungeonState({ dungeonId: dungeon.dungeonId, roomIndex: nextIndex, rewards });
+          startRealmCombat(rooms[nextIndex].enemyId);
+          return;
+        }
+        s.gold = (s.gold || 0) + rewards.gold;
+        s.exp = (s.exp || 0) + rewards.exp;
+        s.totalExp = (s.totalExp || 0) + rewards.exp;
+        setRealmDungeonState(null);
+      } else {
+        s.gold = (s.gold || 0) + state.enemyGold;
+        s.exp = (s.exp || 0) + state.enemyExp;
+        s.totalExp = (s.totalExp || 0) + state.enemyExp;
+      }
+      setRealmPlayerStats(s);
+      document.getElementById('realm-combat-panel')?.classList.add('hidden');
+      renderRealm();
+    });
+    return;
+  }
+  if (state.phase === 'defeat') {
+    logEl.innerHTML = (logEl.innerHTML || '') + '<div class="realm-combat-defeat">Defeated. Respawn at village.</div>';
+    actionsEl.innerHTML = '<button type="button" class="hub-btn realm-combat-done-btn">Respawn</button>';
+    actionsEl.querySelector('.realm-combat-done-btn')?.addEventListener('click', () => {
+      const s = getRealmPlayerStats() || {};
+      s.hp = s.maxHp ?? REALM_BASE_HP;
+      setRealmPlayerStats(s);
+      setRealmMapProgress({ currentCellId: 'village', visitedCells: getRealmMapProgress().visitedCells || ['village'] });
+      document.getElementById('realm-combat-panel')?.classList.add('hidden');
+      renderRealm();
+    });
+    return;
+  }
+
+  actionsEl.innerHTML = '<button type="button" class="hub-btn realm-attack-btn">Attack</button>';
+  actionsEl.querySelector('.realm-attack-btn')?.addEventListener('click', () => {
+    const stats = getEffectiveRealmStats();
+    const damage = Math.max(1, stats.atk - state.enemyDef);
+    const newEnemyHp = Math.max(0, state.enemyHp - damage);
+    let log = logEl.innerHTML || '';
+    log += `<div>You deal ${damage} damage.</div>`;
+    if (newEnemyHp <= 0) {
+      log += '<div class="realm-combat-victory">Victory!</div>';
+      logEl.innerHTML = log;
+      state.phase = 'victory';
+      renderRealmCombat(state);
+      return;
+    }
+    state.enemyHp = newEnemyHp;
+    const enemyDamage = Math.max(1, state.enemyAtk - stats.def);
+    const newPlayerHp = Math.max(0, state.playerHp - enemyDamage);
+    log += `<div>${state.enemyName} deals ${enemyDamage} damage.</div>`;
+    logEl.innerHTML = log;
+    state.playerHp = newPlayerHp;
+    if (newPlayerHp <= 0) {
+      state.phase = 'defeat';
+      renderRealmCombat(state);
+      return;
+    }
+    renderRealmCombat(state);
+  });
+}
+
+function startRealmDungeon(dungeonId) {
+  const dungeon = REALM_DUNGEONS[dungeonId];
+  if (!dungeon) return;
+  setRealmDungeonState({ dungeonId, roomIndex: 0, rewards: { gold: 0, exp: 0 } });
+  const room = dungeon.rooms[0];
+  startRealmCombat(room.enemyId);
 }
 
 // ——— Store (PayPal in-app purchases) ———

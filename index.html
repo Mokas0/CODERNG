@@ -64,6 +64,7 @@
             <button type="button" class="tab-btn" data-tab="store" aria-selected="false">Store</button>
             <button type="button" class="tab-btn" data-tab="quests" aria-selected="false">Quests</button>
             <button type="button" class="tab-btn" data-tab="competition" aria-selected="false">Competition</button>
+            <button type="button" class="tab-btn" data-tab="realm" aria-selected="false">Realm</button>
           </div>
           <div id="tab-past" class="tab-panel" role="tabpanel">
             <p class="tab-desc">Salvage for coins or lock to move to storage.</p>
@@ -324,6 +325,40 @@
               <div class="competition-leaderboards">
                 <h4 class="competition-section-title">Leaderboard</h4>
                 <div id="competition-all-leaderboards" class="competition-all-leaderboards"></div>
+              </div>
+            </div>
+          </div>
+          <div id="tab-realm" class="tab-panel hidden" role="tabpanel" aria-hidden="true">
+            <p class="tab-desc">A realm where your locked auras become tools and artifacts. Import auras, equip them, and explore.</p>
+            <div class="realm-sections">
+              <div class="realm-section realm-loadout">
+                <h3 class="realm-heading">Loadout</h3>
+                <p class="realm-hint">Equip auras as Weapon, Armor, or Artifact.</p>
+                <div id="realm-loadout-slots" class="realm-loadout-slots"></div>
+                <div id="realm-stats" class="realm-stats"></div>
+              </div>
+              <div class="realm-section realm-inventory">
+                <h3 class="realm-heading">Realm Inventory</h3>
+                <p class="realm-hint">Import auras from Locked storage below, then equip.</p>
+                <div id="realm-locked-import" class="realm-locked-list"></div>
+                <div id="realm-inventory-list" class="realm-inventory-list"></div>
+              </div>
+              <div class="realm-section realm-map">
+                <h3 class="realm-heading">Map</h3>
+                <div id="realm-current-location" class="realm-current-location"></div>
+                <div id="realm-travel-buttons" class="realm-travel-buttons"></div>
+                <div id="realm-location-actions" class="realm-location-actions"></div>
+              </div>
+              <div class="realm-section realm-combat hidden" id="realm-combat-panel">
+                <h3 class="realm-heading">Combat</h3>
+                <div id="realm-combat-player" class="realm-combat-bar"></div>
+                <div id="realm-combat-enemy" class="realm-combat-bar"></div>
+                <div id="realm-combat-log" class="realm-combat-log"></div>
+                <div id="realm-combat-actions" class="realm-combat-actions"></div>
+              </div>
+              <div class="realm-section realm-quests">
+                <h3 class="realm-heading">Quests</h3>
+                <div id="realm-quest-list" class="realm-quest-list"></div>
               </div>
             </div>
           </div>
