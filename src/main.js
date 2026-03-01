@@ -5763,11 +5763,10 @@ function renderRealm() {
       lockedEl.innerHTML = '<p class="realm-empty">No auras in Locked storage. Lock some from Past rolls first.</p>';
     } else {
       lockedEl.innerHTML = locked.map((h, i) => {
-        const idx = locked.length - 1 - i;
         return `<div class="realm-locked-row">
           <span class="history-text" style="font-family:'${h.font || 'Inter'}';color:${h.color || '#fff'}">${escapeHtml(h.text || '?')}</span>
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
-          <button type="button" class="hub-btn hub-btn--small realm-import-btn" data-locked-index="${idx}">Import</button>
+          <button type="button" class="hub-btn hub-btn--small realm-import-btn" data-locked-index="${i}">Import</button>
         </div>`;
       }).join('');
       lockedEl.querySelectorAll('.realm-import-btn').forEach((btn) => {
@@ -5809,7 +5808,12 @@ function renderRealm() {
   const locEl = document.getElementById('realm-current-location');
   const travelEl = document.getElementById('realm-travel-buttons');
   const actionsEl = document.getElementById('realm-location-actions');
-  if (locEl && currentNode) {
+  if (!currentNode) {
+    setRealmMapProgress({ currentCellId: 'village', visitedCells: ['village'] });
+    if (locEl) locEl.innerHTML = '<em>Resetting to village…</em>';
+    if (travelEl) travelEl.innerHTML = '';
+    if (actionsEl) actionsEl.innerHTML = '';
+  } else if (locEl) {
     locEl.innerHTML = `<strong>${currentNode.name}</strong> — ${currentNode.desc}`;
   }
   if (travelEl && currentNode) {
@@ -5848,10 +5852,10 @@ function renderRealm() {
       if (enemyId) startRealmCombat(enemyId);
     });
     actionsEl.querySelector('.realm-enter-dungeon-btn')?.addEventListener('click', (e) => {
-      startRealmDungeon(e.target.dataset.dungeon);
+      startRealmDungeon(e.currentTarget.dataset.dungeon);
     });
     actionsEl.querySelector('.realm-talk-btn')?.addEventListener('click', (e) => {
-      const npc = REALM_NPCS[e.target.dataset.npc];
+      const npc = REALM_NPCS[e.currentTarget.dataset.npc];
       if (npc) alert(npc.dialogue);
     });
   }
@@ -5862,11 +5866,12 @@ function renderRealm() {
     const qProgress = getRealmQuests();
     questEl.innerHTML = REALM_QUESTS.map((q) => {
       const p = qProgress[q.id] || { progress: 0, completed: false };
-      const obj = q.objectives[0];
-      const done = p.completed || (obj.type === 'kill' && p.progress >= obj.count);
+      const obj = q.objectives?.[0];
+      const done = !obj ? false : p.completed || (obj.type === 'kill' && (p.progress || 0) >= (obj.count || 0));
+      const progText = !obj ? '-' : p.completed ? 'Done' : `${p.progress || 0}/${obj.count}`;
       return `<div class="realm-quest-row ${done ? 'realm-quest-done' : ''}">
         <strong>${q.name}</strong>: ${q.description}
-        <span class="realm-quest-progress">${p.completed ? 'Done' : `${p.progress || 0}/${obj.count}`}</span>
+        <span class="realm-quest-progress">${progText}</span>
       </div>`;
     }).join('');
   }
@@ -5875,6 +5880,8 @@ function renderRealm() {
 function startRealmCombat(enemyId) {
   const enemy = REALM_ENEMIES[enemyId];
   if (!enemy) return;
+  const logEl = document.getElementById('realm-combat-log');
+  if (logEl) logEl.innerHTML = '';
   const stats = getEffectiveRealmStats();
   const combatState = {
     phase: 'active',
