@@ -630,6 +630,31 @@ begin
 end;
 $$;
 
+-- RPC: withdraw aura from Bazaar inventory to client (adds to Locked storage locally)
+create or replace function public.bazaar_withdraw_aura_to_client(p_inventory_id bigint)
+returns table(success boolean, item_json jsonb, message text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_json jsonb;
+begin
+  if auth.uid() is null then
+    return query select false, null::jsonb, 'Not signed in'::text;
+    return;
+  end if;
+  select bazaar_seller_inventory.item_json into v_json from bazaar_seller_inventory
+  where id = p_inventory_id and user_id = auth.uid();
+  if not found then
+    return query select false, null::jsonb, 'Item not in your Bazaar inventory'::text;
+    return;
+  end if;
+  delete from bazaar_seller_inventory where id = p_inventory_id and user_id = auth.uid();
+  return query select true, v_json, ''::text;
+end;
+$$;
+
 -- ─── Bazaar Business Investments ───
 create table if not exists public.bazaar_business_investments (
   id bigint generated always as identity primary key,
@@ -979,3 +1004,4 @@ grant execute on function public.bazaar_create_listing(bigint, int) to authentic
 grant execute on function public.bazaar_buy_listing(bigint) to authenticated;
 grant execute on function public.bazaar_cancel_listing(bigint) to authenticated;
 grant execute on function public.bazaar_withdraw_aura_to_casino(bigint) to authenticated;
+grant execute on function public.bazaar_withdraw_aura_to_client(bigint) to authenticated;

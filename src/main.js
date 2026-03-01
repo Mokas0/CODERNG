@@ -3318,6 +3318,47 @@ async function bazaarWithdrawAuraToCasino(inventoryId) {
   renderBazaar();
 }
 
+async function bazaarWithdrawAuraToLocked(inventoryId) {
+  if (!authUser || !supabase) return;
+  const { data, error } = await supabase.rpc('bazaar_withdraw_aura_to_client', { p_inventory_id: inventoryId });
+  const result = Array.isArray(data) ? data[0] : data;
+  if (error || !result?.success) {
+    showBazaarBalanceMsg(result?.message || error?.message || 'Withdraw failed', true);
+    return;
+  }
+  const item = result?.item_json;
+  if (!item || !item.text) {
+    showBazaarBalanceMsg('Could not retrieve aura data.', true);
+    return;
+  }
+  const entry = {
+    text: item.text || '?',
+    font: item.font || 'Inter',
+    color: item.color || '#ffffff',
+    fontWeight: item.fontWeight || '400',
+    fontStyle: item.fontStyle || 'normal',
+    textShadow: item.textShadow || 'none',
+    rarity: item.rarity ?? 1,
+    ...(item.id != null && { id: item.id }),
+    ...(item.historyId && { historyId: item.historyId }),
+    ...(item.isElder != null && { isElder: item.isElder }),
+    ...(item.isAscendant != null && { isAscendant: item.isAscendant }),
+    ...(item.isEmperor != null && { isEmperor: item.isEmperor }),
+    ...(item.is100Q != null && { is100Q: item.is100Q }),
+    ...(item.isTier2 != null && { isTier2: item.isTier2 }),
+    ...(item.isSecret != null && { isSecret: item.isSecret }),
+    ...(item.isSupremeKing != null && { isSupremeKing: item.isSupremeKing }),
+    ...(item.isVoidQueen != null && { isVoidQueen: item.isVoidQueen }),
+    ...(item.isBookOfPower != null && { isBookOfPower: item.isBookOfPower }),
+  };
+  const locked = getLockedStorage();
+  locked.push(entry);
+  setLockedStorage(locked);
+  renderLockedStorage();
+  await renderBazaar();
+  showBazaarBalanceMsg('Withdrawn to Locked storage.');
+}
+
 async function bazaarStockBuyMax() {
   if (!authUser || !supabase) return;
   await bazaarFetchBalance();
@@ -3531,23 +3572,27 @@ function renderBazaar() {
       document.getElementById('bazaar-import-all-btn')?.addEventListener('click', bazaarImportAllFromCasino);
     }
     const { data: inv } = await supabase.from('bazaar_seller_inventory').select('id, item_json').eq('user_id', authUser.id).order('id', { ascending: false });
-    const invList = (inv || []).map((r) => ({ id: r.id, ...(typeof r.item_json === 'string' ? (() => { try { return JSON.parse(r.item_json); } catch { return {}; } })() : r.item_json) }));
+    const invList = (inv || []).map((r) => {
+      const item = typeof r.item_json === 'string' ? (() => { try { return JSON.parse(r.item_json); } catch { return {}; } })() : (r.item_json || {});
+      return { invId: r.id, ...item };
+    });
     const invEl = document.getElementById('bazaar-inventory');
     if (invEl) {
       invEl.innerHTML = invList.length
-        ? invList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font}';color:${a.color}">${escapeHtml(a.text)}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><input type="number" class="casino-amount-input bazaar-price-input" placeholder="Price (coins)" min="1" data-id="${a.id}" /><button type="button" class="hub-btn bazaar-list-btn" data-id="${a.id}">List for sale</button><button type="button" class="hub-btn hub-btn--secondary bazaar-withdraw-aura-btn" data-id="${a.id}">To Casino</button></div>`).join('')
+        ? invList.map((a) => `<div class="casino-aura-row"><span class="history-text" style="font-family:'${a.font || 'Inter'}';color:${a.color || '#fff'}">${escapeHtml(a.text || '?')}</span><span class="history-rarity">${formatRarity(a.rarity)}</span><input type="number" class="casino-amount-input bazaar-price-input" placeholder="Price (coins)" min="1" data-inv-id="${a.invId}" /><button type="button" class="hub-btn bazaar-list-btn" data-inv-id="${a.invId}">List for sale</button><button type="button" class="hub-btn hub-btn--secondary bazaar-withdraw-casino-btn" data-inv-id="${a.invId}" title="Requires linked Casino vault">To Casino</button><button type="button" class="hub-btn hub-btn--secondary bazaar-withdraw-locked-btn" data-inv-id="${a.invId}" title="Add to Locked storage">To Locked</button></div>`).join('')
         : '<p class="casino-empty">No auras in Bazaar inventory. Import from Locked or Casino vault above.</p>';
       invEl.querySelectorAll('.bazaar-list-btn').forEach((btn) => {
-        const id = Number(btn.dataset.id);
+        const invId = Number(btn.dataset.invId);
         const row = btn.closest('.casino-aura-row');
         const priceInput = row?.querySelector('.bazaar-price-input');
         btn.addEventListener('click', () => {
           const p = Math.floor(Number(priceInput?.value || 0));
-          if (p >= 1) bazaarCreateListing(id, p);
+          if (p >= 1) bazaarCreateListing(invId, p);
           else showBazaarBalanceMsg('Enter a price (1 or more) first.', true);
         });
       });
-      invEl.querySelectorAll('.bazaar-withdraw-aura-btn').forEach((btn) => btn.addEventListener('click', () => bazaarWithdrawAuraToCasino(Number(btn.dataset.id))));
+      invEl.querySelectorAll('.bazaar-withdraw-casino-btn').forEach(btn => btn.addEventListener('click', () => bazaarWithdrawAuraToCasino(Number(btn.dataset.invId))));
+      invEl.querySelectorAll('.bazaar-withdraw-locked-btn').forEach(btn => btn.addEventListener('click', () => bazaarWithdrawAuraToLocked(Number(btn.dataset.invId))));
     }
     const { data: myListings } = await supabase.from('bazaar_listings').select('id, item_json, price').eq('seller_id', authUser.id).eq('status', 'listed').order('created_at', { ascending: false });
     const myEl = document.getElementById('bazaar-my-listings');
