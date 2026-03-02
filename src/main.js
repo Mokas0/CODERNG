@@ -1,6 +1,6 @@
 import './style.css';
 import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, ACCOMPLISHMENT_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, MINING_MATERIALS, classifyAuraType } from './data/items.js';
-import { auraToRealmItem, REALM_MAP_NODES, REALM_DUNGEONS, REALM_ENEMIES, REALM_NPCS, REALM_QUESTS } from './data/realm.js';
+import { auraToRealmItem, getAuraSpecialMoves, REALM_MAP_NODES, REALM_BOSSES, REALM_NPCS, REALM_QUESTS } from './data/realm.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
@@ -59,6 +59,8 @@ const STORAGE_KEYS = {
   realmQuests: 'rng_realm_quests',
   realmPlayerStats: 'rng_realm_player_stats',
   realmDungeonState: 'rng_realm_dungeon_state',
+  // Gems (shared across worlds, earned from Realm bosses)
+  gems: 'rng_gems',
 };
 
 const WORLD_CONFIG = {
@@ -90,6 +92,12 @@ function setCoins(n) {
     localStorage.setItem(STORAGE_KEYS.elderCoinsSpent, String(total));
   }
   localStorage.setItem(STORAGE_KEYS.coins, String(next));
+}
+function getGems() {
+  return Number(localStorage.getItem(STORAGE_KEYS.gems) || 0);
+}
+function setGems(n) {
+  localStorage.setItem(STORAGE_KEYS.gems, String(Math.max(0, Math.floor(n))));
 }
 function getScraps() {
   return Number(localStorage.getItem(STORAGE_KEYS.scraps) || 0);
@@ -530,6 +538,11 @@ function renderCoins() {
   if (el) el.textContent = getCoins().toLocaleString();
 }
 
+function renderGems() {
+  const el = document.getElementById('gems');
+  if (el) el.textContent = getGems().toLocaleString();
+}
+
 function renderRollCount() {
   const el = document.getElementById('roll-count');
   if (el) el.textContent = getElderRollTotal().toLocaleString();
@@ -640,8 +653,16 @@ const MINING_POTIONS = [
   { id: 'potionMiningFortune', name: 'Fortune Ore Elixir', luckBonus: 400, luckRolls: 8, emoji: '🌟', desc: '+400× luck for 8 rolls. The finest Mining brew.' },
 ];
 
+// Gem Shop — powerful potions costing gems (earned from Realm bosses)
+const GEM_SHOP_ITEMS = [
+  { id: 'potionGemElixir', name: 'Elixir of Fortune', costGems: 10, luckBonus: 500, emoji: '✨', desc: '+500× luck. Earned through victory.' },
+  { id: 'potionGemSoul', name: 'Soul Essence', costGems: 25, luckBonus: 2000, emoji: '💫', desc: '+2,000× luck. A taste of the beyond.' },
+  { id: 'potionGemVoid', name: 'Void Fragment', costGems: 50, luckBonus: 10000, emoji: '🕳️', desc: '+10,000× luck. Pulled from the void.' },
+  { id: 'potionGemDivine', name: 'Divine Blessing', costGems: 100, luckBonus: 50000, emoji: '🌟', desc: '+50,000× luck. Divine intervention.' },
+];
+
 const ALL_POTIONS_BY_ID = {};
-[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION, POTION_OF_DESTRUCTION, ...MINING_POTIONS].forEach(p => {
+[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION, POTION_OF_DESTRUCTION, ...MINING_POTIONS, ...GEM_SHOP_ITEMS].forEach(p => {
   ALL_POTIONS_BY_ID[p.id] = p;
 });
 
@@ -1114,6 +1135,44 @@ function renderShop() {
   });
   list.querySelectorAll('.shop-buy-max-btn').forEach((btn) => {
     btn.addEventListener('click', () => buyPotionMax(btn.dataset.potion, false));
+  });
+  renderGemShop();
+}
+
+// ——— Gem Shop (powerful potions for gems from Realm bosses) ———
+function buyGemPotion(potionId) {
+  const potion = GEM_SHOP_ITEMS.find((p) => p.id === potionId);
+  if (!potion || getGems() < potion.costGems) return;
+  setGems(getGems() - potion.costGems);
+  const inv = getPotionInventory();
+  inv[potion.id] = (inv[potion.id] || 0) + 1;
+  setPotionInventory(inv);
+  renderGems();
+  renderGemShop();
+  renderPotionInventory();
+}
+
+function renderGemShop() {
+  const list = document.getElementById('gem-shop-list');
+  const balanceEl = document.getElementById('gem-shop-balance');
+  if (balanceEl) balanceEl.textContent = getGems().toLocaleString();
+  if (!list) return;
+  const gems = getGems();
+  list.innerHTML = GEM_SHOP_ITEMS.map((p) => {
+    const canBuy = gems >= p.costGems;
+    return `<div class="shop-item">
+      <span class="shop-item-emoji">${p.emoji}</span>
+      <div class="shop-item-info">
+        <span class="shop-item-name">${p.name}</span>
+        <span class="shop-item-effect">+${p.luckBonus.toLocaleString()}× luck</span>
+      </div>
+      <button type="button" class="hub-btn shop-buy-btn gem-shop-buy" data-potion="${p.id}" ${!canBuy ? 'disabled' : ''}>
+        ${p.costGems} gems
+      </button>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.gem-shop-buy').forEach((btn) => {
+    btn.addEventListener('click', () => buyGemPotion(btn.dataset.potion));
   });
 }
 
@@ -5644,9 +5703,50 @@ function getEffectiveRealmStats() {
   return { ...base, atk, def, maxHp, specials };
 }
 
+function getRealmPlayerPower() {
+  const s = getEffectiveRealmStats();
+  return (s.atk || 0) + (s.def || 0) * 1.5 + (s.maxHp || 0) * 0.1;
+}
+
+/** Returns scaled boss stats based on player power; used at combat start */
+function getScaledBoss(bossId) {
+  const base = REALM_BOSSES[bossId];
+  if (!base) return null;
+  const power = getRealmPlayerPower();
+  const scale = 1 + power * 0.02;
+  const tierMult = 0.8 + (base.tier || 1) * 0.1;
+  const s = scale * tierMult;
+  return {
+    id: base.id,
+    name: base.name,
+    hp: Math.max(10, Math.floor(base.hp * s)),
+    atk: Math.max(1, Math.floor(base.atk * s)),
+    def: Math.max(0, Math.floor(base.def * s)),
+    gold: base.gold,
+    exp: base.exp,
+    coinsReward: Math.max(10, Math.floor(base.baseCoins * s)),
+    gemsReward: Math.max(1, Math.floor(base.baseGems * s)),
+  };
+}
+
+/** Collect unique special moves from equipped loadout (auras >= 100T) */
+function getRealmLoadoutSpecialMoves() {
+  const loadout = getRealmLoadout();
+  const byId = new Map();
+  for (const slot of ['weapon', 'armor', 'artifact']) {
+    const item = loadout[slot];
+    if (!item) continue;
+    for (const move of getAuraSpecialMoves(item)) {
+      if (!byId.has(move.id)) byId.set(move.id, move);
+    }
+  }
+  return [...byId.values()];
+}
+
 function initRealmIfNeeded() {
   let progress = getRealmMapProgress();
-  if (!progress.currentCellId) {
+  const validIds = new Set(REALM_MAP_NODES.map((n) => n.id));
+  if (!progress.currentCellId || !validIds.has(progress.currentCellId)) {
     progress = { currentCellId: 'village', visitedCells: ['village'] };
     setRealmMapProgress(progress);
   }
@@ -5696,9 +5796,10 @@ function realmImportFromLocked(lockedIndex) {
   renderRealm();
 }
 
-function realmEquip(slot, invIndex) {
+function realmEquip(slot, invIndexParam) {
   const inv = getRealmInventory();
-  if (invIndex < 0 || invIndex >= inv.length) return;
+  const invIndex = parseInt(invIndexParam, 10);
+  if (Number.isNaN(invIndex) || invIndex < 0 || invIndex >= inv.length) return;
   const loadout = getRealmLoadout();
   const item = inv[invIndex];
   const mapped = auraToRealmItem(item, classifyAuraType);
@@ -5780,6 +5881,7 @@ function renderRealm() {
   if (invEl) {
     if (inv.length === 0) {
       invEl.innerHTML = '<p class="realm-empty">No auras in Realm. Import from Locked above.</p>';
+      invEl.onclick = null;
     } else {
       invEl.innerHTML = inv.map((item, i) => {
         const mapped = auraToRealmItem(item, classifyAuraType);
@@ -5787,20 +5889,18 @@ function renderRealm() {
           <span class="history-text" style="font-family:'${item.font || 'Inter'}';color:${item.color || '#fff'}">${escapeHtml(item.text || '?')}</span>
           <span class="realm-inv-slot">${mapped.slot}</span>
           <span class="realm-inv-stats">+${mapped.atkBonus} ATK, +${mapped.defBonus} DEF</span>
-          <button type="button" class="hub-btn hub-btn--small realm-equip-weapon" data-inv-index="${i}" ${mapped.slot !== 'weapon' ? 'disabled' : ''}>Equip Weapon</button>
-          <button type="button" class="hub-btn hub-btn--small realm-equip-armor" data-inv-index="${i}" ${mapped.slot !== 'armor' ? 'disabled' : ''}>Equip Armor</button>
-          <button type="button" class="hub-btn hub-btn--small realm-equip-artifact" data-inv-index="${i}" ${mapped.slot !== 'artifact' ? 'disabled' : ''}>Equip Artifact</button>
+          <button type="button" class="hub-btn hub-btn--small realm-equip-btn" data-slot="weapon" data-inv-index="${i}" ${mapped.slot !== 'weapon' ? 'disabled' : ''}>Equip Weapon</button>
+          <button type="button" class="hub-btn hub-btn--small realm-equip-btn" data-slot="armor" data-inv-index="${i}" ${mapped.slot !== 'armor' ? 'disabled' : ''}>Equip Armor</button>
+          <button type="button" class="hub-btn hub-btn--small realm-equip-btn" data-slot="artifact" data-inv-index="${i}" ${mapped.slot !== 'artifact' ? 'disabled' : ''}>Equip Artifact</button>
         </div>`;
       }).join('');
-      invEl.querySelectorAll('.realm-equip-weapon').forEach((btn) => {
-        if (!btn.disabled) btn.addEventListener('click', () => realmEquip('weapon', parseInt(btn.dataset.invIndex, 10)));
-      });
-      invEl.querySelectorAll('.realm-equip-armor').forEach((btn) => {
-        if (!btn.disabled) btn.addEventListener('click', () => realmEquip('armor', parseInt(btn.dataset.invIndex, 10)));
-      });
-      invEl.querySelectorAll('.realm-equip-artifact').forEach((btn) => {
-        if (!btn.disabled) btn.addEventListener('click', () => realmEquip('artifact', parseInt(btn.dataset.invIndex, 10)));
-      });
+      invEl.onclick = (e) => {
+        const btn = e.target.closest('.realm-equip-btn');
+        if (!btn || btn.disabled) return;
+        const slot = btn.dataset.slot;
+        const invIndex = btn.dataset.invIndex;
+        if (slot && invIndex !== undefined) realmEquip(slot, invIndex);
+      };
     }
   }
 
@@ -5833,15 +5933,11 @@ function renderRealm() {
     });
   }
   if (actionsEl && currentNode) {
-    const hasEnemy = currentNode.enemies && currentNode.enemies.length > 0;
-    const hasDungeon = currentNode.dungeonId;
+    const hasBoss = currentNode.enemies && currentNode.enemies.length > 0;
     const hasNpc = currentNode.npcId;
     let actions = '';
-    if (hasEnemy) {
-      actions += `<button type="button" class="hub-btn realm-explore-btn">Explore (fight)</button>`;
-    }
-    if (hasDungeon) {
-      actions += `<button type="button" class="hub-btn realm-enter-dungeon-btn" data-dungeon="${currentNode.dungeonId}">Enter Dungeon</button>`;
+    if (hasBoss) {
+      actions += `<button type="button" class="hub-btn realm-explore-btn">Challenge Boss</button>`;
     }
     if (hasNpc) {
       actions += `<button type="button" class="hub-btn realm-talk-btn" data-npc="${currentNode.npcId}">Talk</button>`;
@@ -5850,9 +5946,6 @@ function renderRealm() {
     actionsEl.querySelector('.realm-explore-btn')?.addEventListener('click', () => {
       const enemyId = currentNode.enemies[0];
       if (enemyId) startRealmCombat(enemyId);
-    });
-    actionsEl.querySelector('.realm-enter-dungeon-btn')?.addEventListener('click', (e) => {
-      startRealmDungeon(e.currentTarget.dataset.dungeon);
     });
     actionsEl.querySelector('.realm-talk-btn')?.addEventListener('click', (e) => {
       const npc = REALM_NPCS[e.currentTarget.dataset.npc];
@@ -5878,7 +5971,7 @@ function renderRealm() {
 }
 
 function startRealmCombat(enemyId) {
-  const enemy = REALM_ENEMIES[enemyId];
+  const enemy = getScaledBoss(enemyId);
   if (!enemy) return;
   const logEl = document.getElementById('realm-combat-log');
   if (logEl) logEl.innerHTML = '';
@@ -5895,6 +5988,8 @@ function startRealmCombat(enemyId) {
     enemyDef: enemy.def,
     enemyGold: enemy.gold,
     enemyExp: enemy.exp,
+    coinsReward: enemy.coinsReward,
+    gemsReward: enemy.gemsReward,
   };
   document.getElementById('realm-combat-panel')?.classList.remove('hidden');
   renderRealmCombat(combatState);
@@ -5911,32 +6006,21 @@ function renderRealmCombat(state) {
   enemyEl.innerHTML = `${state.enemyName}: HP ${state.enemyHp}/${state.enemyMaxHp}`;
 
   if (state.phase === 'victory') {
-    logEl.innerHTML = (logEl.innerHTML || '') + '<div class="realm-combat-victory">Victory! +' + state.enemyGold + ' gold, +' + state.enemyExp + ' exp</div>';
+    const coinsR = state.coinsReward ?? 0;
+    const gemsR = state.gemsReward ?? 0;
+    logEl.innerHTML = (logEl.innerHTML || '') + '<div class="realm-combat-victory">Victory! +' + coinsR.toLocaleString() + ' coins, +' + gemsR + ' gems, +' + state.enemyGold + ' gold, +' + state.enemyExp + ' exp</div>';
     actionsEl.innerHTML = '<button type="button" class="hub-btn realm-combat-done-btn">Done</button>';
     actionsEl.querySelector('.realm-combat-done-btn')?.addEventListener('click', () => {
       realmRecordKill(state.enemyId);
       const s = getRealmPlayerStats() || {};
-      const dungeon = getRealmDungeonState();
-      if (dungeon?.dungeonId) {
-        const d = REALM_DUNGEONS[dungeon.dungeonId];
-        const rooms = d?.rooms || [];
-        const nextIndex = (dungeon.roomIndex || 0) + 1;
-        const rewards = { gold: (dungeon.rewards?.gold || 0) + state.enemyGold, exp: (dungeon.rewards?.exp || 0) + state.enemyExp };
-        if (nextIndex < rooms.length) {
-          setRealmDungeonState({ dungeonId: dungeon.dungeonId, roomIndex: nextIndex, rewards });
-          startRealmCombat(rooms[nextIndex].enemyId);
-          return;
-        }
-        s.gold = (s.gold || 0) + rewards.gold;
-        s.exp = (s.exp || 0) + rewards.exp;
-        s.totalExp = (s.totalExp || 0) + rewards.exp;
-        setRealmDungeonState(null);
-      } else {
-        s.gold = (s.gold || 0) + state.enemyGold;
-        s.exp = (s.exp || 0) + state.enemyExp;
-        s.totalExp = (s.totalExp || 0) + state.enemyExp;
-      }
+      s.gold = (s.gold || 0) + state.enemyGold;
+      s.exp = (s.exp || 0) + state.enemyExp;
+      s.totalExp = (s.totalExp || 0) + state.enemyExp;
       setRealmPlayerStats(s);
+      setCoins(getCoins() + (state.coinsReward ?? 0));
+      setGems(getGems() + (state.gemsReward ?? 0));
+      renderCoins();
+      renderGems();
       document.getElementById('realm-combat-panel')?.classList.add('hidden');
       renderRealm();
     });
@@ -5956,23 +6040,64 @@ function renderRealmCombat(state) {
     return;
   }
 
-  actionsEl.innerHTML = '<button type="button" class="hub-btn realm-attack-btn">Attack</button>';
-  actionsEl.querySelector('.realm-attack-btn')?.addEventListener('click', () => {
-    const stats = getEffectiveRealmStats();
-    const damage = Math.max(1, stats.atk - state.enemyDef);
-    const newEnemyHp = Math.max(0, state.enemyHp - damage);
-    let log = logEl.innerHTML || '';
-    log += `<div>You deal ${damage} damage.</div>`;
-    if (newEnemyHp <= 0) {
-      log += '<div class="realm-combat-victory">Victory!</div>';
+  const specialMoves = getRealmLoadoutSpecialMoves();
+  const stats = getEffectiveRealmStats();
+
+  function performRealmTurn(move) {
+    const effectiveDef = (stats.def || 0) + (state.combatTempDef || 0);
+    let damage = 0;
+    const moveName = move ? move.name : null;
+
+    if (move?.healRatio) {
+      const heal = Math.floor(state.playerMaxHp * move.healRatio);
+      state.playerHp = Math.min(state.playerMaxHp, state.playerHp + heal);
+      let log = logEl.innerHTML || '';
+      log += `<div>You used ${moveName}! Healed ${heal} HP.</div>`;
       logEl.innerHTML = log;
-      state.phase = 'victory';
-      renderRealmCombat(state);
-      return;
+    } else {
+      let baseDmg = Math.max(1, (stats.atk || 0) - (state.enemyDef || 0));
+      if (move?.ignoreDef) {
+        const ignoredDef = Math.floor(state.enemyDef * move.ignoreDef);
+        baseDmg = Math.max(1, (stats.atk || 0) - (state.enemyDef || 0) + ignoredDef);
+      }
+      const mult = move?.damageMult ?? 1;
+      damage = Math.max(1, Math.floor(baseDmg * mult));
+
+      if (move?.executeThreshold != null && move?.executeMult != null) {
+        if (state.enemyHp / state.enemyMaxHp < move.executeThreshold) {
+          damage = Math.max(1, Math.floor(damage * move.executeMult));
+        }
+      }
+      if (move?.critChance != null && Math.random() < move.critChance) {
+        damage = Math.max(1, Math.floor(damage * (move.critMult || 2)));
+      }
+
+      const newEnemyHp = Math.max(0, state.enemyHp - damage);
+      let log = logEl.innerHTML || '';
+      log += `<div>${moveName ? `You used ${moveName}! ` : ''}Dealt ${damage} damage.</div>`;
+      if (move?.lifestealRatio) {
+        const healed = Math.floor(damage * move.lifestealRatio);
+        state.playerHp = Math.min(state.playerMaxHp, state.playerHp + healed);
+        log += `<div>Lifesteal: +${healed} HP.</div>`;
+      }
+      if (move?.defBonus) {
+        state.combatTempDef = (state.combatTempDef || 0) + move.defBonus;
+      }
+      state.enemyHp = newEnemyHp;
+
+      if (newEnemyHp <= 0) {
+        log += '<div class="realm-combat-victory">Victory!</div>';
+        logEl.innerHTML = log;
+        state.phase = 'victory';
+        renderRealmCombat(state);
+        return;
+      }
+      logEl.innerHTML = log;
     }
-    state.enemyHp = newEnemyHp;
-    const enemyDamage = Math.max(1, state.enemyAtk - stats.def);
+
+    const enemyDamage = Math.max(1, (state.enemyAtk || 0) - effectiveDef);
     const newPlayerHp = Math.max(0, state.playerHp - enemyDamage);
+    let log = logEl.innerHTML || '';
     log += `<div>${state.enemyName} deals ${enemyDamage} damage.</div>`;
     logEl.innerHTML = log;
     state.playerHp = newPlayerHp;
@@ -5982,15 +6107,20 @@ function renderRealmCombat(state) {
       return;
     }
     renderRealmCombat(state);
-  });
-}
+  }
 
-function startRealmDungeon(dungeonId) {
-  const dungeon = REALM_DUNGEONS[dungeonId];
-  if (!dungeon) return;
-  setRealmDungeonState({ dungeonId, roomIndex: 0, rewards: { gold: 0, exp: 0 } });
-  const room = dungeon.rooms[0];
-  startRealmCombat(room.enemyId);
+  let buttonsHtml = '<button type="button" class="hub-btn realm-attack-btn">Attack</button>';
+  for (const move of specialMoves) {
+    buttonsHtml += `<button type="button" class="hub-btn realm-special-move-btn" data-move-id="${escapeHtml(move.id)}" title="${escapeHtml(move.desc || '')}">${escapeHtml(move.name)}</button>`;
+  }
+  actionsEl.innerHTML = buttonsHtml;
+
+  actionsEl.querySelector('.realm-attack-btn')?.addEventListener('click', () => performRealmTurn(null));
+  actionsEl.querySelectorAll('.realm-special-move-btn').forEach((btn) => {
+    const moveId = btn.dataset.moveId;
+    const move = specialMoves.find((m) => m.id === moveId);
+    if (move) btn.addEventListener('click', () => performRealmTurn(move));
+  });
 }
 
 // ——— Store (PayPal in-app purchases) ———
@@ -6512,6 +6642,7 @@ function init() {
   subscribeActiveBiome();
   advanceShopRotationIfNeeded();
   renderCoins();
+  renderGems();
   renderRollCount();
   renderLuck();
   renderHistory();

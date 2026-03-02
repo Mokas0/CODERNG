@@ -18,6 +18,7 @@
         <div class="meta">
           <span id="world-switcher" class="world-switcher"></span>
           <span class="coins-wrap">🪙 <span id="coins">0</span> coins</span>
+          <span class="gems-wrap">💎 <span id="gems">0</span> gems</span>
           <span class="rolls-wrap">🎲 <span id="roll-count">0</span> rolls</span>
           <span class="luck-wrap">Luck: <span id="luck-value">1× (normal)</span></span>
           <button type="button" id="luck-btn" class="luck-btn">Boost luck (50 coins)</button>
@@ -102,6 +103,18 @@
               <p class="sneho-countdown-line">Stock rotates: <span id="sneho-countdown" class="sneho-countdown">–</span></p>
               <p id="sneho-feedback" class="sneho-feedback hidden"></p>
               <div id="sneho-list" class="shop-list"></div>
+            </div>
+            <!-- Gem Shop -->
+            <div class="gem-shop">
+              <div class="gem-shop-header">
+                <span class="gem-shop-avatar">💎</span>
+                <div>
+                  <h3 class="gem-shop-name">Gem Shop</h3>
+                  <p class="gem-shop-dialogue">Earn gems by defeating Realm bosses. These potions are exceptionally powerful.</p>
+                </div>
+              </div>
+              <p class="gem-shop-balance">Your gems: <strong id="gem-shop-balance">0</strong></p>
+              <div id="gem-shop-list" class="shop-list"></div>
             </div>
           </div>
           <div id="tab-hub" class="tab-panel hidden" role="tabpanel" aria-hidden="true">

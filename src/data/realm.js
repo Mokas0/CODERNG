@@ -103,77 +103,107 @@ export function auraToRealmItem(aura, classifyAuraType) {
   };
 }
 
-// Map: node graph — 8 locations
+// Map: hub + boss arenas only
 export const REALM_MAP_NODES = [
-  { id: 'village', name: 'Starting Village', type: 'town', desc: 'A peaceful village. Rest and prepare.', connections: ['forest_path'], enemies: null, npcId: 'elder' },
-  { id: 'forest_path', name: 'Forest Path', type: 'wilderness', desc: 'A winding path through ancient trees.', connections: ['village', 'cave_entrance', 'crossroads'], enemies: ['wolf'], npcId: null },
-  { id: 'cave_entrance', name: 'Mountain Cave', type: 'dungeon', desc: 'Dark entrance to a dungeon. Danger awaits.', connections: ['forest_path'], enemies: ['goblin'], npcId: null, dungeonId: 'cave' },
-  { id: 'cave_room2', name: 'Cave — Deep Chamber', type: 'dungeon', desc: 'Deeper into the darkness.', connections: [], enemies: ['goblin'], npcId: null },
-  { id: 'cave_boss', name: 'Cave — Boss Lair', type: 'boss', desc: 'The cave lord awaits.', connections: [], enemies: ['cave_troll'], npcId: null },
-  { id: 'crossroads', name: 'Crossroads', type: 'wilderness', desc: 'Where paths meet.', connections: ['forest_path', 'swamp_edge'], enemies: ['bandit'], npcId: null },
-  { id: 'swamp_edge', name: 'Swamp Edge', type: 'wilderness', desc: 'Murky waters and twisted roots.', connections: ['crossroads', 'dark_castle'], enemies: ['skeleton'], npcId: null },
-  { id: 'dark_castle', name: 'Dark Castle', type: 'boss', desc: 'The final challenge.', connections: ['swamp_edge'], enemies: ['dark_lord'], npcId: null },
+  { id: 'village', name: 'Arena Hub', type: 'town', desc: 'Choose a boss to challenge.', connections: ['forest_arena', 'cave_arena', 'skeletal_arena', 'swamp_arena', 'castle_arena'], enemies: null, npcId: 'elder' },
+  { id: 'forest_arena', name: 'Forest Arena', type: 'boss', desc: 'The Guardian awaits.', connections: ['village'], enemies: ['forest_guardian'], npcId: null },
+  { id: 'cave_arena', name: 'Cave Arena', type: 'boss', desc: 'The Troll lurks within.', connections: ['village'], enemies: ['cave_troll'], npcId: null },
+  { id: 'skeletal_arena', name: 'Skeletal Arena', type: 'boss', desc: 'The Warlord commands undead legions.', connections: ['village'], enemies: ['skeletal_warlord'], npcId: null },
+  { id: 'swamp_arena', name: 'Swamp Arena', type: 'boss', desc: 'Tyranny reigns.', connections: ['village'], enemies: ['swamp_tyrant'], npcId: null },
+  { id: 'castle_arena', name: 'Dark Castle', type: 'boss', desc: 'The ultimate challenge.', connections: ['village'], enemies: ['dark_lord'], npcId: null },
 ];
 
-// Dungeon room sequences
-export const REALM_DUNGEONS = {
-  cave: {
-    id: 'cave',
-    name: 'Mountain Cave',
-    rooms: [
-      { enemyId: 'goblin' },
-      { enemyId: 'goblin' },
-      { enemyId: 'goblin' },
-      { enemyId: 'cave_troll' },
-    ],
-  },
-};
-
-// Enemies
-export const REALM_ENEMIES = {
-  wolf: { id: 'wolf', name: 'Forest Wolf', hp: 30, atk: 4, def: 2, gold: 5, exp: 3 },
-  goblin: { id: 'goblin', name: 'Cave Goblin', hp: 25, atk: 5, def: 1, gold: 8, exp: 5 },
-  bandit: { id: 'bandit', name: 'Highway Bandit', hp: 40, atk: 6, def: 3, gold: 15, exp: 8 },
-  skeleton: { id: 'skeleton', name: 'Skeletal Warrior', hp: 35, atk: 7, def: 4, gold: 12, exp: 7 },
-  cave_troll: { id: 'cave_troll', name: 'Cave Troll', hp: 80, atk: 12, def: 6, gold: 50, exp: 25 },
-  dark_lord: { id: 'dark_lord', name: 'Dark Lord', hp: 150, atk: 18, def: 10, gold: 100, exp: 50 },
+// Bosses — base stats; scaling applied at combat start from player power
+export const REALM_BOSSES = {
+  forest_guardian: { id: 'forest_guardian', name: 'Forest Guardian', hp: 50, atk: 6, def: 3, gold: 20, exp: 10, baseCoins: 75, baseGems: 1, tier: 1 },
+  cave_troll: { id: 'cave_troll', name: 'Cave Troll', hp: 90, atk: 14, def: 7, gold: 40, exp: 20, baseCoins: 150, baseGems: 2, tier: 2 },
+  skeletal_warlord: { id: 'skeletal_warlord', name: 'Skeletal Warlord', hp: 120, atk: 18, def: 9, gold: 55, exp: 30, baseCoins: 225, baseGems: 3, tier: 3 },
+  swamp_tyrant: { id: 'swamp_tyrant', name: 'Swamp Tyrant', hp: 160, atk: 24, def: 13, gold: 80, exp: 45, baseCoins: 350, baseGems: 4, tier: 4 },
+  dark_lord: { id: 'dark_lord', name: 'Dark Lord', hp: 220, atk: 32, def: 18, gold: 120, exp: 65, baseCoins: 500, baseGems: 5, tier: 5 },
 };
 
 // NPCs
 export const REALM_NPCS = {
   elder: {
     id: 'elder',
-    name: 'Village Elder',
-    dialogue: 'Welcome, traveler. Import your auras from Locked storage and equip them. Then venture forth. The forest holds danger — and treasure.',
+    name: 'Arena Master',
+    dialogue: 'Welcome, champion. Import your auras from Locked storage and equip them. Travel to any arena to challenge a boss. Victory rewards coins and gems.',
     quests: ['first_steps'],
     shop: null,
   },
 };
+
+// Special moves for auras >= 100T rarity (Pokemon-style)
+const REALM_SPECIAL_MOVES = [
+  { id: 'power_strike', name: 'Power Strike', desc: '1.5× ATK damage', damageMult: 1.5 },
+  { id: 'execute', name: 'Execute', desc: '2× damage if enemy < 30% HP', damageMult: 1, executeThreshold: 0.3, executeMult: 2 },
+  { id: 'lifesteal', name: 'Lifesteal', desc: 'Heal 50% of damage dealt', damageMult: 1, lifestealRatio: 0.5 },
+  { id: 'shield_bash', name: 'Shield Bash', desc: '0.8× damage, +5 DEF this fight', damageMult: 0.8, defBonus: 5 },
+  { id: 'critical_blow', name: 'Critical Blow', desc: '2× damage, 30% chance', damageMult: 1, critChance: 0.3, critMult: 2 },
+  { id: 'healing_light', name: 'Healing Light', desc: 'Heal 20% max HP, no attack', damageMult: 0, healRatio: 0.2 },
+  { id: 'void_slash', name: 'Void Slash', desc: '1.3× damage, ignore 20% enemy DEF', damageMult: 1.3, ignoreDef: 0.2 },
+  { id: 'elemental_burst', name: 'Elemental Burst', desc: '1.4× damage', damageMult: 1.4 },
+];
+
+const REALM_100T = 1e14;   // 100 trillion — 1 move
+const REALM_1Q = 1e15;     // 1 quadrillion — 2 moves
+
+/** Deterministic hash from aura identity for move assignment */
+function auraMoveSeed(aura) {
+  const str = (aura.text || '') + '|' + (aura.rarity || 0);
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) - h) + str.charCodeAt(i) | 0;
+  return Math.abs(h);
+}
+
+/**
+ * Returns 1 or 2 special moves for auras with rarity >= 100T.
+ * ≥ 1Q grants 2 moves; 100T–999T grants 1 move.
+ */
+export function getAuraSpecialMoves(aura) {
+  const r = Math.max(0, aura.rarity ?? 0);
+  if (r < REALM_100T) return [];
+  const seed = auraMoveSeed(aura);
+  const count = r >= REALM_1Q ? 2 : 1;
+  const moves = [];
+  const used = new Set();
+  for (let i = 0; i < count; i++) {
+    let idx = Math.abs((seed + i * 31) % REALM_SPECIAL_MOVES.length);
+    while (used.has(idx) && used.size < REALM_SPECIAL_MOVES.length) {
+      idx = (idx + 1) % REALM_SPECIAL_MOVES.length;
+    }
+    used.add(idx);
+    moves.push(REALM_SPECIAL_MOVES[idx]);
+  }
+  return moves;
+}
+
+export { REALM_SPECIAL_MOVES };
 
 // Quests
 export const REALM_QUESTS = [
   {
     id: 'first_steps',
     name: 'First Steps',
-    description: 'Defeat your first enemy in the Realm.',
+    description: 'Defeat your first boss in the Arena.',
     objectives: [{ type: 'kill', target: 'any', count: 1 }],
     rewards: { gold: 20, exp: 10 },
     npcId: 'elder',
   },
   {
-    id: 'forest_clear',
-    name: 'Clear the Forest',
-    description: 'Defeat 3 Wolves.',
-    objectives: [{ type: 'kill', target: 'wolf', count: 3 }],
-    rewards: { gold: 50, exp: 20 },
+    id: 'arena_novice',
+    name: 'Arena Novice',
+    description: 'Defeat 3 bosses (any).',
+    objectives: [{ type: 'kill', target: 'any', count: 3 }],
+    rewards: { gold: 75, exp: 30 },
     npcId: 'elder',
   },
   {
-    id: 'cave_conquer',
-    name: 'Conquer the Cave',
-    description: 'Defeat the Cave Troll.',
-    objectives: [{ type: 'kill', target: 'cave_troll', count: 1 }],
-    rewards: { gold: 100, exp: 50 },
+    id: 'champion',
+    name: 'Champion',
+    description: 'Defeat the Dark Lord.',
+    objectives: [{ type: 'kill', target: 'dark_lord', count: 1 }],
+    rewards: { gold: 150, exp: 75 },
     npcId: 'elder',
   },
 ];
