@@ -868,8 +868,8 @@ declare
 begin
   select coalesce(sales_count, 0), coalesce(volume_coins, 0) into v_sales, v_volume
   from bazaar_volume_stats where id = 1;
-  v_fundamental := 100 + (v_sales * 2) + (v_volume / 10000.0);
-  v_fundamental := greatest(50, least(5000, v_fundamental));
+  -- Sells (marketplace sales) push price down; buys push it up (handled in bazaar_stock_buy)
+  v_fundamental := greatest(50, least(5000, 200 - (v_sales * 1) - (v_volume / 20000.0)));
   select coalesce(price, 100) into v_old_price from bazaar_stock_ticker where symbol = p_symbol;
   -- Random walk: ±3% volatility per update (like real market noise)
   v_random_drift := (random() - 0.5) * 0.06;
