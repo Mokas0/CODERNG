@@ -1,6 +1,7 @@
 import './style.css';
 import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, ACCOMPLISHMENT_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, MINING_MATERIALS, classifyAuraType } from './data/items.js';
 import { auraToRealmItem, getAuraSpecialMoves, REALM_MAP_NODES, REALM_BOSSES, REALM_NPCS, REALM_QUESTS } from './data/realm.js';
+import { MAYORS, getMayorWeekKey, getMayorWeekEnd, getPreviousMayorWeekKey, getMayorCandidatesForWeek, mayorBuffStrength } from './data/mayors.js';
 import { supabase, isHubAvailable } from './supabase.js';
 
 // World detection: data-world on <html> or <body>; default 1
@@ -456,6 +457,200 @@ function renderCompetition() {
   });
 }
 
+// ─── Mayor Voting — weekly NPC mayor election (3 of 5, vote for 1) ───────────
+let mayorCache = null; // { serving: { mayor, votes }, currentVotes: { mayorId: count }, myVote: mayorId }
+const MAYOR_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function fetchMayorVotes(weekKey) {
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('mayor_votes')
+    .select('mayor_id')
+    .eq('week_key', weekKey);
+  return data || [];
+}
+
+function getVoteCountsByMayor(votes) {
+  const counts = {};
+  for (const v of votes) {
+    counts[v.mayor_id] = (counts[v.mayor_id] || 0) + 1;
+  }
+  return counts;
+}
+
+async function getMayorWinnerAndVotes(weekKey) {
+  const votes = await fetchMayorVotes(weekKey);
+  const counts = getVoteCountsByMayor(votes);
+  let winnerId = null;
+  let winnerVotes = 0;
+  for (const [id, n] of Object.entries(counts)) {
+    if (n > winnerVotes) { winnerVotes = n; winnerId = id; }
+  }
+  if (!winnerId || winnerVotes <= 0) return null;
+  const mayor = MAYORS.find(m => m.id === winnerId);
+  return mayor ? { mayor, votes: winnerVotes } : null;
+}
+
+async function refreshMayorCache() {
+  try {
+    const weekKey = getMayorWeekKey();
+    const prevKey = getPreviousMayorWeekKey();
+    const token = getDeviceToken();
+    const [serving, currentVotes, myRow] = await Promise.all([
+      getMayorWinnerAndVotes(prevKey),
+      fetchMayorVotes(weekKey).then(getVoteCountsByMayor),
+      supabase ? supabase.from('mayor_votes').select('mayor_id').eq('week_key', weekKey).eq('device_token', token).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+    mayorCache = {
+      serving: serving || null,
+      currentVotes: currentVotes || {},
+      myVote: myRow?.data?.mayor_id || null,
+      weekKey,
+      prevKey,
+    };
+  } catch (e) {
+    mayorCache = { serving: null, currentVotes: {}, myVote: null, weekKey: getMayorWeekKey(), prevKey: getPreviousMayorWeekKey() };
+  }
+  return mayorCache;
+}
+
+function getMayorBuff() {
+  if (!mayorCache?.serving) return null;
+  const { mayor, votes } = mayorCache.serving;
+  const strength = mayorBuffStrength(votes, mayor.basePercent, mayor.scalePerVote, mayor.maxPercent);
+  return { mayor, votes, strength };
+}
+
+function getEffectivePotionCost(baseCost) {
+  const buff = getMayorBuff();
+  if (!buff || buff.mayor.buffType !== 'potions') return baseCost;
+  return Math.max(1, Math.floor(baseCost * (1 - buff.strength)));
+}
+
+function getEffectiveLuckCost(baseCost) {
+  const buff = getMayorBuff();
+  if (!buff || buff.mayor.buffType !== 'luck_boost_cost') return baseCost;
+  return Math.max(1, Math.floor(baseCost * (1 - buff.strength)));
+}
+
+async function submitMayorVote(mayorId) {
+  if (!supabase) { showMayorFeedback('Supabase required to vote.'); return; }
+  const weekKey = getMayorWeekKey();
+  const token = getDeviceToken();
+  const { error } = await supabase.from('mayor_votes').upsert(
+    { week_key: weekKey, mayor_id: mayorId, device_token: token },
+    { onConflict: 'week_key,device_token' }
+  );
+  if (error) { showMayorFeedback(`Vote failed: ${error.message}`); return; }
+  mayorCache = null;
+  await refreshMayorCache();
+  renderMayorPanel();
+  renderLuck();
+  showMayorFeedback(`Vote recorded for ${MAYORS.find(m => m.id === mayorId)?.name || mayorId}.`);
+}
+
+function showMayorFeedback(msg) {
+  const el = document.getElementById('mayor-feedback');
+  if (el) { el.textContent = msg; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 4000); }
+}
+
+function mayorTimeLeft() {
+  const ms = getMayorWeekEnd() - Date.now();
+  if (ms <= 0) return 'Resetting…';
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const d = Math.floor(h / 24);
+  const hours = h % 24;
+  if (d >= 1) return `${d}d ${hours}h`;
+  return `${hours}:${String(m).padStart(2, '0')}`;
+}
+
+function renderMayorPanel() {
+  const panel = document.getElementById('tab-mayor');
+  if (!panel) return;
+  const weekKey = getMayorWeekKey();
+  const candidates = getMayorCandidatesForWeek(weekKey);
+
+  const init = async () => {
+    await refreshMayorCache();
+    const cache = mayorCache || {};
+    const serving = cache.serving;
+    const currentVotes = cache.currentVotes || {};
+    const myVote = cache.myVote;
+    const endStr = new Date(getMayorWeekEnd()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+    let servingHtml = '';
+    if (serving) {
+      const s = mayorBuffStrength(serving.votes, serving.mayor.basePercent, serving.mayor.scalePerVote, serving.mayor.maxPercent);
+      const pct = (s * 100).toFixed(1);
+      servingHtml = `
+        <div class="mayor-serving">
+          <h4 class="mayor-section-title">Current mayor</h4>
+          <div class="mayor-serving-card">
+            <span class="mayor-serving-emoji">${serving.mayor.emoji}</span>
+            <div>
+              <strong>${escapeHtml(serving.mayor.name)}</strong> — ${serving.mayor.title}<br>
+              <span class="mayor-serving-buff">${serving.votes} votes → ${pct}% buff active</span>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      servingHtml = '<div class="mayor-serving"><h4 class="mayor-section-title">Current mayor</h4><p class="mayor-no-winner">No election last week. Buffs inactive.</p></div>';
+    }
+
+    const cards = candidates.map(m => {
+      const votes = currentVotes[m.id] || 0;
+      const isMyVote = myVote === m.id;
+      return `
+        <div class="mayor-candidate-card ${isMyVote ? 'mayor-candidate-card--voted' : ''}">
+          <div class="mayor-candidate-header">
+            <span class="mayor-candidate-emoji">${m.emoji}</span>
+            <div>
+              <strong>${escapeHtml(m.name)}</strong> — ${m.title}
+              ${isMyVote ? '<span class="mayor-voted-badge">✓ Your vote</span>' : ''}
+            </div>
+          </div>
+          <p class="mayor-candidate-desc">${m.desc}</p>
+          <p class="mayor-candidate-votes">${votes} vote${votes !== 1 ? 's' : ''}</p>
+          <button type="button" class="hub-btn mayor-vote-btn" data-mayor-id="${m.id}" ${myVote === m.id ? 'disabled' : ''}>
+            ${myVote === m.id ? 'Voted' : 'Vote'}
+          </button>
+        </div>
+      `;
+    });
+
+    panel.innerHTML = `
+      <div class="mayor-panel">
+        <div class="mayor-npc-header">
+          <span class="mayor-npc-avatar">🏛️</span>
+          <div>
+            <h3 class="mayor-npc-name">Town Hall — Mayor Election</h3>
+            <p class="mayor-npc-dialogue">Each week, three candidates run for mayor. Vote for one! The winner's buff applies next week and scales with total votes received.</p>
+          </div>
+        </div>
+        ${servingHtml}
+        <div class="mayor-election">
+          <h4 class="mayor-section-title">This week's candidates</h4>
+          <p class="mayor-election-meta">Week ${weekKey} · Voting ends: ${endStr} · <span id="mayor-countdown">${mayorTimeLeft()}</span></p>
+          <div class="mayor-candidates-grid">${cards.join('')}</div>
+        </div>
+        <p id="mayor-feedback" class="sneho-feedback mayor-feedback hidden"></p>
+      </div>
+    `;
+
+    panel.querySelectorAll('.mayor-vote-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => submitMayorVote(btn.dataset.mayorId));
+    });
+
+    const cdEl = document.getElementById('mayor-countdown');
+    clearTimeout(panel._mayorTimer);
+    panel._mayorTimer = setTimeout(() => renderMayorPanel(), 1000);
+  };
+  init();
+}
+
 function formatRarity(rarity) {
   if (rarity === -1) return 'UNOBTAINABLE';
   if (rarity === 0) return 'SECRET';
@@ -471,6 +666,13 @@ function formatRarity(rarity) {
 function coinsForSalvage(rarity) {
   const base = Math.max(1, Math.floor(100 / Math.log10(rarity + 1)));
   return Math.min(10000, base);
+}
+
+function getDisplaySalvageCoins(rarity) {
+  let c = coinsForSalvage(rarity);
+  const buff = getMayorBuff();
+  if (buff?.mayor.buffType === 'coins') c = Math.floor(c * (1 + buff.strength));
+  return c;
 }
 
 function nullCoinsForSale(rarity) {
@@ -569,7 +771,7 @@ function renderLuck() {
     }
   }
   if (btn) {
-    const cost = luckCost(m);
+    const cost = getEffectiveLuckCost(luckCost(m));
     btn.textContent = `Boost luck (${cost} coins)`;
     btn.disabled = getCoins() < cost;
   }
@@ -600,6 +802,8 @@ function scrapsFromSalvage(rarity) {
   else if (rarity < 1_000_000)   { chance = 0.55; min = 1; max = 2; }
   else if (rarity < 100_000_000) { chance = 0.70; min = 1; max = 3; }
   else                           { chance = 0.90; min = 2; max = 5; }
+  const vexBuff = getMayorBuff();
+  if (vexBuff?.mayor.buffType === 'scraps') chance = Math.min(1, chance + vexBuff.strength);
   if (Math.random() > chance) return 0;
   return min + Math.floor(Math.random() * (max - min + 1));
 }
@@ -966,13 +1170,14 @@ function buyPotion(potionId, fromBenny = false, fromPatrick = false) {
       ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS, ...(bennyHasSupremeThisVisit ? [SUPREME_LUCK_POTION] : [])]
       : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
-  if (!potion || getCoins() < potion.cost) return;
-  setCoins(getCoins() - potion.cost);
+  const cost = fromBenny || fromPatrick ? potion?.cost : getEffectivePotionCost(potion?.cost ?? 0);
+  if (!potion || getCoins() < cost) return;
+  setCoins(getCoins() - cost);
   const inv = getPotionInventory();
   inv[potion.id] = (inv[potion.id] || 0) + 1;
   setPotionInventory(inv);
   addQuestProgress('potion_buy', 1);
-  addQuestProgress('shop_spend', potion.cost);
+  addQuestProgress('shop_spend', cost);
   renderCoins();
   renderShop();
   renderPotionInventory();
@@ -987,16 +1192,17 @@ function buyPotionMax(potionId, fromBenny = false, fromPatrick = false) {
     ? [...POTIONS.map((p) => ({ ...p, cost: Math.max(1, Math.floor(p.cost * 0.9)) })), ...BENNY_EXCLUSIVE_POTIONS, ...(bennyHasSupremeThisVisit ? [SUPREME_LUCK_POTION] : [])]
     : getCurrentShopOffers();
   const potion = pool.find((p) => p.id === potionId);
-  if (!potion || potion.cost < 1) return;
+  const cost = fromBenny || fromPatrick ? potion?.cost : getEffectivePotionCost(potion?.cost ?? 0);
+  if (!potion || cost < 1) return;
   const coins = getCoins();
-  const count = Math.floor(coins / potion.cost);
+  const count = Math.floor(coins / cost);
   if (count < 1) return;
-  setCoins(coins - potion.cost * count);
+  setCoins(coins - cost * count);
   const inv = getPotionInventory();
   inv[potion.id] = (inv[potion.id] || 0) + count;
   setPotionInventory(inv);
   addQuestProgress('potion_buy', count);
-  addQuestProgress('shop_spend', potion.cost * count);
+  addQuestProgress('shop_spend', cost * count);
   renderCoins();
   renderShop();
   renderPotionInventory();
@@ -1110,8 +1316,9 @@ function renderShop() {
   const coins = getCoins();
   list.innerHTML = offers.map(
     (p) => {
-      const canBuy = coins >= p.cost;
-      const maxCount = Math.floor(coins / p.cost);
+      const cost = getEffectivePotionCost(p.cost);
+      const canBuy = coins >= cost;
+      const maxCount = Math.floor(coins / cost);
       const canBuyMax = maxCount >= 1;
       return `<div class="shop-item">
         <span class="shop-item-emoji">${p.emoji}</span>
@@ -1121,7 +1328,7 @@ function renderShop() {
         </div>
         <div class="shop-item-actions">
           <button type="button" class="shop-buy-btn" data-potion="${p.id}" data-benny="false" ${!canBuy ? 'disabled' : ''}>
-            ${p.cost} coins
+            ${cost} coins
           </button>
           <button type="button" class="shop-buy-max-btn" data-potion="${p.id}" data-benny="false" ${!canBuyMax ? 'disabled' : ''} title="${canBuyMax ? `Buy ${maxCount}` : ''}">
             Buy max${canBuyMax ? ` (${maxCount})` : ''}
@@ -3879,7 +4086,7 @@ function renderHistory() {
           <span class="history-text" style="font-family:'${h.font}';color:${h.color};font-weight:${h.fontWeight};font-style:${h.fontStyle};text-shadow:${h.textShadow}">${h.text}</span>
           ${typeBadge}
           <span class="history-rarity">${formatRarity(h.rarity)}</span>
-          ${canSalvage ? `<button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${coinsForSalvage(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>` : ''}
+          ${canSalvage ? `<button type="button" class="salvage-btn" data-index="${idx}" title="Salvage for ${getDisplaySalvageCoins(h.rarity)} coins${h.rarity >= 100 ? ' + possible scraps' : ''}">Salvage</button>` : ''}
         </li>`;
     })
     .join('');
@@ -3899,7 +4106,10 @@ function renderHistory() {
       if (idx < 0 || idx >= history.length) return;
       const [removed] = history.splice(idx, 1);
       setHistory(history);
-      setCoins(getCoins() + coinsForSalvage(removed.rarity));
+      let coins = coinsForSalvage(removed.rarity);
+      const barronBuff = getMayorBuff();
+      if (barronBuff?.mayor.buffType === 'coins') coins = Math.floor(coins * (1 + barronBuff.strength));
+      setCoins(getCoins() + coins);
       const scrapsGained = scrapsFromSalvage(removed.rarity);
       if (scrapsGained > 0) {
         setScraps(getScraps() + scrapsGained);
@@ -3987,7 +4197,7 @@ function switchTab(tabName) {
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-selected', isActive);
   });
-  ['past', 'locked', 'shop', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests', 'competition', 'realm'].forEach((id) => {
+  ['past', 'locked', 'shop', 'hub', 'casino', 'bazaar', 'tycoon', 'store', 'quests', 'mayor', 'competition', 'realm'].forEach((id) => {
     const panel = document.getElementById(`tab-${id}`);
     if (panel) {
       panel.classList.toggle('hidden', tabName !== id);
@@ -4001,6 +4211,7 @@ function switchTab(tabName) {
   if (tabName === 'tycoon') renderTycoon();
   if (tabName === 'store')  renderStore();
   if (tabName === 'quests') renderQuestBoard();
+  if (tabName === 'mayor') renderMayorPanel();
   if (tabName === 'competition') renderCompetition();
   if (tabName === 'realm') renderRealm();
 }
@@ -5302,7 +5513,9 @@ async function roll() {
   localStorage.setItem(STORAGE_KEYS.elderRollTotal, String(newRolls));
   renderRollCount();
 
-  const mult = getLuckMultiplier() + getGearBonus();
+  let mult = getLuckMultiplier() + getGearBonus();
+  const mayorBuff = getMayorBuff();
+  if (mayorBuff?.mayor.buffType === 'luck') mult = mult * (1 + mayorBuff.strength);
   const item = weightedRandom(mult, WORLD_ID === 2 ? [] : getUnlockedElderPool());
 
   // Quest: track peak luck before it resets, and count the roll
@@ -5432,7 +5645,7 @@ async function roll() {
 }
 
 function buyLuck() {
-  const cost = luckCost(getLuckMultiplier());
+  const cost = getEffectiveLuckCost(luckCost(getLuckMultiplier()));
   if (getCoins() < cost) return;
   setCoins(getCoins() - cost);
   setLuckMultiplier(getLuckMultiplier() + 2);
@@ -6379,6 +6592,7 @@ function init() {
   renderTheo();
   renderSneho();
   renderQuestBoard();
+  refreshMayorCache(); // Preload mayor winner for buffs
 
   // Tycoon click button (persistent listener, not inside renderTycoon)
   document.getElementById('tycoon-click-btn')?.addEventListener('click', tycoonClick);

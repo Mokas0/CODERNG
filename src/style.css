@@ -1283,6 +1283,122 @@ body {
   margin: 1rem 0 0.5rem;
 }
 
+/* Mayor voting — Town Hall */
+.mayor-panel {
+  max-width: 42rem;
+}
+.mayor-npc-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.mayor-npc-avatar {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+.mayor-npc-name {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  color: #e8d4a0;
+}
+.mayor-npc-dialogue {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.mayor-serving {
+  margin-bottom: 1.5rem;
+  padding: 0.9rem 1rem;
+  background: rgba(80, 60, 20, 0.15);
+  border-radius: 8px;
+  border-left: 4px solid #c9a227;
+}
+.mayor-serving-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.mayor-serving-emoji {
+  font-size: 1.75rem;
+}
+.mayor-serving-buff {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.mayor-no-winner {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.mayor-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #c9a227;
+  margin: 0 0 0.5rem;
+}
+.mayor-election {
+  margin-top: 1rem;
+}
+.mayor-election-meta {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.mayor-candidates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+.mayor-candidate-card {
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(40, 35, 25, 0.5);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.mayor-candidate-card--voted {
+  border-color: #c9a227;
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.2);
+}
+.mayor-candidate-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.mayor-candidate-emoji {
+  font-size: 1.5rem;
+}
+.mayor-candidate-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.mayor-candidate-votes {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #c9a227;
+  font-weight: 600;
+}
+.mayor-voted-badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #22c55e;
+  font-weight: 600;
+}
+.mayor-vote-btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+.mayor-feedback {
+  margin-top: 1rem;
+}
+
 .competition-banks-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
