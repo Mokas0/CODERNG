@@ -62,6 +62,8 @@ const STORAGE_KEYS = {
   realmDungeonState: 'rng_realm_dungeon_state',
   // Gems (shared across worlds, earned from Realm bosses)
   gems: 'rng_gems',
+  mayorPermanentLuck: 'rng_mayor_permanent_luck',
+  mayorAmplifierActive: 'rng_mayor_amplifier_active',
 };
 
 const WORLD_CONFIG = {
@@ -182,6 +184,9 @@ function setLuckMultiplier(m) {
 }
 function getLuckRolls() { return Math.max(0, Math.floor(Number(localStorage.getItem(STORAGE_KEYS.luckRolls) || 0))); }
 function setLuckRolls(n) { localStorage.setItem(STORAGE_KEYS.luckRolls, String(Math.max(0, Math.floor(n)))); }
+
+function getMayorPermanentLuck() { return Math.max(0, Number(localStorage.getItem(STORAGE_KEYS.mayorPermanentLuck) || 0)); }
+function addMayorPermanentLuck(n) { localStorage.setItem(STORAGE_KEYS.mayorPermanentLuck, String(getMayorPermanentLuck() + n)); }
 
 function getNullCoins() {
   if (WORLD_ID !== 2) return 0;
@@ -753,7 +758,8 @@ function renderRollCount() {
 function renderLuck() {
   const m = getLuckMultiplier();
   const gear = getGearBonus();
-  const total = m + gear;
+  const perm = getMayorPermanentLuck();
+  const total = m + gear + perm;
   const effectiveRaw = Math.pow(Math.max(total, 1), 0.4);
   const effectiveMult = Math.min(effectiveRaw, WORLD_CONFIG.luckCapEffective);
   const el = document.getElementById('luck-value');
@@ -764,14 +770,17 @@ function renderLuck() {
     const rollSuffix = r > 0 ? ` — ${r} roll${r !== 1 ? 's' : ''} left` : '';
     if (WORLD_CONFIG.luckCapEffective !== Infinity && effectiveRaw >= WORLD_CONFIG.luckCapEffective) {
       el.textContent = `${fmt(effectiveMult)}× (capped)${rollSuffix}`;
-    } else if (gear > 0) {
-      el.textContent = `${fmt(effectiveMult)}× (${fmt(m)} + ${fmt(gear)} gear)${rollSuffix}`;
+    } else if (gear > 0 || perm > 0) {
+      const parts = [fmt(m)];
+      if (gear > 0) parts.push(`${fmt(gear)} gear`);
+      if (perm > 0) parts.push(`${fmt(perm)}★`);
+      el.textContent = `${fmt(effectiveMult)}× (${parts.join(' + ')})${rollSuffix}`;
     } else {
       el.textContent = (effectiveMult === 1 ? '1× (normal)' : `${fmt(effectiveMult)}×`) + rollSuffix;
     }
   }
   if (btn) {
-    const cost = getEffectiveLuckCost(luckCost(m));
+    const cost = getEffectiveLuckCost(luckCost(total));
     btn.textContent = `Boost luck (${cost} coins)`;
     btn.disabled = getCoins() < cost;
   }
@@ -819,6 +828,12 @@ const POTIONS = [
 // Very rare spawn in rotating shop only (not in Benny's list)
 const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: 'Legendary Luck Elixir', cost: 5000, luckBonus: 5000, emoji: '👑' };
 const LEGENDARY_POTION_SPAWN_CHANCE = 0.008;
+
+// Mayor-exclusive potions (only appear when that mayor is serving)
+const MAYOR_POTIONS = {
+  aurelia: { id: 'potionMayorStarlight', name: "Aurelia's Starlight Elixir", cost: 65, luckBonus: 180, emoji: '🌟', desc: 'Mayor-exclusive. Fortune favors you.' },
+  meridia: { id: 'potionMayorAmplifier', name: "Meridia's Amplifier", cost: 1, luckBonus: 0, emoji: '⚗️', desc: 'Mayor-exclusive. Your next potion grants 2× effect.', isAmplifier: true },
+};
 // Benny-exclusive potions (not sold anywhere else)
 const BENNY_EXCLUSIVE_POTIONS = [
   { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,    luckBonus: 15,    emoji: '🎒', desc: "Dirt cheap and it works." },
@@ -866,7 +881,7 @@ const GEM_SHOP_ITEMS = [
 ];
 
 const ALL_POTIONS_BY_ID = {};
-[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION, POTION_OF_DESTRUCTION, ...MINING_POTIONS, ...GEM_SHOP_ITEMS].forEach(p => {
+[...POTIONS, LEGENDARY_LUCK_POTION, ...BENNY_EXCLUSIVE_POTIONS, ...PATRICK_EXCLUSIVE_POTIONS, SUPREME_LUCK_POTION, POTION_OF_DESTRUCTION, ...MINING_POTIONS, ...GEM_SHOP_ITEMS, MAYOR_POTIONS.aurelia, MAYOR_POTIONS.meridia].forEach(p => {
   ALL_POTIONS_BY_ID[p.id] = p;
 });
 
@@ -1134,7 +1149,9 @@ function getCurrentShopOffers() {
     const j = Math.floor(seededRandom(seed + i) * (i + 1));
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
-  const count = 3 + Math.floor(seededRandom(seed + 99) * 2);
+  const mayorBuff = getMayorBuff();
+  const meridiaActive = mayorBuff?.mayor?.id === 'meridia';
+  const count = meridiaActive ? 4 + Math.floor(seededRandom(seed + 99) * 3) : 3 + Math.floor(seededRandom(seed + 99) * 2);
   const offers = indices.slice(0, count).map((i) => {
     const p = POTIONS[i];
     const discount = 0.85 + seededRandom(seed + i * 7) * 0.15;
@@ -1144,6 +1161,14 @@ function getCurrentShopOffers() {
   if (seededRandom(seed + 1337) < LEGENDARY_POTION_SPAWN_CHANCE) {
     const discount = 0.9 + seededRandom(seed + 1338) * 0.1;
     offers.push({ ...LEGENDARY_LUCK_POTION, cost: Math.max(1, Math.floor(LEGENDARY_LUCK_POTION.cost * discount)) });
+  }
+  // Aurelia's Starlight Elixir — 6% chance when she's mayor
+  if (mayorBuff?.mayor?.id === 'aurelia' && seededRandom(seed + 2222) < 0.06) {
+    offers.push({ ...MAYOR_POTIONS.aurelia, cost: MAYOR_POTIONS.aurelia.cost });
+  }
+  // Meridia's Amplifier — 5% chance when she's mayor
+  if (meridiaActive && seededRandom(seed + 3333) < 0.05) {
+    offers.push({ ...MAYOR_POTIONS.meridia, cost: MAYOR_POTIONS.meridia.cost });
   }
   return offers;
 }
@@ -1215,6 +1240,14 @@ function usePotion(potionId) {
   if (!inv[potionId] || inv[potionId] < 1) return;
   const potion = ALL_POTIONS_BY_ID[potionId];
   if (!potion) return;
+  if (potion.id === 'potionMayorAmplifier') {
+    inv[potionId]--;
+    if (inv[potionId] <= 0) delete inv[potionId];
+    setPotionInventory(inv);
+    localStorage.setItem(STORAGE_KEYS.mayorAmplifierActive, '1');
+    renderPotionInventory();
+    return;
+  }
   if (potion.id === 'potionDestruction') {
     if (WORLD_ID !== 2) return; // Only usable in World 2; do not consume
     inv[potionId]--;
@@ -1227,7 +1260,10 @@ function usePotion(potionId) {
   inv[potionId]--;
   if (inv[potionId] <= 0) delete inv[potionId];
   setPotionInventory(inv);
-  setLuckMultiplier(getLuckMultiplier() + (potion.luckBonus || 0));
+  const amplifierActive = localStorage.getItem(STORAGE_KEYS.mayorAmplifierActive) === '1';
+  if (amplifierActive) localStorage.removeItem(STORAGE_KEYS.mayorAmplifierActive);
+  const luckGain = (potion.luckBonus || 0) * (amplifierActive ? 2 : 1);
+  setLuckMultiplier(getLuckMultiplier() + luckGain);
   if (potion.luckRolls) setLuckRolls(potion.luckRolls);
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (potion.id === 'potionBennyUltraluck') triggerSecretAura(1).catch(console.error);
@@ -1243,7 +1279,7 @@ function useAllPotions() {
   let ultraluckCount = 0;
   let hasSupreme = false;
   for (const [id, count] of Object.entries(inv)) {
-    if (id === 'potionDestruction') continue; // Use individually in World 2 only
+    if (id === 'potionDestruction' || id === 'potionMayorAmplifier') continue; // Use individually
     const potion = ALL_POTIONS_BY_ID[id];
     if (!potion || count < 1) continue;
     totalLuck += (potion.luckBonus || 0) * count;
@@ -4109,8 +4145,12 @@ function renderHistory() {
       let coins = coinsForSalvage(removed.rarity);
       const barronBuff = getMayorBuff();
       if (barronBuff?.mayor.buffType === 'coins') coins = Math.floor(coins * (1 + barronBuff.strength));
+      if (barronBuff?.mayor?.id === 'barron' && Math.random() < 0.02) {
+        coins += 1000 + Math.floor(Math.random() * 1001);
+      }
       setCoins(getCoins() + coins);
-      const scrapsGained = scrapsFromSalvage(removed.rarity);
+      let scrapsGained = scrapsFromSalvage(removed.rarity);
+      if (scrapsGained > 0 && getMayorBuff()?.mayor?.id === 'vex' && Math.random() < 0.25) scrapsGained *= 2;
       if (scrapsGained > 0) {
         setScraps(getScraps() + scrapsGained);
         renderTheo();
@@ -5513,7 +5553,7 @@ async function roll() {
   localStorage.setItem(STORAGE_KEYS.elderRollTotal, String(newRolls));
   renderRollCount();
 
-  let mult = getLuckMultiplier() + getGearBonus();
+  let mult = getLuckMultiplier() + getGearBonus() + getMayorPermanentLuck();
   const mayorBuff = getMayorBuff();
   if (mayorBuff?.mayor.buffType === 'luck') mult = mult * (1 + mayorBuff.strength);
   const item = weightedRandom(mult, WORLD_ID === 2 ? [] : getUnlockedElderPool());
@@ -5605,6 +5645,13 @@ async function roll() {
   if (item.rarity >= RARE_ROLL_THRESHOLD) reportRareRoll(item);
   checkAllAchievements();
 
+  // Aurelia's Permanent Fortune — 0.03% per roll when she's mayor
+  const aureliaBuff = getMayorBuff();
+  if (aureliaBuff?.mayor?.id === 'aurelia' && Math.random() < 0.0003) {
+    addMayorPermanentLuck(1);
+    renderLuck();
+  }
+
   // Biome bonus roll — only fires during an active biome
   if (activeBiome && new Date(activeBiome.ends_at) > Date.now()) {
     const biomeAura = tryBiomeRoll(activeBiome.biome_type);
@@ -5645,12 +5692,14 @@ async function roll() {
 }
 
 function buyLuck() {
-  const cost = getEffectiveLuckCost(luckCost(getLuckMultiplier()));
+  const total = getLuckMultiplier() + getGearBonus() + getMayorPermanentLuck();
+  const cost = getEffectiveLuckCost(luckCost(total));
   if (getCoins() < cost) return;
   setCoins(getCoins() - cost);
-  setLuckMultiplier(getLuckMultiplier() + 2);
+  const lyraBonus = getMayorBuff()?.mayor?.id === 'lyra' && Math.random() < 0.12 ? 1 : 0;
+  setLuckMultiplier(getLuckMultiplier() + 2 + lyraBonus);
   addQuestProgress('shop_spend', cost);
-  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
+  addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus() + getMayorPermanentLuck());
   renderCoins();
   renderLuck();
 }
