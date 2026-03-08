@@ -334,8 +334,8 @@ begin
     return query select false, 0, 'Not signed in'::text;
     return;
   end if;
-  if p_amount is null or p_amount <= 0 then
-    return query select false, 0, 'Invalid amount'::text;
+  if p_amount is null or p_amount <= 0 or p_amount > 999999999 then
+    return query select false, 0, 'Invalid amount (1–999,999,999)'::text;
     return;
   end if;
   insert into bazaar_wallets (user_id, coins_balance)
@@ -364,8 +364,8 @@ begin
     return query select false, 0, 'Not signed in'::text;
     return;
   end if;
-  if p_amount is null or p_amount <= 0 then
-    return query select false, 0, 'Invalid amount'::text;
+  if p_amount is null or p_amount <= 0 or p_amount > 999999999 then
+    return query select false, 0, 'Invalid amount (1–999,999,999)'::text;
     return;
   end if;
   update bazaar_wallets
@@ -510,8 +510,8 @@ begin
     return query select false, null::bigint, 'Not signed in'::text;
     return;
   end if;
-  if p_price is null or p_price <= 0 then
-    return query select false, null::bigint, 'Invalid price'::text;
+  if p_price is null or p_price <= 0 or p_price > 999999999 then
+    return query select false, null::bigint, 'Invalid price (1–999,999,999)'::text;
     return;
   end if;
   select item_json into v_json from bazaar_seller_inventory
@@ -537,7 +537,6 @@ set search_path = public
 as $$
 declare
   v_listing record;
-  v_buyer_bal int;
 begin
   if auth.uid() is null then
     return query select false, 'Not signed in'::text;
@@ -555,14 +554,12 @@ begin
     return query select false, 'Cannot buy your own listing'::text;
     return;
   end if;
-  select coins_balance into v_buyer_bal from bazaar_wallets where user_id = auth.uid();
-  v_buyer_bal := coalesce(v_buyer_bal, 0);
-  if v_buyer_bal < v_listing.price then
+  update bazaar_wallets set coins_balance = coins_balance - v_listing.price, updated_at = now()
+  where user_id = auth.uid() and coins_balance >= v_listing.price;
+  if not found then
     return query select false, 'Not enough Bazaar balance'::text;
     return;
   end if;
-  update bazaar_wallets set coins_balance = coins_balance - v_listing.price, updated_at = now()
-  where user_id = auth.uid();
   insert into bazaar_wallets (user_id, coins_balance)
   values (v_listing.seller_id, v_listing.price)
   on conflict (user_id) do update set coins_balance = bazaar_wallets.coins_balance + v_listing.price, updated_at = now();
@@ -685,9 +682,6 @@ create policy "Bazaar business stats read" on public.bazaar_business_stats for s
 create or replace function public.bazaar_invest_in_business(p_owner_id uuid, p_amount int)
 returns table(success boolean, message text)
 language plpgsql security definer set search_path = public as $$
-declare
-  v_bal int;
-  v_cur int;
 begin
   if auth.uid() is null then
     return query select false, 'Not signed in'::text;
@@ -697,17 +691,16 @@ begin
     return query select false, 'Cannot invest in yourself'::text;
     return;
   end if;
-  if p_amount is null or p_amount <= 0 then
-    return query select false, 'Invalid amount'::text;
-    return;
-  end if;
-  select coalesce(coins_balance, 0) into v_bal from bazaar_wallets where user_id = auth.uid();
-  if v_bal < p_amount then
-    return query select false, 'Not enough Bazaar balance'::text;
+  if p_amount is null or p_amount <= 0 or p_amount > 999999999 then
+    return query select false, 'Invalid amount (1–999,999,999)'::text;
     return;
   end if;
   update bazaar_wallets set coins_balance = coins_balance - p_amount, updated_at = now()
-  where user_id = auth.uid();
+  where user_id = auth.uid() and coins_balance >= p_amount;
+  if not found then
+    return query select false, 'Not enough Bazaar balance'::text;
+    return;
+  end if;
   insert into bazaar_business_investments (investor_id, business_owner_id, amount)
   values (auth.uid(), p_owner_id, p_amount)
   on conflict (investor_id, business_owner_id) do update set amount = bazaar_business_investments.amount + p_amount;
@@ -728,26 +721,21 @@ $$;
 create or replace function public.bazaar_divest_from_business(p_owner_id uuid, p_amount int)
 returns table(success boolean, message text)
 language plpgsql security definer set search_path = public as $$
-declare
-  v_cur int;
 begin
   if auth.uid() is null then
     return query select false, 'Not signed in'::text;
     return;
   end if;
-  if p_amount is null or p_amount <= 0 then
-    return query select false, 'Invalid amount'::text;
-    return;
-  end if;
-  select amount into v_cur from bazaar_business_investments
-  where investor_id = auth.uid() and business_owner_id = p_owner_id;
-  v_cur := coalesce(v_cur, 0);
-  if v_cur < p_amount then
-    return query select false, 'Not enough invested'::text;
+  if p_amount is null or p_amount <= 0 or p_amount > 999999999 then
+    return query select false, 'Invalid amount (1–999,999,999)'::text;
     return;
   end if;
   update bazaar_business_investments set amount = amount - p_amount
-  where investor_id = auth.uid() and business_owner_id = p_owner_id;
+  where investor_id = auth.uid() and business_owner_id = p_owner_id and amount >= p_amount;
+  if not found then
+    return query select false, 'Not enough invested'::text;
+    return;
+  end if;
   delete from bazaar_business_investments
   where investor_id = auth.uid() and business_owner_id = p_owner_id and amount <= 0;
   update bazaar_wallets set coins_balance = coins_balance + p_amount, updated_at = now()
@@ -880,44 +868,47 @@ begin
 end;
 $$;
 
--- RPC: buy BZX shares
+-- RPC: buy BZX shares (concurrent-safe, validated)
 create or replace function public.bazaar_stock_buy(p_symbol text default 'BZX', p_shares int default 1)
 returns table(success boolean, message text)
 language plpgsql security definer set search_path = public as $$
 declare
   v_price numeric;
-  v_exec_price numeric;  -- price after market impact (buyer pays this)
+  v_exec_price numeric;
   v_cost numeric;
-  v_bal int;
   v_cur_shares int;
   v_cur_avg numeric;
   v_new_avg numeric;
   v_impact numeric;
+  v_max_shares int := 500;
 begin
   if auth.uid() is null then
     return query select false, 'Not signed in'::text;
     return;
   end if;
-  if p_shares is null or p_shares <= 0 then
+  if p_symbol is null or p_symbol != 'BZX' then
+    return query select false, 'Invalid symbol'::text;
+    return;
+  end if;
+  p_shares := least(greatest(coalesce(p_shares, 0), 1), v_max_shares);
+  if p_shares <= 0 then
     return query select false, 'Invalid shares'::text;
     return;
   end if;
-  select price into v_price from bazaar_stock_ticker where symbol = p_symbol;
+  select price into v_price from bazaar_stock_ticker where symbol = p_symbol for update;
   if v_price is null then
     return query select false, 'Unknown ticker'::text;
     return;
   end if;
-  -- Market impact: buyer pays the post-impact price (can't profit from own trade)
   v_impact := 0.002 * least(p_shares, 50);
   v_exec_price := least(10000, round(v_price * (1 + v_impact), 2));
-  v_cost := v_exec_price * p_shares;
-  select coalesce(coins_balance, 0) into v_bal from bazaar_wallets where user_id = auth.uid();
-  if v_bal < v_cost then
+  v_cost := round(v_exec_price * p_shares, 0);
+  update bazaar_wallets set coins_balance = coins_balance - v_cost, updated_at = now()
+  where user_id = auth.uid() and coins_balance >= v_cost;
+  if not found then
     return query select false, 'Not enough Bazaar balance'::text;
     return;
   end if;
-  update bazaar_wallets set coins_balance = coins_balance - v_cost, updated_at = now()
-  where user_id = auth.uid();
   update bazaar_stock_ticker set price = v_exec_price, updated_at = now() where symbol = p_symbol;
   select coalesce(shares, 0), avg_buy_price into v_cur_shares, v_cur_avg
   from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol;
@@ -937,46 +928,48 @@ begin
 end;
 $$;
 
--- RPC: sell BZX shares
+-- RPC: sell BZX shares (concurrent-safe, validated)
 create or replace function public.bazaar_stock_sell(p_symbol text default 'BZX', p_shares int default 1)
 returns table(success boolean, message text)
 language plpgsql security definer set search_path = public as $$
 declare
   v_price numeric;
-  v_exec_price numeric;  -- price after market impact (seller receives this)
+  v_exec_price numeric;
   v_proceeds numeric;
-  v_cur_shares int;
   v_impact numeric;
+  v_max_shares int := 500;
 begin
   if auth.uid() is null then
     return query select false, 'Not signed in'::text;
     return;
   end if;
-  if p_shares is null or p_shares <= 0 then
+  if p_symbol is null or p_symbol != 'BZX' then
+    return query select false, 'Invalid symbol'::text;
+    return;
+  end if;
+  p_shares := least(greatest(coalesce(p_shares, 0), 1), v_max_shares);
+  if p_shares <= 0 then
     return query select false, 'Invalid shares'::text;
     return;
   end if;
-  select price into v_price from bazaar_stock_ticker where symbol = p_symbol;
+  select price into v_price from bazaar_stock_ticker where symbol = p_symbol for update;
   if v_price is null then
     return query select false, 'Unknown ticker'::text;
     return;
   end if;
-  select shares into v_cur_shares from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol;
-  v_cur_shares := coalesce(v_cur_shares, 0);
-  if v_cur_shares < p_shares then
+  update bazaar_stock_holdings set shares = shares - p_shares
+  where user_id = auth.uid() and symbol = p_symbol and shares >= p_shares;
+  if not found then
     return query select false, 'Not enough shares'::text;
     return;
   end if;
-  -- Market impact: seller receives the post-impact price (can't profit from own trade)
   v_impact := 0.002 * least(p_shares, 50);
   v_exec_price := greatest(10, round(v_price * (1 - v_impact), 2));
-  v_proceeds := v_exec_price * p_shares;
+  v_proceeds := round(v_exec_price * p_shares, 0);
   insert into bazaar_wallets (user_id, coins_balance)
   values (auth.uid(), v_proceeds)
   on conflict (user_id) do update set coins_balance = bazaar_wallets.coins_balance + v_proceeds, updated_at = now();
   update bazaar_stock_ticker set price = v_exec_price, updated_at = now() where symbol = p_symbol;
-  update bazaar_stock_holdings set shares = shares - p_shares
-  where user_id = auth.uid() and symbol = p_symbol;
   delete from bazaar_stock_holdings where user_id = auth.uid() and symbol = p_symbol and shares <= 0;
   update bazaar_stock_ticker set shares_outstanding = greatest(0, shares_outstanding - p_shares), updated_at = now()
   where symbol = p_symbol;
@@ -986,7 +979,9 @@ $$;
 
 grant execute on function public.bazaar_stock_get_price(text) to anon;
 grant execute on function public.bazaar_stock_get_price(text) to authenticated;
-grant execute on function public.bazaar_stock_update_price(text) to authenticated;
+-- bazaar_stock_update_price: NOT granted to users; only the listing-sold trigger calls it
+revoke execute on function public.bazaar_stock_update_price(text) from authenticated;
+revoke execute on function public.bazaar_stock_update_price(text) from anon;
 grant execute on function public.bazaar_stock_buy(text, int) to authenticated;
 grant execute on function public.bazaar_stock_sell(text, int) to authenticated;
 

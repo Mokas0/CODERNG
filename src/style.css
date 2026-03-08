@@ -284,6 +284,8 @@ body {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.25rem;
   margin-bottom: 0.75rem;
 }
@@ -3223,6 +3225,64 @@ body {
 @keyframes elder-core-breathe {
   0%, 100% { opacity: 0.35; transform: scale(0.85); }
   50%       { opacity: 0.85; transform: scale(1.15); }
+}
+
+/* ─── Chain Aura Overlay (back-to-back rolls) ───────────────────────────────── */
+.rarity-overlay--chain {
+  background: var(--mythic-bg, #000);
+  cursor: default;
+}
+.rarity-overlay--chain .rarity-overlay__beams {
+  opacity: 1;
+  animation: beams-spin 6s linear infinite;
+}
+.rarity-overlay--chain .rarity-overlay__beams::before {
+  background: conic-gradient(
+    transparent 0deg,
+    color-mix(in srgb, var(--mythic-a) 15%, transparent) 60deg,
+    transparent 120deg,
+    color-mix(in srgb, var(--mythic-b) 12%, transparent) 180deg,
+    transparent 240deg,
+    color-mix(in srgb, var(--mythic-a) 10%, transparent) 300deg,
+    transparent 360deg
+  );
+}
+.rarity-overlay--chain .rarity-overlay__beams::after {
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--mythic-a) 25%, transparent) 0%,
+    color-mix(in srgb, var(--mythic-b) 8%, transparent) 45%,
+    transparent 75%
+  );
+  animation: pulse-glow 2.5s ease-in-out infinite alternate;
+}
+.rarity-overlay--chain .rarity-overlay__quote {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 78%;
+  margin: 0;
+  font-size: clamp(1.1rem, 2.8vw, 1.9rem);
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.92);
+  text-align: center;
+  text-shadow: 0 0 30px color-mix(in srgb, var(--mythic-a) 40%, transparent);
+  animation: none;
+  opacity: 0;
+  z-index: 2;
+}
+.rarity-overlay--chain .rarity-overlay__tier,
+.rarity-overlay--chain .rarity-overlay__label,
+.rarity-overlay--chain .rarity-overlay__rarity {
+  animation: none;
+  opacity: 0;
+  z-index: 2;
+}
+.rarity-overlay--chain .rarity-overlay__sub {
+  display: none !important;
 }
 
 /* ─── Spinning 8-pointed star (Supreme King & Tier 2) ───────────────────────── */

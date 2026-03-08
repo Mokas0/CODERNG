@@ -1,4 +1,5 @@
 import './style.css';
+import { gsap } from 'gsap';
 import { ITEMS, WORLD2_ITEMS, SECRET_AURAS, BIOME_AURAS, ELDER_AURAS, ASCENDANT_AURAS, EMPEROR_AURAS, AURAS_100Q, ACCOMPLISHMENT_AURAS, MUTATION_AURAS, GEOMETRICAL_AURAS, TIER2_AURAS, SUPREME_KING_AURA, JIA_VOID_AURAS, JIA_RARE_ITEMS, VOID_QUEEN_AURA, BOOK_OF_POWER_AURA, SELLER_MATERIALS, MINING_MATERIALS, classifyAuraType } from './data/items.js';
 import { auraToRealmItem, getAuraSpecialMoves, REALM_MAP_NODES, REALM_BOSSES, REALM_NPCS, REALM_QUESTS } from './data/realm.js';
 import { MAYORS, getMayorWeekKey, getMayorWeekEnd, getPreviousMayorWeekKey, getMayorCandidatesForWeek, mayorBuffStrength } from './data/mayors.js';
@@ -51,6 +52,8 @@ const STORAGE_KEYS = {
   nullCoins: STORAGE_PREFIX + 'null_coins',
   materials: STORAGE_PREFIX + 'materials',
   luckRolls: STORAGE_PREFIX + 'luck_rolls', // rolls remaining for multi-roll luck potions
+  luckExpiresAt: STORAGE_PREFIX + 'luck_expires_at', // timestamp when time-based luck expires
+  chainReceived: STORAGE_PREFIX + 'chain_received', // chain aura IDs already earned
   achievementsUnlocked: STORAGE_PREFIX + 'achievements_unlocked',
   achievementEquipped: STORAGE_PREFIX + 'achievement_equipped',
   // Realm (shared across World 1 and 2)
@@ -184,6 +187,10 @@ function setLuckMultiplier(m) {
 }
 function getLuckRolls() { return Math.max(0, Math.floor(Number(localStorage.getItem(STORAGE_KEYS.luckRolls) || 0))); }
 function setLuckRolls(n) { localStorage.setItem(STORAGE_KEYS.luckRolls, String(Math.max(0, Math.floor(n)))); }
+
+function getLuckExpiresAt() { return Number(localStorage.getItem(STORAGE_KEYS.luckExpiresAt) || 0); }
+function setLuckExpiresAt(ts) { localStorage.setItem(STORAGE_KEYS.luckExpiresAt, String(Math.max(0, Math.floor(ts)))); }
+function clearLuckExpiresAt() { localStorage.removeItem(STORAGE_KEYS.luckExpiresAt); }
 
 function getMayorPermanentLuck() { return Math.max(0, Number(localStorage.getItem(STORAGE_KEYS.mayorPermanentLuck) || 0)); }
 function addMayorPermanentLuck(n) { localStorage.setItem(STORAGE_KEYS.mayorPermanentLuck, String(getMayorPermanentLuck() + n)); }
@@ -767,16 +774,20 @@ function renderLuck() {
   if (el) {
     const fmt = (n) => Number.isInteger(n) ? n.toLocaleString() : n.toLocaleString(undefined, { maximumFractionDigits: 1 });
     const r = getLuckRolls();
-    const rollSuffix = r > 0 ? ` — ${r} roll${r !== 1 ? 's' : ''} left` : '';
+    const exp = getLuckExpiresAt();
+    const secsLeft = exp > 0 ? Math.max(0, Math.ceil((exp - Date.now()) / 1000)) : 0;
+    let suffix = '';
+    if (r > 0) suffix = ` — ${r} roll${r !== 1 ? 's' : ''} left`;
+    else if (secsLeft > 0) suffix = ` — ${secsLeft}s left`;
     if (WORLD_CONFIG.luckCapEffective !== Infinity && effectiveRaw >= WORLD_CONFIG.luckCapEffective) {
-      el.textContent = `${fmt(effectiveMult)}× (capped)${rollSuffix}`;
+      el.textContent = `${fmt(effectiveMult)}× (capped)${suffix}`;
     } else if (gear > 0 || perm > 0) {
       const parts = [fmt(m)];
       if (gear > 0) parts.push(`${fmt(gear)} gear`);
       if (perm > 0) parts.push(`${fmt(perm)}★`);
-      el.textContent = `${fmt(effectiveMult)}× (${parts.join(' + ')})${rollSuffix}`;
+      el.textContent = `${fmt(effectiveMult)}× (${parts.join(' + ')})${suffix}`;
     } else {
-      el.textContent = (effectiveMult === 1 ? '1× (normal)' : `${fmt(effectiveMult)}×`) + rollSuffix;
+      el.textContent = (effectiveMult === 1 ? '1× (normal)' : `${fmt(effectiveMult)}×`) + suffix;
     }
   }
   if (btn) {
@@ -817,42 +828,42 @@ function scrapsFromSalvage(rarity) {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-// Shop potions: id, name, cost, luckBonus (added to current multiplier for next roll)
+// Shop potions: id, name, cost, luckBonus. High luck (>=500) uses luckRolls; low luck uses luckDurationMs (60s).
 const POTIONS = [
-  { id: 'potion1', name: 'Minor Luck Potion', cost: 25,  luckBonus: 25,   emoji: '🧪' },
-  { id: 'potion2', name: 'Luck Potion',        cost: 50,  luckBonus: 75,   emoji: '⚗️' },
-  { id: 'potion3', name: 'Greater Luck Potion',cost: 120, luckBonus: 200,  emoji: '🔮' },
-  { id: 'potion4', name: 'Supreme Luck Elixir',cost: 300, luckBonus: 600,  emoji: '✨' },
-  { id: 'potion5', name: 'Mythic Fortune Brew', cost: 700, luckBonus: 1750, emoji: '🌟' },
+  { id: 'potion1', name: 'Minor Luck Potion', cost: 25,  luckBonus: 25,   emoji: '🧪', luckDurationMs: 60000 },
+  { id: 'potion2', name: 'Luck Potion',        cost: 50,  luckBonus: 75,   emoji: '⚗️', luckDurationMs: 60000 },
+  { id: 'potion3', name: 'Greater Luck Potion',cost: 120, luckBonus: 200,  emoji: '🔮', luckDurationMs: 60000 },
+  { id: 'potion4', name: 'Supreme Luck Elixir',cost: 300, luckBonus: 600,  emoji: '✨', luckRolls: 2 },
+  { id: 'potion5', name: 'Mythic Fortune Brew', cost: 700, luckBonus: 1750, emoji: '🌟', luckRolls: 5 },
 ];
 // Very rare spawn in rotating shop only (not in Benny's list)
-const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: 'Legendary Luck Elixir', cost: 5000, luckBonus: 5000, emoji: '👑' };
+const LEGENDARY_LUCK_POTION = { id: 'potionLegendary3000', name: 'Legendary Luck Elixir', cost: 5000, luckBonus: 5000, emoji: '👑', luckRolls: 16 };
 const LEGENDARY_POTION_SPAWN_CHANCE = 0.008;
 
 // Mayor-exclusive potions (only appear when that mayor is serving)
 const MAYOR_POTIONS = {
-  aurelia: { id: 'potionMayorStarlight', name: "Aurelia's Starlight Elixir", cost: 65, luckBonus: 180, emoji: '🌟', desc: 'Mayor-exclusive. Fortune favors you.' },
+  aurelia: { id: 'potionMayorStarlight', name: "Aurelia's Starlight Elixir", cost: 65, luckBonus: 180, emoji: '🌟', desc: 'Mayor-exclusive. Fortune favors you.', luckDurationMs: 60000 },
   meridia: { id: 'potionMayorAmplifier', name: "Meridia's Amplifier", cost: 1, luckBonus: 0, emoji: '⚗️', desc: 'Mayor-exclusive. Your next potion grants 2× effect.', isAmplifier: true },
 };
 // Benny-exclusive potions (not sold anywhere else)
 const BENNY_EXCLUSIVE_POTIONS = [
-  { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,    luckBonus: 15,    emoji: '🎒', desc: "Dirt cheap and it works." },
-  { id: 'potionBennyTonic',      name: "Old Road Tonic",        cost: 18,   luckBonus: 40,    emoji: '🫙', desc: "Brewed on the road. Surprisingly potent." },
-  { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,   luckBonus: 175,   emoji: '🔩', desc: "Concocted from leftover parts. Great deal." },
-  { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 25000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable." },
+  { id: 'potionBennyBargain',    name: "Benny's Bargain Brew",  cost: 8,    luckBonus: 15,    emoji: '🎒', desc: "Dirt cheap and it works.", luckDurationMs: 60000 },
+  { id: 'potionBennyTonic',      name: "Old Road Tonic",        cost: 18,   luckBonus: 40,    emoji: '🫙', desc: "Brewed on the road. Surprisingly potent.", luckDurationMs: 60000 },
+  { id: 'potionBennyCraft',      name: "Crafter's Draft",       cost: 75,   luckBonus: 175,   emoji: '🔩', desc: "Concocted from leftover parts. Great deal.", luckDurationMs: 60000 },
+  { id: 'potionBennyUltraluck',  name: 'Ultraluck Potion',      cost: 5000, luckBonus: 25000, emoji: '⚡', desc: "Benny's rarest. Surprisingly affordable.", luckRolls: 83 },
 ];
 
 // Patrick-exclusive potions — huge luck, hefty price. Patrick appears 2× rarer than Benny.
 const PATRICK_EXCLUSIVE_POTIONS = [
-  { id: 'potionPatrickMega',     name: "Patrick's Mega Brew",   cost: 50000,  luckBonus: 250_000,   emoji: '🌟', desc: 'Massive luck. Massive price.' },
-  { id: 'potionPatrickTitan',    name: "Patrick's Titan Elixir", cost: 250_000, luckBonus: 1_250_000, emoji: '💫', desc: 'For those who spare no expense.' },
-  { id: 'potionPatrickColossus', name: "Patrick's Colossus",    cost: 1_000_000, luckBonus: 7_500_000, emoji: '🔮', desc: 'The big one. You know what you\'re paying for.' },
+  { id: 'potionPatrickMega',     name: "Patrick's Mega Brew",   cost: 50000,  luckBonus: 250_000,   emoji: '🌟', desc: 'Massive luck. Massive price.', luckRolls: 8 },
+  { id: 'potionPatrickTitan',    name: "Patrick's Titan Elixir", cost: 250_000, luckBonus: 1_250_000, emoji: '💫', desc: 'For those who spare no expense.', luckRolls: 15 },
+  { id: 'potionPatrickColossus', name: "Patrick's Colossus",    cost: 1_000_000, luckBonus: 7_500_000, emoji: '🔮', desc: 'The big one. You know what you\'re paying for.', luckRolls: 15 },
 ];
 
 // Supreme Luck Potion — 1/100 chance to appear in Benny's shop per visit
 const SUPREME_LUCK_POTION = {
   id: 'potionSupremeLuck', name: 'Supreme Luck Potion', cost: 150000,
-  luckBonus: 15_000_000, emoji: '👑✨', desc: 'The rarest potion in existence. Benny found it once. He may never find another.',
+  luckBonus: 15_000_000, emoji: '👑✨', desc: 'The rarest potion in existence. Benny found it once. He may never find another.', luckRolls: 15,
 };
 const SUPREME_POTION_APPEAR_CHANCE = 1 / 100;
 const SUPREME_KING_SPAWN_CHANCE = 1 / 1_000;
@@ -874,10 +885,10 @@ const MINING_POTIONS = [
 
 // Gem Shop — powerful potions costing gems (earned from Realm bosses)
 const GEM_SHOP_ITEMS = [
-  { id: 'potionGemElixir', name: 'Elixir of Fortune', costGems: 10, luckBonus: 500, emoji: '✨', desc: '+500× luck. Earned through victory.' },
-  { id: 'potionGemSoul', name: 'Soul Essence', costGems: 25, luckBonus: 2000, emoji: '💫', desc: '+2,000× luck. A taste of the beyond.' },
-  { id: 'potionGemVoid', name: 'Void Fragment', costGems: 50, luckBonus: 10000, emoji: '🕳️', desc: '+10,000× luck. Pulled from the void.' },
-  { id: 'potionGemDivine', name: 'Divine Blessing', costGems: 100, luckBonus: 50000, emoji: '🌟', desc: '+50,000× luck. Divine intervention.' },
+  { id: 'potionGemElixir', name: 'Elixir of Fortune', costGems: 10, luckBonus: 500, emoji: '✨', desc: '+500× luck. Earned through victory.', luckRolls: 2 },
+  { id: 'potionGemSoul', name: 'Soul Essence', costGems: 25, luckBonus: 2000, emoji: '💫', desc: '+2,000× luck. A taste of the beyond.', luckRolls: 6 },
+  { id: 'potionGemVoid', name: 'Void Fragment', costGems: 50, luckBonus: 10000, emoji: '🕳️', desc: '+10,000× luck. Pulled from the void.', luckRolls: 15 },
+  { id: 'potionGemDivine', name: 'Divine Blessing', costGems: 100, luckBonus: 50000, emoji: '🌟', desc: '+50,000× luck. Divine intervention.', luckRolls: 15 },
 ];
 
 const ALL_POTIONS_BY_ID = {};
@@ -888,13 +899,13 @@ const ALL_POTIONS_BY_ID = {};
 // ——— Sneho's forbidden shop ———
 // Each item has a cursedChance: if the curse triggers the luck effect is negative (cursedPenalty)
 const SNEHO_ITEMS = [
-  { id: 'sneho1', name: 'Shadowed Vial',       cost: 8,    luckBonus: 12,    cursedChance: 0.50, cursedPenalty: -8,     emoji: '🫗',  desc: 'Could go either way.' },
-  { id: 'sneho2', name: "Demon's Brew",         cost: 30,   luckBonus: 40,    cursedChance: 0.40, cursedPenalty: -25,    emoji: '😈',  desc: 'Smells of sulfur. High risk, high reward.' },
-  { id: 'sneho3', name: 'Void Essence',         cost: 150,  luckBonus: 175,   cursedChance: 0.30, cursedPenalty: -100,   emoji: '🕳️', desc: 'Bottled nothing. Unstable.' },
-  { id: 'sneho4', name: 'Blood Moon Extract',   cost: 800,  luckBonus: 600,   cursedChance: 0.25, cursedPenalty: -350,   emoji: '🌑',  desc: 'Only available on the wrong night.' },
-  { id: 'sneho5', name: 'Forbidden Pact Seal',  cost: 5000, luckBonus: 2500, cursedChance: 0.20, cursedPenalty: -1500, emoji: '📜',  desc: 'Sign your soul away. Might be worth it.' },
-  { id: 'sneho6', name: 'Cursed Coin',          cost: 50,   luckBonus: 30,    cursedChance: 0.65, cursedPenalty: -20,    emoji: '🪙',  desc: 'Suspiciously cheap.' },
-  { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 350,   cursedChance: 0.35, cursedPenalty: -200,   emoji: '💀',  desc: 'Handle with care. Or don\'t.' },
+  { id: 'sneho1', name: 'Shadowed Vial',       cost: 8,    luckBonus: 12,    cursedChance: 0.50, cursedPenalty: -8,     emoji: '🫗',  desc: 'Could go either way.', luckDurationMs: 60000 },
+  { id: 'sneho2', name: "Demon's Brew",         cost: 30,   luckBonus: 40,    cursedChance: 0.40, cursedPenalty: -25,    emoji: '😈',  desc: 'Smells of sulfur. High risk, high reward.', luckDurationMs: 60000 },
+  { id: 'sneho3', name: 'Void Essence',         cost: 150,  luckBonus: 175,   cursedChance: 0.30, cursedPenalty: -100,   emoji: '🕳️', desc: 'Bottled nothing. Unstable.', luckDurationMs: 60000 },
+  { id: 'sneho4', name: 'Blood Moon Extract',   cost: 800,  luckBonus: 600,   cursedChance: 0.25, cursedPenalty: -350,   emoji: '🌑',  desc: 'Only available on the wrong night.', luckRolls: 2 },
+  { id: 'sneho5', name: 'Forbidden Pact Seal',  cost: 5000, luckBonus: 2500, cursedChance: 0.20, cursedPenalty: -1500, emoji: '📜',  desc: 'Sign your soul away. Might be worth it.', luckRolls: 8 },
+  { id: 'sneho6', name: 'Cursed Coin',          cost: 50,   luckBonus: 30,    cursedChance: 0.65, cursedPenalty: -20,    emoji: '🪙',  desc: 'Suspiciously cheap.', luckDurationMs: 60000 },
+  { id: 'sneho7', name: 'Hex Flask',            cost: 400,  luckBonus: 350,   cursedChance: 0.35, cursedPenalty: -200,   emoji: '💀',  desc: 'Handle with care. Or don\'t.', luckDurationMs: 60000 },
 ];
 
 // Incarnatus — 1/5000 chance to appear in Sneho (no luck modifier). Grants a Geometrical aura.
@@ -1264,7 +1275,13 @@ function usePotion(potionId) {
   if (amplifierActive) localStorage.removeItem(STORAGE_KEYS.mayorAmplifierActive);
   const luckGain = (potion.luckBonus || 0) * (amplifierActive ? 2 : 1);
   setLuckMultiplier(getLuckMultiplier() + luckGain);
-  if (potion.luckRolls) setLuckRolls(potion.luckRolls);
+  if (potion.luckRolls) {
+    setLuckRolls(potion.luckRolls);
+    clearLuckExpiresAt();
+  } else if (potion.luckDurationMs) {
+    setLuckExpiresAt(Date.now() + potion.luckDurationMs);
+    setLuckRolls(0);
+  }
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (potion.id === 'potionBennyUltraluck') triggerSecretAura(1).catch(console.error);
   if (potion.id === 'potionSupremeLuck') triggerSupremeKing().catch(console.error);
@@ -1276,6 +1293,7 @@ function useAllPotions() {
   const inv = getPotionInventory();
   let totalLuck = 0;
   let totalRolls = 0;
+  let maxDurationMs = 0;
   let ultraluckCount = 0;
   let hasSupreme = false;
   for (const [id, count] of Object.entries(inv)) {
@@ -1284,16 +1302,23 @@ function useAllPotions() {
     if (!potion || count < 1) continue;
     totalLuck += (potion.luckBonus || 0) * count;
     if (potion.luckRolls) totalRolls += potion.luckRolls * count;
+    if (potion.luckDurationMs) maxDurationMs = Math.max(maxDurationMs, potion.luckDurationMs * count);
     if (id === 'potionBennyUltraluck') ultraluckCount += count;
     if (id === 'potionSupremeLuck') hasSupreme = true;
   }
-  if (totalLuck === 0 && totalRolls === 0) return;
+  if (totalLuck === 0 && totalRolls === 0 && maxDurationMs === 0) return;
   const toRemove = Object.keys(inv).filter(k => k !== 'potionDestruction');
   const newInv = {};
   if (inv.potionDestruction) newInv.potionDestruction = inv.potionDestruction;
   setPotionInventory(newInv);
   setLuckMultiplier(getLuckMultiplier() + totalLuck);
-  if (totalRolls > 0) setLuckRolls(totalRolls);
+  if (totalRolls > 0) {
+    setLuckRolls(totalRolls);
+    clearLuckExpiresAt();
+  } else if (maxDurationMs > 0) {
+    setLuckExpiresAt(Date.now() + maxDurationMs);
+    setLuckRolls(0);
+  }
   addQuestProgress('luck_reach', getLuckMultiplier() + getGearBonus());
   if (ultraluckCount > 0) triggerSecretAura(ultraluckCount).catch(console.error);
   if (hasSupreme) triggerSupremeKing().catch(console.error);
@@ -1324,6 +1349,7 @@ function renderPotionInventory() {
     <div class="potion-inv-list">${entries.map(e => {
       let bonusText = (e.potion.luckBonus || 0) > 0 ? `+${(e.potion.luckBonus * e.count).toLocaleString()}× luck` : (e.potion.desc || 'Special effect');
       if (e.potion.luckRolls) bonusText += ` for ${e.potion.luckRolls * e.count} roll${e.potion.luckRolls * e.count !== 1 ? 's' : ''}`;
+      else if (e.potion.luckDurationMs) bonusText += ` for ${Math.round(e.potion.luckDurationMs / 1000)}s`;
       return `
       <div class="potion-inv-row">
         <span class="potion-inv-emoji">${e.potion.emoji}</span>
@@ -2124,6 +2150,13 @@ function buySnehoItem(itemId) {
   const effect = cursed ? item.cursedPenalty : item.luckBonus;
   const newLuck = Math.max(1, getLuckMultiplier() + effect);
   setLuckMultiplier(newLuck);
+  if (item.luckRolls) {
+    setLuckRolls(item.luckRolls);
+    clearLuckExpiresAt();
+  } else if (item.luckDurationMs) {
+    setLuckExpiresAt(Date.now() + item.luckDurationMs);
+    setLuckRolls(0);
+  }
 
   // Elder tracking
   const newSneho = getElderSnehoTotal() + 1;
@@ -3737,10 +3770,12 @@ async function bazaarStockSellAll() {
   await bazaarStockSell();
 }
 
+const BZX_MAX_SHARES_PER_TRADE = 500;
+
 async function bazaarStockBuy() {
   if (!authUser || !supabase) return;
-  const shares = Math.floor(Number(document.getElementById('bazaar-stock-buy-shares')?.value || 0));
-  if (shares < 1) { showBazaarBalanceMsg('Enter shares to buy.', true); return; }
+  const shares = Math.min(BZX_MAX_SHARES_PER_TRADE, Math.floor(Number(document.getElementById('bazaar-stock-buy-shares')?.value || 0)));
+  if (shares < 1) { showBazaarBalanceMsg('Enter shares to buy (max 500).', true); return; }
   const btn = document.getElementById('bazaar-stock-buy-btn');
   if (btn) btn.disabled = true;
   const { data, error } = await supabase.rpc('bazaar_stock_buy', { p_symbol: 'BZX', p_shares: shares });
@@ -3754,8 +3789,8 @@ async function bazaarStockBuy() {
 
 async function bazaarStockSell() {
   if (!authUser || !supabase) return;
-  const shares = Math.floor(Number(document.getElementById('bazaar-stock-sell-shares')?.value || 0));
-  if (shares < 1) { showBazaarBalanceMsg('Enter shares to sell.', true); return; }
+  const shares = Math.min(BZX_MAX_SHARES_PER_TRADE, Math.floor(Number(document.getElementById('bazaar-stock-sell-shares')?.value || 0)));
+  if (shares < 1) { showBazaarBalanceMsg('Enter shares to sell (max 500).', true); return; }
   const btn = document.getElementById('bazaar-stock-sell-btn');
   if (btn) btn.disabled = true;
   const { data, error } = await supabase.rpc('bazaar_stock_sell', { p_symbol: 'BZX', p_shares: shares });
@@ -4066,6 +4101,7 @@ function renderHistory() {
       const isGeometrical = h.isGeometrical || false;
       const isMutation  = h.isMutation  || false;
       const isNull      = h.isNull      || false;
+      const isChain     = h.isChain     || false;
       const specialClass = isSupremeKing ? ' history-item--supreme-king'
         : isVoidQueen ? ' history-item--void-queen'
         : isBookOfPower ? ' history-item--book-of-power'
@@ -4080,8 +4116,9 @@ function renderHistory() {
         : isAscendant ? ' history-item--ascendant'
         : isMutation  ? ' history-item--mutation'
         : isNull      ? ' history-item--null'
+        : isChain     ? ' history-item--chain'
         : '';
-      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || is100Q || isTier2 || isAccomplishment || isGeometrical || isNull || isSupremeKing || isVoidQueen || isBookOfPower;
+      const isSpecial = isSecret || isBiome || isElder || isAscendant || isEmperor || is100Q || isTier2 || isAccomplishment || isGeometrical || isNull || isSupremeKing || isVoidQueen || isBookOfPower || isChain;
       const categoryBadge = isSupremeKing
         ? `<span class="supreme-king-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.15em;color:#ffd700;opacity:.95;text-shadow:0 0 12px #ffd700, 0 0 24px #ff4400, 0 0 40px #ff2200;">♔ UNOBTAINABLE</span>`
         : isVoidQueen
@@ -4110,7 +4147,9 @@ function renderHistory() {
                   ? `<span class="mutation-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.12em;color:#ff88ff;opacity:.9;text-shadow:0 0 8px #ff88ff;">⟁ ${h.subtitle || 'MUTATED'}</span>`
                   : isNull
                     ? `<span class="null-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.2em;color:#666;opacity:.9;">NULL</span>`
-                    : '';
+                    : isChain
+                      ? `<span class="chain-badge" style="font-size:0.55rem;font-weight:900;letter-spacing:.12em;color:#ffaa00;opacity:.95;text-shadow:0 0 10px #ffaa00;">✦ CHAIN</span>`
+                      : '';
       const lockBtn = `<button type="button" class="lock-btn" data-history-id="${id}" title="Lock — move to storage (no salvage)">🔒 Lock</button>`;
       const canSalvage = !isSpecial;
       const at = h.auraType || classifyAuraType(h.text);
@@ -4190,6 +4229,7 @@ function renderLockedStorage() {
         : h.is100Q ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ 100Q</span>'
         : h.isTier2 ? '<span class="lineage-badge" style="color:#ffd700;text-shadow:0 0 10px #ffd700, 0 0 20px #ff6600;">✦ TIER 2</span>'
         : h.isGeometrical ? '<span class="lineage-badge" style="color:#00d4ff;text-shadow:0 0 10px #00d4ff;">🔷 GEOMETRICAL</span>'
+        : h.isChain ? '<span class="lineage-badge" style="color:#ffaa00;text-shadow:0 0 10px #ffaa00;">✦ CHAIN</span>'
         : h.isElder ? '<span class="lineage-badge" style="color:gold;text-shadow:0 0 8px gold;">ELDER</span>'
         : h.isAscendant ? '<span class="lineage-badge" style="color:#00ddaa;text-shadow:0 0 8px #00ddaa;">ASCENDANT</span>'
         : '';
@@ -4201,6 +4241,7 @@ function renderLockedStorage() {
         : h.is100Q ? ' history-item--100q'
         : h.isTier2 ? ' history-item--tier2'
         : h.isGeometrical ? ' history-item--geometrical'
+        : h.isChain ? ' history-item--chain'
         : h.isElder ? ' history-item--elder'
         : h.isAscendant ? ' history-item--ascendant'
         : '';
@@ -4493,6 +4534,70 @@ const JIA_VOID_CUTSCENES = {
   10140: { quote: 'The Supreme King has an enemy. You summoned her.', bg: '#0f0018', accentA: '#aa00ff', accentB: '#440066' },
   10150: { quote: 'Well, you found me.', bg: '#0a0800', accentA: '#ffd700', accentB: '#ff6600' },
 };
+
+// ─── Chain Auras: earned by back-to-back rolls >= threshold ─────────────────
+const CHAIN_AURAS = [
+  { id: 10050, text: 'DOUBLE FLAME', threshold: 1_000, chainLength: 2, font: 'Bebas Neue', color: '#ff6600', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 20px #ff6600, 0 0 40px #ff2200' },
+  { id: 10051, text: 'TWIN ECHO', threshold: 10_000, chainLength: 2, font: 'Cinzel', color: '#aaccff', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 20px #aaccff, 0 0 50px #4488ff' },
+  { id: 10052, text: 'BONDED FORTUNE', threshold: 100_000, chainLength: 2, font: 'Playfair Display', color: '#d4af37', fontWeight: '700', fontStyle: 'italic', textShadow: '0 0 25px #d4af37, 0 0 55px #ff8800' },
+  { id: 10053, text: 'TWO FATES', threshold: 1_000_000, chainLength: 2, font: 'Syne', color: '#ff00aa', fontWeight: '800', fontStyle: 'normal', textShadow: '0 0 20px #ff00aa, 0 0 50px #aa0066' },
+  { id: 10054, text: 'DUAL PULSE', threshold: 10_000_000, chainLength: 2, font: 'Unbounded', color: '#00ffcc', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 25px #00ffcc, 0 0 60px #00aa88' },
+  { id: 10055, text: 'MIRRORED STARS', threshold: 100_000_000, chainLength: 2, font: 'DM Serif Display', color: '#ffd700', fontWeight: '400', fontStyle: 'italic', textShadow: '0 0 30px #ffd700, 0 0 70px #ff8800' },
+  { id: 10056, text: 'PARALLEL CROWN', threshold: 1_000_000_000, chainLength: 2, font: 'Righteous', color: '#ff4400', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 20px #ff4400, 0 0 50px #cc2200' },
+  { id: 10057, text: 'BINARY GOD', threshold: 10_000_000_000, chainLength: 2, font: 'Space Mono', color: '#00eeff', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 25px #00eeff, 0 0 60px #0088bb' },
+  { id: 10058, text: 'DOUBLE INFINITY', threshold: 100_000_000_000, chainLength: 2, font: 'Oswald', color: '#ff44ff', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 30px #ff44ff, 0 0 70px #aa00aa' },
+  { id: 10059, text: 'TWIN TRUTH', threshold: 1_000_000_000_000, chainLength: 2, font: 'Press Start 2P', color: '#ffffff', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 20px #ffffff, 0 0 50px #aaaaaa' },
+  { id: 10060, text: 'TRIPLE FLAME', threshold: 1_000, chainLength: 3, font: 'Bebas Neue', color: '#ff8800', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 25px #ff8800, 0 0 55px #ff4400' },
+  { id: 10061, text: 'THRICE BLESSED', threshold: 10_000, chainLength: 3, font: 'Cormorant Garamond', color: '#00ff88', fontWeight: '700', fontStyle: 'italic', textShadow: '0 0 25px #00ff88, 0 0 60px #00cc66' },
+  { id: 10062, text: 'TRINITY PULSE', threshold: 100_000, chainLength: 3, font: 'Montserrat', color: '#bb00ff', fontWeight: '900', fontStyle: 'normal', textShadow: '0 0 25px #bb00ff, 0 0 60px #660088' },
+  { id: 10063, text: 'TRIPLE MYTH', threshold: 1_000_000, chainLength: 3, font: 'Creepster', color: '#ff2222', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 20px #ff2222, 0 0 50px #880000' },
+  { id: 10064, text: 'TRIPLE DAWN', threshold: 10_000_000, chainLength: 3, font: 'Great Vibes', color: '#ffd700', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 30px #ffd700, 0 0 70px #ffaa00' },
+  { id: 10065, text: 'TRIPLE VOID', threshold: 100_000_000, chainLength: 3, font: 'Quicksand', color: '#9900ff', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 25px #9900ff, 0 0 60px #4400aa' },
+  { id: 10066, text: 'QUAD FLAME', threshold: 1_000, chainLength: 4, font: 'Raleway', color: '#ff6600', fontWeight: '900', fontStyle: 'normal', textShadow: '0 0 30px #ff6600, 0 0 70px #ff2200' },
+  { id: 10067, text: 'FOUR WINDS', threshold: 10_000, chainLength: 4, font: 'Fredoka', color: '#44aaff', fontWeight: '600', fontStyle: 'normal', textShadow: '0 0 20px #44aaff, 0 0 50px #2288ff' },
+  { id: 10068, text: 'QUAD STORM', threshold: 100_000, chainLength: 4, font: 'Rubik', color: '#ffffff', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 25px #ffffff, 0 0 60px #aaddff' },
+  { id: 10069, text: 'QUAD EMPIRE', threshold: 1_000_000, chainLength: 4, font: 'Lobster', color: '#ffcc00', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 25px #ffcc00, 0 0 60px #cc9900' },
+  { id: 10070, text: 'PENT FLAME', threshold: 1_000, chainLength: 5, font: 'DM Serif Display', color: '#ff4400', fontWeight: '400', fontStyle: 'italic', textShadow: '0 0 30px #ff4400, 0 0 80px #ff0000' },
+  { id: 10071, text: 'FIVE SEAS', threshold: 10_000, chainLength: 5, font: 'Comfortaa', color: '#00ffff', fontWeight: '700', fontStyle: 'normal', textShadow: '0 0 25px #00ffff, 0 0 60px #00cccc' },
+  { id: 10072, text: 'PENT CROWN', threshold: 100_000, chainLength: 5, font: 'Poiret One', color: '#ffd700', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 30px #ffd700, 0 0 80px #ff8800' },
+  { id: 10073, text: 'HEX FLAME', threshold: 1_000, chainLength: 6, font: 'JetBrains Mono', color: '#ff6600', fontWeight: '400', fontStyle: 'normal', textShadow: '0 0 35px #ff6600, 0 0 90px #ff2200, 0 0 120px #aa0000' },
+  { id: 10074, text: 'HEX DAWN', threshold: 10_000, chainLength: 6, font: 'Syne', color: '#ffee88', fontWeight: '800', fontStyle: 'normal', textShadow: '0 0 30px #ffee88, 0 0 70px #ffcc00, 0 0 100px #ff8800' },
+];
+
+const CHAIN_STAGES = {
+  10050: ['Two in a row.', 'The flame doubles.', 'Fortune favors the patient.'],
+  10051: ['Echo upon echo.', 'The stars align twice.', 'Something resonates.'],
+  10052: ['Rare. Then rarer.', 'Two bonds sealed.', 'The gold deepens.'],
+  10053: ['One million. Then another.', 'Two fates intertwined.', 'The universe bends.'],
+  10054: ['Ten million. Twice.', 'Dual pulse. Dual light.', 'The cosmos remembers.'],
+  10055: ['A hundred million. Again.', 'Mirror of stars.', 'You have been seen.'],
+  10056: ['A billion. Twice.', 'Parallel crowns.', 'Two thrones. One will.'],
+  10057: ['Ten billion. Back to back.', 'Binary divinity.', 'Zero and one. Both yours.'],
+  10058: ['A hundred billion. Twice.', 'Double infinity.', 'There is no end.'],
+  10059: ['A trillion. Two.', 'Twin truth.', 'The impossible. Twice.'],
+  10060: ['One. Two. Three.', 'The flame triples.', 'Thrice blessed. Thrice burned.'],
+  10061: ['Three at ten thousand.', 'The blessing deepens.', 'Patterns emerge.'],
+  10062: ['Three at a hundred thousand.', 'Trinity pulse.', 'Three hearts. One beat.'],
+  10063: ['Three million. In sequence.', 'Triple myth.', 'Legends are made.'],
+  10064: ['Three at ten million.', 'Triple dawn.', 'The sun rises thrice.'],
+  10065: ['Three at a hundred million.', 'Triple void.', 'Darkness in threes.'],
+  10066: ['Four in a row. A thousand each.', 'Quad flame.', 'The fire spreads.'],
+  10067: ['Four at ten thousand.', 'The four winds.', 'Every direction yields.'],
+  10068: ['Four at a hundred thousand.', 'Quad storm.', 'The tempest quadruples.'],
+  10069: ['Four million. Consecutive.', 'Quad empire.', 'Four thrones. One crown.'],
+  10070: ['Five. A thousand each.', 'Pent flame.', 'Five tongues of fire.'],
+  10071: ['Five at ten thousand.', 'Five seas.', 'The waters part. Five times.'],
+  10072: ['Five at a hundred thousand.', 'Pent crown.', 'Five peaks. One summit.'],
+  10073: ['Six. All above a thousand.', 'Hex flame.', 'The sixth seal breaks.'],
+  10074: ['Six at ten thousand.', 'Hex dawn.', 'Six suns. One horizon.'],
+};
+
+const CHAIN_CUTSCENES = Object.fromEntries(
+  CHAIN_AURAS.map((a, i) => {
+    const bgs = ['#0a0500', '#000508', '#050010', '#080500', '#000f0a', '#0a0015', '#060008', '#000806', '#0d0015', '#050505', '#0f0800', '#000a05', '#080008', '#0a0000', '#00100a', '#050008', '#080400', '#000508', '#050008', '#0a0500', '#080500', '#000508', '#0a0800', '#0f0500', '#080500'];
+    return [a.id, { bg: bgs[i], accentA: a.color, accentB: a.color }];
+  })
+);
 
 // ─── Elder Aura stage texts (played sequentially, unskippable) ──────────────
 const ELDER_STAGES = {
@@ -4907,15 +5012,18 @@ function startTier2CutsceneEffects(overlay, cfg) {
 }
 
 // ─── Elder Aura helpers ──────────────────────────────────────────────────────
-function elderSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function elderSleep(ms) {
+  return new Promise(r => gsap.delayedCall(ms / 1000, r));
+}
 
 function elderFade(el, toOpacity, durationMs) {
-  return new Promise(r => {
-    if (!el) { setTimeout(r, durationMs); return; }
-    el.style.transition = `opacity ${durationMs}ms ease`;
-    el.style.opacity = String(toOpacity);
-    setTimeout(r, durationMs + 30);
-  });
+  if (!el) return elderSleep(durationMs);
+  return gsap.to(el, {
+    opacity: toOpacity,
+    duration: durationMs / 1000,
+    ease: 'power2.out',
+    overwrite: true,
+  }).then();
 }
 
 async function showElderCutscene(aura) {
@@ -5007,12 +5115,15 @@ async function showElderCutscene(aura) {
   await elderFade(tierEl, 1, 900);
   await elderSleep(500);
 
-  // Label bursts in
+  // Label bursts in (GSAP back ease for punch)
   if (labelEl) {
-    labelEl.style.transition = 'opacity 0.85s ease, transform 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    labelEl.style.opacity    = '1';
-    labelEl.style.transform  = 'scale(1)';
-    await elderSleep(900);
+    await gsap.fromTo(labelEl, { scale: 0.55, opacity: 0 }, {
+      scale: 1,
+      opacity: 1,
+      duration: 0.85,
+      ease: 'back.out(1.7)',
+      overwrite: true,
+    }).then();
   }
 
   await elderSleep(400);
@@ -5044,6 +5155,118 @@ async function showElderCutscene(aura) {
   isAnimating = false;
 }
 
+// ─── Chain Aura detection and grant ─────────────────────────────────────────
+function checkAndGrantChainAura() {
+  const history = getHistory();
+  const rollEntries = history.filter((h) => !h.isChain && h.rarity != null);
+  const received = getChainReceived();
+  // Sort by chainLength desc, threshold desc to grant highest first
+  const sorted = [...CHAIN_AURAS].sort((a, b) =>
+    b.chainLength - a.chainLength || b.threshold - a.threshold
+  );
+  for (const chain of sorted) {
+    if (received.includes(chain.id)) continue;
+    const lastN = rollEntries.slice(-chain.chainLength);
+    if (lastN.length < chain.chainLength) continue;
+    const allMeet = lastN.every((e) => e.rarity >= chain.threshold);
+    if (!allMeet) continue;
+    markChainReceived(chain.id);
+    const hist = getHistory();
+    hist.push({
+      historyId: `${Date.now()}-chain-${chain.id}`,
+      id: chain.id,
+      text: chain.text,
+      font: chain.font,
+      color: chain.color,
+      fontWeight: chain.fontWeight,
+      fontStyle: chain.fontStyle,
+      textShadow: chain.textShadow,
+      rarity: chain.threshold,
+      isChain: true,
+    });
+    setHistory(hist);
+    return chain;
+  }
+  return null;
+}
+
+async function showChainCutscene(aura) {
+  const overlay = document.getElementById('rarity-overlay');
+  if (!overlay) return;
+  const tierEl = document.getElementById('rarity-overlay-tier');
+  const labelEl = document.getElementById('rarity-overlay-label');
+  const rarityEl = document.getElementById('rarity-overlay-rarity');
+  const quoteEl = document.getElementById('rarity-overlay-quote');
+  const subEl = overlay.querySelector('.rarity-overlay__sub');
+  const cfg = CHAIN_CUTSCENES[aura.id] || { bg: '#000', accentA: aura.color, accentB: '#666' };
+  const stages = CHAIN_STAGES[aura.id] || [];
+
+  overlay.style.setProperty('--mythic-bg', cfg.bg);
+  overlay.style.setProperty('--mythic-a', cfg.accentA);
+  overlay.style.setProperty('--mythic-b', cfg.accentB);
+  overlay.classList.remove('hidden', 'rarity-overlay--global', 'rarity-overlay--universal', 'rarity-overlay--mythic', 'rarity-overlay--secret', 'rarity-overlay--biome', 'rarity-overlay--elder', 'rarity-overlay--tier2', 'rarity-overlay--has-star');
+  overlay.classList.add('rarity-overlay--chain');
+  overlay.style.opacity = '1';
+  overlay.setAttribute('aria-hidden', 'false');
+
+  for (const el of [tierEl, labelEl, rarityEl, quoteEl]) {
+    if (!el) continue;
+    el.style.transition = 'none';
+    el.style.opacity = '0';
+    el.style.transform = '';
+  }
+  if (subEl) subEl.style.display = 'none';
+
+  for (let i = 0; i < stages.length; i++) {
+    if (!quoteEl) break;
+    quoteEl.textContent = stages[i];
+    quoteEl.style.display = '';
+    await elderFade(quoteEl, 1, 650);
+    await elderSleep(1800);
+    await elderFade(quoteEl, 0, 450);
+    await elderSleep(200);
+  }
+
+  tierEl.textContent = '✦ Chain Aura ✦';
+  if (labelEl) {
+    labelEl.textContent = aura.text;
+    labelEl.style.fontFamily = `"${aura.font}", serif`;
+    labelEl.style.color = aura.color;
+    labelEl.style.textShadow = aura.textShadow || '';
+  }
+  if (rarityEl) rarityEl.textContent = `${aura.chainLength}× rolls ≥ ${formatRarity(aura.threshold)}`;
+
+  await elderFade(tierEl, 1, 700);
+  await elderSleep(400);
+  if (labelEl) {
+    await gsap.fromTo(labelEl, { scale: 0.55, opacity: 0 }, {
+      scale: 1, opacity: 1, duration: 0.8, ease: 'back.out(1.7)', overwrite: true,
+    }).then();
+  }
+  await elderSleep(300);
+  await elderFade(rarityEl, 0.85, 600);
+  await elderSleep(2500);
+  await elderFade(overlay, 0, 800);
+
+  overlay.classList.add('hidden');
+  overlay.classList.remove('rarity-overlay--chain');
+  overlay.style.opacity = '';
+  overlay.style.removeProperty('--mythic-bg');
+  overlay.style.removeProperty('--mythic-a');
+  overlay.style.removeProperty('--mythic-b');
+  overlay.setAttribute('aria-hidden', 'true');
+  for (const el of [tierEl, labelEl, rarityEl, quoteEl]) {
+    if (!el) continue;
+    el.style.opacity = '';
+    el.style.transition = '';
+    el.style.transform = '';
+    el.style.fontFamily = '';
+    el.style.color = '';
+    el.style.textShadow = '';
+  }
+  if (subEl) subEl.style.display = '';
+}
+
 // ─── Elder / Ascendant tracking ──────────────────────────────────────────────
 function getElderReceived() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.elderReceived) || '[]'); }
@@ -5053,6 +5276,15 @@ function markElderReceived(id) {
   const arr = getElderReceived();
   if (!arr.includes(id)) arr.push(id);
   localStorage.setItem(STORAGE_KEYS.elderReceived, JSON.stringify(arr));
+}
+function getChainReceived() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.chainReceived) || '[]'); }
+  catch { return []; }
+}
+function markChainReceived(id) {
+  const arr = getChainReceived();
+  if (!arr.includes(id)) arr.push(id);
+  localStorage.setItem(STORAGE_KEYS.chainReceived, JSON.stringify(arr));
 }
 function getElderUnlocked() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.elderUnlocked) || '[]'); }
@@ -5322,8 +5554,18 @@ function showRarityAnimation(item, tier) {
     overlay.classList.add(`rarity-overlay--${tier}`);
     overlay.setAttribute('aria-hidden', 'false');
 
+    // GSAP entrance: overlay + staggered content fade-in
+    gsap.set([tierEl, labelEl, rarityEl], { opacity: 0 });
+    gsap.set(overlay, { opacity: 0 });
+    const tl = gsap.timeline({ overwrite: true });
+    tl.to(overlay, { opacity: 1, duration: 0.4, ease: 'power2.out' })
+      .to(tierEl, { opacity: 1, duration: 0.35, ease: 'power2.out' }, 0.15)
+      .to(labelEl, { opacity: 1, duration: 0.4, ease: 'power2.out' }, 0.3)
+      .to(rarityEl, { opacity: 1, duration: 0.35, ease: 'power2.out' }, 0.45);
+
     const dismiss = () => {
       clearTimeout(timer);
+      gsap.killTweensOf([overlay, tierEl, labelEl, rarityEl]);
       overlay.removeEventListener('click', dismiss);
       overlay.classList.add('hidden');
       overlay.setAttribute('aria-hidden', 'true');
@@ -5548,6 +5790,15 @@ async function roll() {
   const rollBtn = document.getElementById('roll-btn');
   if (rollBtn) rollBtn.disabled = true;
 
+  // Time-based luck expiry: reset if past luckExpiresAt
+  const expiresAt = getLuckExpiresAt();
+  if (expiresAt > 0 && Date.now() > expiresAt) {
+    setLuckMultiplier(1);
+    clearLuckExpiresAt();
+    setLuckRolls(0);
+    renderLuck();
+  }
+
   // Elder/Ascendant roll tracking (sneho/curse/spent tracked elsewhere)
   const newRolls = getElderRollTotal() + 1;
   localStorage.setItem(STORAGE_KEYS.elderRollTotal, String(newRolls));
@@ -5588,6 +5839,12 @@ async function roll() {
       isTier2: item.isTier2 || false,
     });
     setHistory(histE);
+    const chainAuraE = checkAndGrantChainAura();
+    if (chainAuraE) {
+      isAnimating = true;
+      await showChainCutscene(chainAuraE);
+      isAnimating = false;
+    }
     renderResult(item);
     renderHistory();
     renderCoins();
@@ -5623,6 +5880,14 @@ async function roll() {
   }
   history.push(histEntry);
   setHistory(history);
+
+  // ── Chain Aura check: back-to-back rolls >= threshold ─────────────────────
+  const chainAura = checkAndGrantChainAura();
+  if (chainAura) {
+    isAnimating = true;
+    await showChainCutscene(chainAura);
+    isAnimating = false;
+  }
 
   const isWorld2Aura = WORLD_ID === 2 && item.id >= 10000 && item.id < 10020;
   const cutsceneSetting = getCutsceneThreshold();
@@ -5671,6 +5936,12 @@ async function roll() {
         isNull: biomeAura.isNull || false,
       });
       setHistory(history2);
+      const chainAuraB = checkAndGrantChainAura();
+      if (chainAuraB) {
+        isAnimating = true;
+        await showChainCutscene(chainAuraB);
+        isAnimating = false;
+      }
       renderHistory();
       reportRareRoll(biomeAura);
       if (biomeAura.isNull) {
